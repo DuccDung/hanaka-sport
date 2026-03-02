@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
 
 import HomeScreen from "../screens/Home/HomeScreen";
+import VideosScreen from "../screens/Videos/VideosScreen";
 import Placeholder from "../components/Placeholder";
 import HomeStack from "./HomeStack";
 const Tab = createBottomTabNavigator();
@@ -44,7 +45,7 @@ export default function AppNavigator() {
         />
         <Tab.Screen
           name="Videos"
-          component={() => <Placeholder title="Videos" />}
+          component={VideosScreen}
           options={{ title: "Videos" }}
         />
         <Tab.Screen

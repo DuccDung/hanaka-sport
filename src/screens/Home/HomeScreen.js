@@ -16,6 +16,14 @@ export default function HomeScreen({ navigation }) {
 
   const handlePressItem = (item) => {
     if (item.key === "rules") navigation.navigate("Rules");
+    if (item.key === "members") navigation.navigate("Members");
+    if (item.key === "coach") navigation.navigate("Coach");
+    if (item.key === "club") navigation.navigate("Club");
+    if (item.key === "court") navigation.navigate("Court");
+    if (item.key === "ref") navigation.navigate("Referee");
+    if (item.key === "tournament") navigation.navigate("Tournament");
+    if (item.key === "exchange") navigation.navigate("Exchange");
+    if (item.key === "match") navigation.navigate("MatchList");
   };
   return (
     <View style={styles.safe}>
@@ -26,6 +34,11 @@ export default function HomeScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <MenuGrid items={menuItems} onPressItem={handlePressItem} />
+        <BannerCarousel
+          banners={banners}
+          index={bannerIndex}
+          onChangeIndex={setBannerIndex}
+        />
         <BannerCarousel
           banners={banners}
           index={bannerIndex}
