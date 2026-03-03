@@ -21,6 +21,9 @@ import TournamentScheduleScreen from "../screens/Tournament/TournamentScheduleSc
 
 import TournamentStandingsScreen from "../screens/Tournament/TournamentStandingsScreen";
 import TournamentStandingsGroupScreen from "../screens/Tournament/TournamentStandingsGroupScreen";
+import RegisterScreen from "../screens/Auth/RegisterScreen";
+import LoginScreen from "../screens/Auth/LoginScreen";
+import AccountScreen from "../screens/Account/AccountScreen";
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -129,6 +132,21 @@ export default function HomeStack() {
       <Stack.Screen
         name="TournamentStandingsGroup"
         component={TournamentStandingsGroupScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Account"
+        component={AccountScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

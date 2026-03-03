@@ -27,7 +27,11 @@ export default function HomeScreen({ navigation }) {
   };
   return (
     <View style={styles.safe}>
-      <Header sport={sport} onToggleSport={toggleSport} />
+      <Header
+        sport={sport}
+        onToggleSport={toggleSport}
+        onPressAvatar={() => navigation.navigate("Login")}
+      />
 
       <ScrollView
         contentContainerStyle={styles.body}

@@ -1,10 +1,27 @@
 import React from "react";
-import { View, Text, SafeAreaView, Pressable, StatusBar } from "react-native";
+import {
+  View,
+  Text,
+  SafeAreaView,
+  Pressable,
+  StatusBar,
+  Image,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+
 import { COLORS } from "../../../constants/colors";
 import { styles } from "../styles";
+import { useAuth } from "../../../context/AuthContext";
 
-export default function Header({ sport, onToggleSport }) {
+export default function Header({ sport, onToggleSport, onPressAvatar }) {
+  const { session } = useAuth();
+  const user = session?.user;
+
+  const navigation = useNavigation();
+
+  const avatarUrl = user?.avatarUrl;
+
   return (
     <>
       <SafeAreaView style={{ backgroundColor: COLORS.BLUE }} />
@@ -28,9 +45,35 @@ export default function Header({ sport, onToggleSport }) {
             <Ionicons name="settings-outline" size={22} color="#fff" />
           </Pressable>
 
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={18} color={COLORS.BLUE} />
-          </View>
+          {/* Nếu có user -> hiện avatar + vào Account, nếu không -> hiện nút login (onPressAvatar) */}
+          {user ? (
+            <Pressable
+              onPress={() => navigation.navigate("Account")}
+              hitSlop={10}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                overflow: "hidden",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  style={{ width: 36, height: 36 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Ionicons name="person-circle-outline" size={30} color="#fff" />
+              )}
+            </Pressable>
+          ) : (
+            <Pressable onPress={onPressAvatar} hitSlop={10}>
+              <Ionicons name="person-circle-outline" size={30} color="#fff" />
+            </Pressable>
+          )}
         </View>
       </View>
     </>
