@@ -24,6 +24,9 @@ import TournamentStandingsGroupScreen from "../screens/Tournament/TournamentStan
 import RegisterScreen from "../screens/Auth/RegisterScreen";
 import LoginScreen from "../screens/Auth/LoginScreen";
 import AccountScreen from "../screens/Account/AccountScreen";
+import ChangePasswordScreen from "../screens/Account/ChangePasswordScreen";
+import MemberDetailScreen from "../screens/Members/MemberDetailScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -147,6 +150,16 @@ export default function HomeStack() {
       <Stack.Screen
         name="Account"
         component={AccountScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MemberDetail"
+        component={MemberDetailScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

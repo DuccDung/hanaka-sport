@@ -1,14 +1,20 @@
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 const { width } = Dimensions.get("window");
 
 export const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.BG },
-  body: { padding: 16 },
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.BG,
+  },
+
+  body: {
+    padding: 16,
+  },
 
   header: {
-    backgroundColor: COLORS.BLUE,
+    backgroundColor: COLORS.PRIMARY,
     paddingHorizontal: 16,
     paddingTop: 6,
     paddingBottom: 12,
@@ -16,6 +22,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+
   sportPicker: {
     flexDirection: "row",
     alignItems: "center",
@@ -27,37 +34,69 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     minWidth: 170,
   },
-  sportText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerIcon: { padding: 6 },
+  sportText: {
+    color: COLORS.WHITE,
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  headerIcon: {
+    padding: 6,
+  },
+
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#E5ECFF",
+    backgroundColor: "#FDEBED",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  menuItem: {
-    alignItems: "center",
-    marginBottom: 18,
+  /* MENU */
+  menuItemOuter: {
+    borderRadius: 22,
+    marginBottom: 16,
   },
+
+  menuItemInner: {
+    borderRadius: 22,
+    backgroundColor: COLORS.PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    minHeight: 96,
+  },
+
+  menuItemPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+
   menuIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 29,
-    backgroundColor: "#E6E6E6",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
+
   menuLabel: {
     textAlign: "center",
-    color: "#434446",
+    color: COLORS.WHITE,
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "700",
+    lineHeight: 14,
   },
 
   sectionTitle: {
@@ -70,12 +109,16 @@ export const styles = StyleSheet.create({
 
   bannerCard: {
     borderWidth: 2,
-    borderColor: COLORS.BLUE,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#fff",
   },
-  bannerImage: { width: width - 32, height: 200 },
+
+  bannerImage: {
+    width: width - 32,
+    height: 200,
+  },
+
   dots: {
     position: "absolute",
     bottom: 10,
@@ -85,11 +128,15 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
+
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: "rgba(255,255,255,0.6)",
   },
-  dotActive: { backgroundColor: "#fff" },
+
+  dotActive: {
+    backgroundColor: "#fff",
+  },
 });

@@ -23,7 +23,7 @@ function normalize(str = "") {
 }
 
 function Stars({ value }) {
-  const full = Math.round(value); // đơn giản: 0-5
+  const full = Math.round(value); 
   return (
     <View style={styles.starsRow}>
       {[0, 1, 2, 3, 4].map((i) => (

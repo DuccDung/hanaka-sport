@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./loginStyles";
 import { login } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
-
+import { getMe } from "../../services/userService";
 function isEmailLike(v = "") {
   const s = v.trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -44,7 +44,6 @@ export default function LoginScreen({ navigation }) {
         identifier: email.trim(),
         password,
       });
-
       await setAuthSession({
         accessToken: data.accessToken,
         expiresAtUtc: data.expiresAtUtc,

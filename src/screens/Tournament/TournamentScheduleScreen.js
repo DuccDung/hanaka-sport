@@ -1,5 +1,5 @@
 // src/screens/Tournament/TournamentScheduleScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,19 +8,54 @@ import {
   Pressable,
   FlatList,
   Share,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./scheduleStyles";
 import { rounds, scheduleSeed } from "./data/schedule";
 
+// Enable LayoutAnimation on Android
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+function groupByTable(matches) {
+  // group by tableNo
+  const map = new Map();
+  for (const m of matches) {
+    const key = String(m.tableNo ?? 1);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(m);
+  }
+
+  // sort tables by number
+  const tables = Array.from(map.entries())
+    .map(([tableKey, items]) => ({
+      id: `table-${tableKey}`,
+      tableNo: Number(tableKey),
+      items: items.sort((a, b) => (a.leftIndex ?? 0) - (b.leftIndex ?? 0)),
+    }))
+    .sort((a, b) => a.tableNo - b.tableNo);
+
+  return tables;
+}
+
 export default function TournamentScheduleScreen({ navigation, route }) {
   const tournament = route?.params?.tournament;
   const [roundKey, setRoundKey] = useState("r1");
 
-  const data = useMemo(
-    () => scheduleSeed.filter((x) => x.roundKey === roundKey),
-    [roundKey],
-  );
+  // tree expand/collapse state per table
+  const [openMap, setOpenMap] = useState({}); // { [tableNo]: boolean }
+
+  const tables = useMemo(() => {
+    const matches = scheduleSeed.filter((x) => x.roundKey === roundKey);
+    return groupByTable(matches);
+  }, [roundKey]);
 
   const onShare = async () => {
     try {
@@ -30,52 +65,111 @@ export default function TournamentScheduleScreen({ navigation, route }) {
     } catch (e) {}
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.row}>
-      {/* left circle */}
-      <View style={styles.leftCircle}>
-        <Text style={styles.leftCircleText}>{item.leftIndex}</Text>
-      </View>
+  const toggleTable = useCallback((tableNo) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenMap((prev) => ({
+      ...prev,
+      [tableNo]: !(prev?.[tableNo] ?? true), // default open
+    }));
+  }, []);
 
-      {/* card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTop}>
-          {item.code} ({item.time}; Sân: {item.court})
-        </Text>
-
-        <View style={styles.teamsRow}>
-          <View style={styles.teamsLeft}>
-            <Text style={styles.teamText}>{item.teamA}</Text>
-            <Text style={styles.teamText}>{item.teamB}</Text>
-          </View>
-
-          <View style={styles.scoresRight}>
-            <Text style={styles.scoreText}>{item.scoreA}</Text>
-            <Text style={styles.scoreText}>{item.scoreB}</Text>
-          </View>
+  const renderMatch = (item) => (
+    <View>
+      <View style={styles.matchRow}>
+        {/* left circle */}
+        <View style={styles.leftCircle}>
+          <Text style={styles.leftCircleText}>{item.leftIndex}</Text>
         </View>
 
-        <View style={styles.actionsRow}>
-          <Pressable style={styles.actionItem} hitSlop={10}>
-            <Ionicons name="play-circle-outline" size={18} color="#6B7280" />
-            <Text style={styles.actionText}>Xem video</Text>
-          </Pressable>
+        {/* match body */}
+        <View style={styles.matchBody}>
+          <Text style={styles.cardTop}>
+            {item.code} ({item.time}; Sân: {item.court})
+          </Text>
 
-          <Pressable style={styles.actionItem} hitSlop={10}>
-            <Ionicons name="flag-outline" size={18} color="#111827" />
-            <Text style={[styles.actionText, styles.actionTextStrong]}>
-              Diễn biến
-            </Text>
-          </Pressable>
+          <View style={styles.teamsRow}>
+            <View style={styles.teamsLeft}>
+              <Text style={styles.teamText}>{item.teamA}</Text>
+              <Text style={styles.teamText}>{item.teamB}</Text>
+            </View>
 
-          <Pressable style={styles.actionItem} hitSlop={10} onPress={onShare}>
-            <Ionicons name="share-social-outline" size={18} color="#6B7280" />
-            <Text style={styles.actionText}>Chia sẻ</Text>
-          </Pressable>
+            <View style={styles.scoresRight}>
+              <Text style={styles.scoreText}>{item.scoreA}</Text>
+              <Text style={styles.scoreText}>{item.scoreB}</Text>
+            </View>
+          </View>
+
+          <View style={styles.actionsRow}>
+            <Pressable style={styles.actionItem} hitSlop={10}>
+              <Ionicons name="play-circle-outline" size={18} color="#6B7280" />
+              <Text style={styles.actionText}>Xem video</Text>
+            </Pressable>
+
+            <Pressable style={styles.actionItem} hitSlop={10}>
+              <Ionicons name="flag-outline" size={18} color="#111827" />
+              <Text style={[styles.actionText, styles.actionTextStrong]}>
+                Diễn biến
+              </Text>
+            </Pressable>
+
+            <Pressable style={styles.actionItem} hitSlop={10} onPress={onShare}>
+              <Ionicons name="share-social-outline" size={18} color="#6B7280" />
+              <Text style={styles.actionText}>Chia sẻ</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
+
+      <View style={styles.matchDivider} />
     </View>
   );
+
+  const renderTable = ({ item }) => {
+    const isOpen = openMap?.[item.tableNo] ?? true; // default open
+    const count = item.items?.length ?? 0;
+
+    return (
+      <View style={styles.groupWrap}>
+        {/* left big group card */}
+        <View style={styles.groupCard}>
+          {/* group header (tree) */}
+          <Pressable
+            style={styles.groupHeader}
+            onPress={() => toggleTable(item.tableNo)}
+          >
+            <View style={styles.groupHeaderLeft}>
+              <Ionicons
+                name={isOpen ? "chevron-down" : "chevron-forward"}
+                size={18}
+                color="#111827"
+              />
+              <View>
+                <Text style={styles.groupTitle}>{`Bảng ${item.tableNo}`}</Text>
+                <Text style={styles.groupSub}>{`${count} trận`}</Text>
+              </View>
+            </View>
+
+            <Ionicons name="ellipsis-horizontal" size={18} color="#9CA3AF" />
+          </Pressable>
+
+          {/* matches */}
+          {isOpen ? (
+            <View>
+              {item.items.map((m, idx) => (
+                <View key={m.id}>
+                  {renderMatch(m)}
+                  {/* bỏ divider cuối */}
+                  {idx === item.items.length - 1 ? (
+                    <View style={{ height: 1, backgroundColor: "#fff" }} />
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.safe}>
@@ -92,6 +186,7 @@ export default function TournamentScheduleScreen({ navigation, route }) {
           >
             <Ionicons name="arrow-back" size={20} color="#1E2430" />
           </Pressable>
+
           <Text style={styles.headerTitle}>Lịch thi đấu</Text>
 
           <View style={styles.headerRight}>
@@ -149,12 +244,12 @@ export default function TournamentScheduleScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* list */}
+      {/* list of tables */}
       <FlatList
         contentContainerStyle={styles.listPad}
-        data={data}
+        data={tables}
         keyExtractor={(it) => it.id}
-        renderItem={renderItem}
+        renderItem={renderTable}
         showsVerticalScrollIndicator={false}
       />
     </View>

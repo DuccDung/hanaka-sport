@@ -92,7 +92,7 @@ export const styles = StyleSheet.create({
   },
   submitBtnActive: { backgroundColor: COLORS.BLUE },
 
-  submitText: { fontSize: 15, fontWeight: "700", color: "#9CA3AF" },
+  submitText: { fontSize: 15, fontWeight: "700", color: "#ffffff" },
   submitTextActive: { color: "#fff" },
 
   footerRow: {

@@ -1,5 +1,5 @@
 // src/screens/Tournament/TournamentDetailScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,9 +10,70 @@ import {
   Image,
   TextInput,
   Share,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./detailStyles";
+import { publicGetTournamentDetail } from "../../services/tournamentService";
+
+// helpers format giống screen list
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+function formatDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ${pad2(
+    d.getHours(),
+  )}:${pad2(d.getMinutes())}`;
+}
+
+// map server dto -> UI model mà màn hình đang dùng
+function mapDtoToUi(dto) {
+  const bannerFallback =
+    "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80";
+
+  const gameTypeLabel =
+    dto?.gameType === "DOUBLE"
+      ? "Đôi"
+      : dto?.gameType === "SINGLE"
+        ? "Đơn"
+        : dto?.gameType === "MIXED"
+          ? "Đôi hỗn hợp"
+          : dto?.gameType || "-";
+
+  return {
+    tournamentId: dto?.tournamentId,
+    title: dto?.title ?? "Chi tiết giải đấu",
+    banner: dto?.bannerUrl || bannerFallback,
+    dateTime: formatDateTime(dto?.startTime),
+    registerDeadline: formatDateTime(dto?.registerDeadline),
+
+    // UI đang dùng playoffType / formatText hơi lẫn — ưu tiên formatText
+    playoffType: dto?.playoffType ?? "-",
+    formatText: dto?.formatText ?? "-",
+    gameType: gameTypeLabel,
+
+    singleLimit: dto?.singleLimit ?? 0,
+    doubleLimit: dto?.doubleLimit ?? 0,
+
+    location: dto?.locationText ?? "-",
+    expectedTeams: dto?.expectedTeams ?? 0,
+    matches: dto?.matchesCount ?? 0,
+
+    statusText: dto?.statusText ?? dto?.status ?? "-",
+    stateText: dto?.stateText ?? "-",
+
+    organizer: dto?.organizer ?? "-",
+    creator: dto?.creatorName ?? "-",
+
+    registeredCount: dto?.registeredCount ?? null,
+    pairedCount: dto?.pairedCount ?? null,
+
+    content: dto?.content ?? "",
+  };
+}
 
 function InfoLine({ label, value, boldValue }) {
   return (
@@ -24,36 +85,72 @@ function InfoLine({ label, value, boldValue }) {
 }
 
 export default function TournamentDetailScreen({ navigation, route }) {
-  const tournament = route?.params?.tournament;
+  const tournamentId = route?.params?.tournamentId;
+  const preview = route?.params?.preview; // optional
 
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [dto, setDto] = useState(null);
+
+  // fetch detail
+  const fetchDetail = useCallback(async () => {
+    try {
+      setErrorMsg("");
+      setLoading(true);
+      const res = await publicGetTournamentDetail(tournamentId);
+      setDto(res);
+    } catch (e) {
+      setErrorMsg(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Không tải được chi tiết giải đấu.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tournamentId]);
+
+  useEffect(() => {
+    fetchDetail();
+  }, [fetchDetail]);
+
+  // t = model dùng để render UI
   const t = useMemo(() => {
-    // fallback an toàn nếu quên truyền params
-    return (
-      tournament ?? {
-        title: "Chi tiết giải đấu",
-        banner:
-          "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80",
-        dateTime: "-",
-        registerDeadline: "-",
-        playoffType: "-",
-        gameType: "-",
-        singleLimit: "-",
-        doubleLimit: "-",
-        location: "-",
-        expectedTeams: "-",
-        matches: "-",
-        statusText: "-",
-        stateText: "-",
-        organizer: "-",
-        creator: "-",
-        registeredCount: 0,
-        pairedCount: 0,
-        content: "",
-      }
-    );
-  }, [tournament]);
+    // nếu đang loading mà có preview thì show preview trước
+    if (!dto && preview) return mapDtoToUi(preview);
+    if (dto) return mapDtoToUi(dto);
+
+    // fallback
+    return {
+      title: "Chi tiết giải đấu",
+      banner:
+        "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80",
+      dateTime: "-",
+      registerDeadline: "-",
+      playoffType: "-",
+      formatText: "-",
+      gameType: "-",
+      singleLimit: "-",
+      doubleLimit: "-",
+      location: "-",
+      expectedTeams: "-",
+      matches: "-",
+      statusText: "-",
+      stateText: "-",
+      organizer: "-",
+      creator: "-",
+      registeredCount: 0,
+      pairedCount: 0,
+      content: "",
+    };
+  }, [dto, preview]);
 
   const [content, setContent] = useState(t.content ?? "");
+
+  // khi dto về, sync content vào state (vì bạn cho edit trong TextInput)
+  useEffect(() => {
+    setContent(t.content ?? "");
+  }, [t.content]);
 
   const onShare = async () => {
     try {
@@ -93,6 +190,22 @@ export default function TournamentDetailScreen({ navigation, route }) {
         </View>
       </View>
 
+      {/* trạng thái load/error */}
+      {loading ? (
+        <View style={{ paddingTop: 12 }}>
+          <ActivityIndicator />
+        </View>
+      ) : null}
+
+      {errorMsg ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <Text style={{ color: "#DC2626" }}>{errorMsg}</Text>
+          <Pressable onPress={fetchDetail} style={{ marginTop: 8 }}>
+            <Text style={{ color: "#2563EB" }}>Thử lại</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Banner */}
         <Image source={{ uri: t.banner }} style={styles.banner} />
@@ -104,16 +217,8 @@ export default function TournamentDetailScreen({ navigation, route }) {
 
           <InfoLine label="Ngày" value={t.dateTime} boldValue />
           <InfoLine label="Hạn đăng ký" value={t.registerDeadline} boldValue />
-          <InfoLine
-            label="Thể thức"
-            value={t.playoffType ?? t.format}
-            boldValue
-          />
-          <InfoLine
-            label="Giải"
-            value={t.gameType ?? (t.format === "Đôi" ? "Đôi" : "Đơn")}
-            boldValue
-          />
+          <InfoLine label="Thể thức" value={t.playoffType} boldValue />
+          <InfoLine label="Giải" value={t.gameType} boldValue />
 
           <View style={styles.twoColRow}>
             <Text style={styles.line}>
@@ -156,23 +261,28 @@ export default function TournamentDetailScreen({ navigation, route }) {
             <Text style={[styles.line, { textAlign: "right" }]}>
               Dạng:{" "}
               <Text style={[styles.value, styles.valueBold]}>
-                {t.stateText}
+                {t.formatText}
               </Text>
             </Text>
           </View>
 
           <InfoLine label="Đơn vị tổ chức" value={t.organizer} />
           <InfoLine label="Người tạo giải" value={t.creator} boldValue />
-          <InfoLine
-            label="Thành viên đã đăng ký"
-            value={t.registeredCount}
-            boldValue
-          />
-          <InfoLine
-            label="Thành viên đã ghép cặp"
-            value={t.pairedCount}
-            boldValue
-          />
+          {t.registeredCount !== null ? (
+            <InfoLine
+              label="Thành viên đã đăng ký"
+              value={String(t.registeredCount)}
+              boldValue
+            />
+          ) : null}
+
+          {t.pairedCount !== null ? (
+            <InfoLine
+              label="Thành viên đã ghép cặp"
+              value={String(t.pairedCount)}
+              boldValue
+            />
+          ) : null}
 
           {/* Content */}
           <View style={{ height: 14 }} />

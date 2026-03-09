@@ -1,5 +1,5 @@
 // src/screens/Tournament/RegistrationListScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,58 +10,215 @@ import {
   FlatList,
   Image,
   Keyboard,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registrationStyles";
-import { registrationsSeed } from "./data/registrations";
+import { publicListTournamentRegistrations } from "../../services/tournamentService";
 
 function normalize(str = "") {
-  return str
+  return String(str)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function Checkbox({ checked, onPress }) {
-  return (
-    <Pressable onPress={onPress} hitSlop={10}>
-      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-        {checked ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
-      </View>
-    </Pressable>
-  );
+function pad2(n) {
+  return String(n).padStart(2, "0");
+}
+function fmtDateTime(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ${pad2(
+    d.getHours(),
+  )}:${pad2(d.getMinutes())}`;
+}
+function getInitial(name = "") {
+  const s = String(name || "").trim();
+  if (!s) return "?";
+  // lấy ký tự đầu của từ cuối (thường là tên)
+  const parts = s.split(/\s+/);
+  const last = parts[parts.length - 1] || s;
+  return last[0]?.toUpperCase() || "?";
 }
 
+function isValidHttpUrl(uri) {
+  if (!uri) return false;
+  const s = String(uri);
+  return s.startsWith("http://") || s.startsWith("https://");
+}
+
+// Avatar tròn: có ảnh thì show ảnh, không có ảnh thì show chữ cái đầu
+function AvatarCircle({ uri, name, size = 44 }) {
+  const initial = getInitial(name);
+  const showImage = isValidHttpUrl(uri);
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#E5E7EB", // xám nhạt
+      }}
+    >
+      {showImage ? (
+        <Image
+          source={{ uri }}
+          style={{ width: size, height: size }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text
+          style={{ fontSize: size * 0.42, fontWeight: "700", color: "#374151" }}
+        >
+          {initial}
+        </Text>
+      )}
+    </View>
+  );
+}
 export default function RegistrationListScreen({ navigation, route }) {
   const tournament = route?.params?.tournament;
-  const [query, setQuery] = useState("");
-  const [checked, setChecked] = useState({}); // id -> bool
+  const tournamentId = tournament?.tournamentId || route?.params?.tournamentId;
 
+  const [query, setQuery] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // server response
+  const [resp, setResp] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setErrorMsg("");
+      setLoading(true);
+      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
+      setResp(res);
+    } catch (e) {
+      setErrorMsg(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Không tải được danh sách đăng ký.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [tournamentId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(async () => {
+    try {
+      setErrorMsg("");
+      setRefreshing(true);
+      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
+      setResp(res);
+    } catch (e) {
+      setErrorMsg(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Không tải được danh sách đăng ký.",
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [tournamentId]);
+
+  // map server items -> UI items như registrationsSeed cũ (vdv1/vdv2)
+  const allItems = useMemo(() => {
+    const successItems = resp?.successItems || [];
+    const waitingItems = resp?.waitingItems || [];
+
+    // gộp theo index để list hiển thị liên tục (bạn có thể tách section sau)
+    const merged = [...successItems, ...waitingItems];
+
+    return merged.map((r) => {
+      const v1 = r.player1;
+      const v2 = r.player2;
+
+      return {
+        id: String(r.registrationId),
+        index: r.regIndex,
+        regCode: r.regCode,
+        regTime: fmtDateTime(r.regTime),
+        points: r.points ?? 0,
+        success: !!r.success,
+        waitingPair: !!r.waitingPair,
+        vdv1: {
+          name: v1?.name || "-",
+          avatar: v1?.avatar || "",
+          level: v1?.level ?? 0,
+          verified: !!v1?.verified,
+          isGuest: !!v1?.isGuest,
+        },
+        vdv2: v2
+          ? {
+              name: v2?.name || "-",
+              avatar: v2?.avatar || "",
+              level: v2?.level ?? 0,
+              verified: !!v2?.verified,
+              isGuest: !!v2?.isGuest,
+            }
+          : {
+              // waiting pair => show placeholder
+              name: "Chờ ghép",
+              avatar: "",
+              level: 0,
+              verified: false,
+              isGuest: true,
+            },
+      };
+    });
+  }, [resp]);
+
+  // search
   const data = useMemo(() => {
     const q = normalize(query.trim());
-    if (!q) return registrationsSeed;
-    return registrationsSeed.filter((r) => {
+    if (!q) return allItems;
+
+    return allItems.filter((r) => {
       const hay = normalize(
         `${r.regCode} ${r.regTime} ${r.vdv1.name} ${r.vdv2.name}`,
       );
       return hay.includes(q);
     });
-  }, [query]);
+  }, [query, allItems]);
 
+  // stats từ server counts
   const stats = useMemo(() => {
-    const success = registrationsSeed.filter((x) => x.success).length;
-    const waitingPair = registrationsSeed.filter((x) => x.waitingPair).length;
-    const capacity =
-      (tournament?.expectedTeams ?? 64) - registrationsSeed.length;
-    return { success, waitingPair, capacity };
-  }, [tournament]);
-
-  const toggleChecked = (id) => setChecked((m) => ({ ...m, [id]: !m[id] }));
+    const c = resp?.counts;
+    if (!c) {
+      return {
+        success: 0,
+        waitingPair: 0,
+        capacity: tournament?.expectedTeams ?? 0,
+      };
+    }
+    return {
+      success: c.success ?? 0,
+      waitingPair: c.waiting ?? 0,
+      capacity: c.capacityLeft ?? 0,
+    };
+  }, [resp, tournament]);
 
   const renderPlayer = (p) => (
     <View style={styles.playerCol}>
       <View style={styles.avatarRing}>
-        <Image source={{ uri: p.avatar }} style={styles.avatar} />
+        <AvatarCircle
+          uri={p.avatar}
+          name={p.name}
+          size={styles.avatar?.width || 44}
+        />
       </View>
       <Text style={styles.playerName}>{p.name}</Text>
       <Text style={styles.playerLevel}>({p.level})</Text>
@@ -70,7 +227,9 @@ export default function RegistrationListScreen({ navigation, route }) {
         <Text style={styles.verifiedText}>Đã xác thực</Text>
       ) : (
         <View style={styles.statusPill}>
-          <Text style={styles.statusPillText}>Chờ xác thực</Text>
+          <Text style={styles.statusPillText}>
+            {p.isGuest ? "Khách" : "Chờ xác thực"}
+          </Text>
         </View>
       )}
     </View>
@@ -96,26 +255,6 @@ export default function RegistrationListScreen({ navigation, route }) {
           <Text style={styles.pointsText}>{item.points}</Text>
         </View>
       </View>
-
-      {/* bottom actions */}
-      {/* <View style={styles.bottomActions}>
-        <Pressable style={[styles.actionBtn, styles.actionBlue]} hitSlop={10}>
-          <Text style={[styles.actionText, styles.actionBlueText]}>
-            Đánh giá
-          </Text>
-          <Ionicons name="star" size={16} color="#fff" />
-        </Pressable>
-
-        <Pressable
-          style={[styles.actionBtn, styles.actionOutline]}
-          hitSlop={10}
-        >
-          <Text style={[styles.actionText, styles.actionOutlineText]}>
-            Thanh toán
-          </Text>
-          <Ionicons name="card" size={16} color="#F97316" />
-        </Pressable>
-      </View> */}
     </View>
   );
 
@@ -137,6 +276,22 @@ export default function RegistrationListScreen({ navigation, route }) {
           <Text style={styles.headerTitle}>Danh sách đăng ký</Text>
         </View>
       </View>
+
+      {/* error / loading */}
+      {loading ? (
+        <View style={{ paddingTop: 12 }}>
+          <ActivityIndicator />
+        </View>
+      ) : null}
+
+      {errorMsg ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <Text style={{ color: "#DC2626" }}>{errorMsg}</Text>
+          <Pressable onPress={fetchData} style={{ marginTop: 8 }}>
+            <Text style={{ color: "#2563EB" }}>Thử lại</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {/* links */}
       <View style={styles.linksRow}>
@@ -187,7 +342,7 @@ export default function RegistrationListScreen({ navigation, route }) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Nhập tên, SĐT VĐV để tìm kiếm..."
+            placeholder="Nhập tên, mã đăng ký để tìm kiếm..."
             placeholderTextColor="#9CA3AF"
             style={styles.searchInput}
             returnKeyType="search"
@@ -217,6 +372,9 @@ export default function RegistrationListScreen({ navigation, route }) {
         keyExtractor={(it) => it.id}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );

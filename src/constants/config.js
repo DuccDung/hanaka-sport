@@ -1,5 +1,5 @@
 // ĐỔI baseURL theo môi trường bạn đang test:
-export const API_BASE_URL = "http://192.168.0.102:5062";
+export const API_BASE_URL = "http://192.168.1.19:5062";
 
 export const API_TIMEOUT = 15000;
 

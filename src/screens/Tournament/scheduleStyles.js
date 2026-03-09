@@ -18,7 +18,7 @@ export const styles = StyleSheet.create({
   headerRight: { marginLeft: "auto" },
   headerIconBtn: { padding: 6 },
 
-  // Meta row under header
+  // Meta row
   metaRow: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,
@@ -53,10 +53,73 @@ export const styles = StyleSheet.create({
   // List
   listPad: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 },
 
-  row: {
+  // ===== Tree group (Bảng) =====
+  groupWrap: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    marginBottom: 14,
+  },
+
+  // Khối trắng (chứa các trận) giống ảnh
+  groupCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    overflow: "hidden",
+  },
+
+  groupHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEF2F8",
+  },
+
+  groupHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  groupTitle: { fontSize: 13, fontWeight: "700", color: "#1E2430" },
+  groupSub: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+
+  // Right column (vòng tròn xanh + mũi tên) như ảnh
+  rightCol: {
+    width: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
+  },
+  rightGreenCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#22C55E",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  rightGreenText: { fontSize: 13, fontWeight: "700", color: "#fff" },
+
+  // ===== Match row inside group =====
+  matchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+
+  // divider giữa các trận
+  matchDivider: {
+    height: 1,
+    backgroundColor: "#EEF2F8",
+    marginLeft: 12,
   },
 
   leftCircle: {
@@ -72,14 +135,7 @@ export const styles = StyleSheet.create({
   },
   leftCircleText: { fontSize: 14, fontWeight: "700", color: COLORS.BLUE },
 
-  card: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
+  matchBody: { flex: 1 },
 
   cardTop: { fontSize: 13, fontWeight: "600", color: "#1E2430" },
 
@@ -99,21 +155,4 @@ export const styles = StyleSheet.create({
   actionItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   actionText: { fontSize: 13, fontWeight: "400", color: "#6B7280" },
   actionTextStrong: { color: "#1E2430", fontWeight: "600" },
-
-  rightCol: {
-    width: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 10,
-  },
-  rightGreenCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#22C55E",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  rightGreenText: { fontSize: 13, fontWeight: "700", color: "#fff" },
 });

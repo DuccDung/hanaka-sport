@@ -1,4 +1,3 @@
-// src/screens/Videos/VideosScreen.js
 import React, { useMemo, useState } from "react";
 import {
   View,
@@ -24,17 +23,19 @@ function normalize(str = "") {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-function VideoCard({ item }) {
+function VideoCard({ item, onPress }) {
   const onShare = async () => {
     try {
-      await Share.share({ message: `${item.title} • ${item.dateTime}` });
+      await Share.share({
+        message: `${item.title} • ${item.dateTime}\n${item.videoUrl || ""}`,
+      });
     } catch (e) {}
   };
 
-  const p = item.players;
+  const p = item.players || [];
 
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={onPress} disabled={!onPress}>
       <Image source={{ uri: item.banner }} style={styles.banner} />
 
       <View style={styles.cardBody}>
@@ -42,14 +43,22 @@ function VideoCard({ item }) {
           <Text style={styles.metaText}>{item.dateTime}</Text>
           <Text style={styles.metaLight}> {item.code} </Text>
 
-          <Pressable style={styles.shareBtn} onPress={onShare} hitSlop={10}>
+          {/* Chặn bấm share không trigger bấm card */}
+          <Pressable
+            style={styles.shareBtn}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onShare();
+            }}
+            hitSlop={10}
+          >
             <Ionicons name="share-social-outline" size={18} color="#1E2430" />
           </Pressable>
         </View>
 
         <Text style={styles.mainTitle}>{item.title}</Text>
 
-        {/* 2 cột, mỗi cột 2 VĐV */}
+        {/* Giữ layout players như bạn đang làm (mình rút gọn, bạn có thể paste lại block cũ) */}
         <View style={styles.playersGrid}>
           <View style={styles.teamCol}>
             <View>
@@ -115,12 +124,22 @@ function VideoCard({ item }) {
             </View>
           </View>
         </View>
+
+        {/* Gợi ý nhỏ để user biết card bấm được */}
+        {!!item.videoUrl && (
+          <View style={{ marginTop: 10, flexDirection: "row", gap: 6 }}>
+            <Ionicons name="play-circle-outline" size={16} color="#111827" />
+            <Text style={{ fontSize: 12, color: "#111827", fontWeight: "600" }}>
+              Xem video
+            </Text>
+          </View>
+        )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
-export default function VideosScreen() {
+export default function VideosScreen({ navigation }) {
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
 
@@ -206,7 +225,20 @@ export default function VideosScreen() {
         contentContainerStyle={styles.listPad}
         data={data}
         keyExtractor={(it) => it.id}
-        renderItem={({ item }) => <VideoCard item={item} />}
+        renderItem={({ item }) => (
+          <VideoCard
+            item={item}
+            onPress={
+              item.videoUrl
+                ? () =>
+                    navigation.navigate("VideoPlayer", {
+                      title: item.title,
+                      videoUrl: item.videoUrl,
+                    })
+                : undefined
+            }
+          />
+        )}
         showsVerticalScrollIndicator={false}
       />
     </View>

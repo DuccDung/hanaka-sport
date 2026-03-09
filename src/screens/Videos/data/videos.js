@@ -14,6 +14,7 @@ export const videosSeed = [
     dateTime: "01/03/2026 19:38",
     code: "V5-B8",
     title: "GIẢI ĐẤU PICKLEBALL KF OPEN CUP 2026 - ĐÔI HỖN HỢP 7.0",
+    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     players: [
       { name: "Thành Cận", avatar: "https://i.pravatar.cc/100?img=11" },
       { name: "Tuyển CR9", avatar: "https://i.pravatar.cc/100?img=12" },
@@ -30,6 +31,7 @@ export const videosSeed = [
     dateTime: "03/03/2026 09:20",
     code: "V2-A1",
     title: "HIGHLIGHT PICKLEBALL - ĐÔI NAM",
+    videoUrl: "https://www.facebook.com/watch/?v=1234567890",
     players: [
       { name: "A", avatar: "https://i.pravatar.cc/100?img=21" },
       { name: "B", avatar: "https://i.pravatar.cc/100?img=22" },

@@ -77,13 +77,13 @@ export const styles = StyleSheet.create({
     borderColor: "#EEF2F8",
     marginBottom: 12,
   },
-  banner: { width: "100%", height: 160 },
+  banner: { width: "100%", height: 200 },
 
   cardBody: { padding: 12 },
 
-  title: { fontSize: 14, fontWeight: "600", color: "#1E2430" },
+  title: { fontSize: 17, fontWeight: "700", color: "#1E2430" },
 
-  line: { fontSize: 12, fontWeight: "400", color: "#6B7280", marginTop: 6 },
+  line: { fontSize: 14, fontWeight: "400", color: "#6B7280", marginTop: 6 },
   strong: { fontWeight: "600", color: "#1E2430" },
 
   twoColRow: {
