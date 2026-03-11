@@ -96,21 +96,31 @@ export const styles = StyleSheet.create({
   textAreaBox: { height: 110, alignItems: "flex-start", paddingTop: 10 },
   textArea: { height: "100%" },
 
-  // Submit
-  submitBtn: {
-    marginTop: 18,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   submitBtnDisabled: { opacity: 0.9 },
   submitText: { fontSize: 15, fontWeight: "700", color: "#9CA3AF" },
   submitTextDisabled: { color: "#9CA3AF" },
 
-  submitBtnActive: { backgroundColor: COLORS.BLUE, borderColor: COLORS.BLUE },
-  submitTextActive: { color: "#fff" },
+  //==========
+  submitBtn: {
+    marginTop: 18,
+    height: 50,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+  },
+
+  submitBtnActiveRed: {
+    backgroundColor: "#DC2626",
+  },
+
+  submitText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
+  submitTextDisabled: {
+    color: "#9CA3AF",
+  },
 });

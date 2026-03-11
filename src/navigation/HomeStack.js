@@ -26,7 +26,8 @@ import LoginScreen from "../screens/Auth/LoginScreen";
 import AccountScreen from "../screens/Account/AccountScreen";
 import ChangePasswordScreen from "../screens/Account/ChangePasswordScreen";
 import MemberDetailScreen from "../screens/Members/MemberDetailScreen";
-
+import SelfRatingScreen from "../screens/Members/SelfRatingScreen";
+import ClubDetailScreen from "../screens/Club/ClubDetailScreen";
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -160,6 +161,16 @@ export default function HomeStack() {
       <Stack.Screen
         name="MemberDetail"
         component={MemberDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SelfRating"
+        component={SelfRatingScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ClubDetail"
+        component={ClubDetailScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

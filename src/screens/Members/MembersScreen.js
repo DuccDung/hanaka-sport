@@ -162,7 +162,10 @@ export default function MembersScreen({ navigation }) {
               <Ionicons name="people-outline" size={20} color="#1E2430" />
             </Pressable>
 
-            <Pressable hitSlop={10}>
+            <Pressable
+              hitSlop={10}
+              onPress={() => navigation.navigate("SelfRating")}
+            >
               <Text style={styles.headerLink}>Tự chấm trình</Text>
             </Pressable>
           </View>

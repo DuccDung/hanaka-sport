@@ -74,8 +74,8 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   col: {
-    width: 50, // ✅ mỗi cột 50 (khớp score width)
-    alignItems: "flex-end", // ✅ icon nằm về phía phải của cột
+    width: 50,
+    alignItems: "flex-end",
   },
 
   // List item

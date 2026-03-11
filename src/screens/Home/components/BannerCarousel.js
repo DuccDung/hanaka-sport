@@ -3,22 +3,31 @@ import { View, Text, FlatList, Image, Dimensions } from "react-native";
 import { styles } from "../styles";
 
 const { width } = Dimensions.get("window");
+const CARD_WIDTH = width - 32;
 
-export default function BannerCarousel({ banners, index, onChangeIndex }) {
+export default function BannerCarousel({
+  banners = [],
+  index = 0,
+  onChangeIndex,
+}) {
   const onBannerScroll = (e) => {
     const x = e.nativeEvent.contentOffset.x;
-    const idx = Math.round(x / (width - 32));
-    onChangeIndex(idx);
+    const idx = Math.round(x / CARD_WIDTH);
+    onChangeIndex?.(idx);
   };
+
+  if (!banners.length) {
+    return null;
+  }
 
   return (
     <>
-      <Text style={styles.sectionTitle}>{banners[index]?.title}</Text>
+      <Text style={styles.sectionTitle}>{banners[index]?.title || ""}</Text>
 
       <View style={styles.bannerCard}>
         <FlatList
           data={banners}
-          keyExtractor={(b) => b.key}
+          keyExtractor={(item) => item.key}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}

@@ -74,3 +74,14 @@ export async function getUserDetail(userId) {
   const res = await apiClient.get(`/users/${userId}`);
   return res.data;
 }
+/**
+ * PUT /api/users/me/self-rating
+ * body: { ratingSingle, ratingDouble }
+ */
+export async function updateMySelfRating({ ratingSingle, ratingDouble }) {
+  const res = await apiClient.put("/users/me/self-rating", {
+    ratingSingle,
+    ratingDouble,
+  });
+  return res.data;
+}

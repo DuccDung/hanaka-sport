@@ -155,4 +155,31 @@ export const styles = StyleSheet.create({
   actionItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   actionText: { fontSize: 13, fontWeight: "400", color: "#6B7280" },
   actionTextStrong: { color: "#1E2430", fontWeight: "600" },
+
+  matchRowWinner: {
+    backgroundColor: "#F0FDF4",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+
+  leftCircleWinner: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#86EFAC",
+  },
+
+  leftCircleTextWinner: {
+    color: "#166534",
+    fontWeight: "700",
+  },
+
+  teamWinnerText: {
+    fontWeight: "700",
+    color: "#166534",
+  },
+
+  scoreWinnerText: {
+    fontWeight: "800",
+    color: "#166534",
+  },
 });

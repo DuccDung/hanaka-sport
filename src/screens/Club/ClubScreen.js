@@ -1,5 +1,4 @@
-// src/screens/Club/ClubScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,20 +9,15 @@ import {
   FlatList,
   Image,
   Keyboard,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./styles";
-import { clubsSeed } from "./data/clubs";
-
-function normalize(str = "") {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
+import { getClubs } from "../../services/clubService";
 
 function Stars({ value }) {
-  const full = Math.round(value); 
+  const full = Math.round(Number(value || 0));
   return (
     <View style={styles.starsRow}>
       {[0, 1, 2, 3, 4].map((i) => (
@@ -40,52 +34,175 @@ function Stars({ value }) {
 
 export default function ClubScreen({ navigation }) {
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
 
-  const data = useMemo(() => {
-    const q = normalize(query.trim());
-    if (!q) return clubsSeed;
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [total, setTotal] = useState(0);
 
-    return clubsSeed.filter((c) => {
-      const hay = normalize(`${c.name} ${c.area} ${c.members}`);
-      return hay.includes(q);
-    });
-  }, [query]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.cover }} style={styles.cover} />
-
-      <View style={styles.cardBody}>
-        <Text style={styles.title}>
-          {item.name} ({item.members} tv)
-        </Text>
-
-        <View style={styles.ratingRow}>
-          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
-          <Stars value={item.rating} />
-          <Text style={styles.ratingText}>({item.reviews} Đánh giá)</Text>
-        </View>
-
-        <Text style={styles.metaText}>Khu vực: {item.area}</Text>
-
-        <View style={styles.statsRow}>
-          <Text style={styles.statText}>Trận: {item.matches.played}</Text>
-          <Text style={styles.statText}>Thắng: {item.matches.win}</Text>
-          <Text style={styles.statText}>Hòa: {item.matches.draw}</Text>
-          <Text style={styles.statText}>Thua: {item.matches.loss}</Text>
-        </View>
-
-        <View style={styles.btnRow}>
-          <Pressable style={styles.btnPrimary}>
-            <Text style={styles.btnText}>Mời giao lưu</Text>
-          </Pressable>
-          <Pressable style={styles.btnSecondary}>
-            <Text style={styles.btnText}>Tuyển thành viên</Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
+  const canLoadMore = useMemo(
+    () => items.length < total,
+    [items.length, total],
   );
+
+  const fetchClubs = useCallback(
+    async ({ reset = false, keyword = submittedQuery } = {}) => {
+      try {
+        if (reset) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        const nextPage = reset ? 1 : page;
+
+        const res = await getClubs({
+          keyword: keyword.trim(),
+          page: nextPage,
+          pageSize,
+        });
+
+        setTotal(res?.total || 0);
+
+        if (reset) {
+          setItems(res?.items || []);
+          setPage(2);
+        } else {
+          setItems((prev) => [...prev, ...(res?.items || [])]);
+          setPage((prev) => prev + 1);
+        }
+      } catch (error) {
+        console.log(
+          "fetch clubs error:",
+          error?.response?.data || error?.message,
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [page, submittedQuery],
+  );
+
+  useEffect(() => {
+    fetchClubs({ reset: true, keyword: submittedQuery });
+  }, [submittedQuery, fetchClubs]);
+
+  const onSearch = () => {
+    Keyboard.dismiss();
+    setSubmittedQuery(query);
+  };
+
+  const onRefresh = () => {
+    fetchClubs({ reset: true, keyword: submittedQuery });
+  };
+
+  const renderItem = ({ item }) => {
+    const membersCount = item.membersCount ?? item.members ?? 0;
+    const coverUrl = item.coverUrl || item.cover || "";
+    const areaText = item.areaText || "Chưa có khu vực";
+    const ratingAvg = Number(item.ratingAvg || 0);
+    const reviewsCount = Number(item.reviewsCount || 0);
+    const matchesPlayed = Number(item.matchesPlayed || 0);
+    const matchesWin = Number(item.matchesWin || 0);
+    const matchesDraw = Number(item.matchesDraw || 0);
+    const matchesLoss = Number(item.matchesLoss || 0);
+
+    return (
+      <Pressable
+        style={styles.card}
+        onPress={() =>
+          navigation.navigate("ClubDetail", {
+            clubId: item.clubId,
+            club: item,
+          })
+        }
+      >
+        {coverUrl ? (
+          <Image source={{ uri: coverUrl }} style={styles.cover} />
+        ) : (
+          <View
+            style={[
+              styles.cover,
+              {
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#E5E7EB",
+              },
+            ]}
+          >
+            <Ionicons name="image-outline" size={28} color="#9CA3AF" />
+          </View>
+        )}
+
+        <View style={styles.cardBody}>
+          <Text style={styles.title}>
+            {item.clubName}
+            {membersCount > 0 ? ` (${membersCount} tv)` : ""}
+          </Text>
+
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingText}>{ratingAvg.toFixed(1)}</Text>
+            <Stars value={ratingAvg} />
+            <Text style={styles.ratingText}>({reviewsCount} Đánh giá)</Text>
+          </View>
+
+          <Text style={styles.metaText}>Khu vực: {areaText}</Text>
+
+          <View style={styles.statsRow}>
+            <Text style={styles.statText}>Trận: {matchesPlayed}</Text>
+            <Text style={styles.statText}>Thắng: {matchesWin}</Text>
+            <Text style={styles.statText}>Hòa: {matchesDraw}</Text>
+            <Text style={styles.statText}>Thua: {matchesLoss}</Text>
+          </View>
+
+          <View style={styles.btnRow}>
+            <Pressable style={styles.btnPrimary}>
+              <Text style={styles.btnText}>Xin Vào</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                navigation.navigate("ClubDetail", {
+                  clubId: item.clubId,
+                  club: item,
+                });
+              }}
+              style={styles.btnSecondary}
+            >
+              <Text style={styles.btnText}>Xem chi tiết</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loading) return <View style={{ height: 10 }} />;
+
+    return (
+      <View style={{ paddingVertical: 16 }}>
+        <ActivityIndicator />
+      </View>
+    );
+  };
+
+  const renderEmpty = () => {
+    if (loading || refreshing) return null;
+
+    return (
+      <View style={{ paddingTop: 48, alignItems: "center" }}>
+        <Ionicons name="people-outline" size={32} color="#9CA3AF" />
+        <Text style={{ marginTop: 10, fontSize: 14, color: "#6B7280" }}>
+          Không có câu lạc bộ nào
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.safe}>
@@ -120,31 +237,48 @@ export default function ClubScreen({ navigation }) {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm kiếm CLB..."
               placeholderTextColor="#9CA3AF"
               style={styles.searchInput}
               returnKeyType="search"
-              onSubmitEditing={() => Keyboard.dismiss()}
+              onSubmitEditing={onSearch}
             />
-            <Ionicons name="search" size={18} color="#9CA3AF" />
+            <Pressable onPress={onSearch} hitSlop={10}>
+              <Ionicons name="search" size={18} color="#9CA3AF" />
+            </Pressable>
           </View>
         </View>
 
         <View style={styles.filterRow}>
           <Pressable style={styles.filterBtn}>
             <Ionicons name="location-outline" size={14} color="#6B7280" />
-            <Text style={styles.filterText}>Khu vực: Tất cả</Text>
-            <Ionicons name="chevron-down" size={14} color="#6B7280" />
+            <Text style={styles.filterText}>
+              {submittedQuery
+                ? `Từ khóa: ${submittedQuery}`
+                : "Tất cả câu lạc bộ"}
+            </Text>
           </Pressable>
         </View>
       </View>
 
       <FlatList
         contentContainerStyle={styles.listPad}
-        data={data}
-        keyExtractor={(it) => it.id}
+        data={items}
+        keyExtractor={(it) => String(it.clubId)}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onEndReachedThreshold={0.25}
+        onEndReached={() => {
+          if (!loading && canLoadMore) {
+            fetchClubs({ reset: false });
+          }
+        }}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );

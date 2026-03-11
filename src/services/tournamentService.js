@@ -211,3 +211,35 @@ export async function publicListTournamentRegistrations(
   );
   return res.data;
 }
+
+/**
+ * GET: /api/tournaments/:id
+ * Nếu sau này bạn cần lấy detail giải riêng
+ */
+export async function getTournamentDetail(tournamentId) {
+  const res = await apiClient.get(`/tournaments/${tournamentId}`);
+  return res.data;
+}
+
+/**
+ * GET: /api/tournaments
+ * Ví dụ nếu sau này cần list giải đấu
+ */
+export async function getTournaments(params = {}) {
+  const res = await apiClient.get("/tournaments", { params });
+  return res.data;
+}
+/**
+ * GET: /api/tournaments/:tournamentId/rounds-with-matches
+ * Response:
+ * {
+ *   tournament: {...},
+ *   rounds: [...]
+ * }
+ */
+export async function getTournamentRoundsWithMatches(tournamentId) {
+  const res = await apiClient.get(
+    `/tournaments/${tournamentId}/rounds-with-matches`,
+  );
+  return res.data;
+}

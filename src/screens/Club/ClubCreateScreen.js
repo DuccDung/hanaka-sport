@@ -1,4 +1,3 @@
-// src/screens/Club/ClubCreateScreen.js
 import React, { useMemo, useState } from "react";
 import {
   View,
@@ -11,10 +10,14 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { styles } from "./createStyles";
-import RichTextBlock from "../../components/RichTextBlock"; // dùng lại component rich editor (bạn đã có)
+import RichTextBlock from "../../components/RichTextBlock";
+import { createClub, uploadClubCover } from "../../services/clubService";
 
 function stripHtml(html = "") {
   return html
@@ -24,7 +27,7 @@ function stripHtml(html = "") {
     .trim();
 }
 
-function Label({ text, required }) {
+function Label({ text, required = false }) {
   return (
     <View style={styles.labelRow}>
       <Text style={styles.label}>{text}</Text>
@@ -33,7 +36,6 @@ function Label({ text, required }) {
   );
 }
 
-// input 1 dòng có icon bên phải (calendar / dropdown)
 function InputBox({
   value,
   onChangeText,
@@ -66,18 +68,18 @@ function InputBox({
 }
 
 export default function ClubCreateScreen({ navigation }) {
-  // Images (demo only). Khi làm thật bạn thay bằng ImagePicker
-  const [coverUri, setCoverUri] = useState(""); // ảnh CLB
-  const [avatarUri, setAvatarUri] = useState(""); // ảnh đại diện
+  const [coverUri, setCoverUri] = useState("");
+  const [avatarUri, setAvatarUri] = useState("");
 
-  // Fields
   const [name, setName] = useState("");
-  const [descHtml, setDescHtml] = useState(""); // rich text HTML
-  const [foundedDate, setFoundedDate] = useState(""); // DD/MM/YYYY
+  const [descHtml, setDescHtml] = useState("");
+  const [foundedDate, setFoundedDate] = useState("");
   const [playTime, setPlayTime] = useState("");
-  const [province, setProvince] = useState(""); // Tỉnh/Thành
-  const [district, setDistrict] = useState(""); // Quận/Huyện
+  const [province, setProvince] = useState("");
+  const [district, setDistrict] = useState("");
   const [address, setAddress] = useState("");
+
+  const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = useMemo(() => {
     return (
@@ -91,56 +93,88 @@ export default function ClubCreateScreen({ navigation }) {
     );
   }, [name, descHtml, foundedDate, playTime, province, district, address]);
 
-  // Demo actions
-  const pickCover = () => {
-    // TODO: dùng expo-image-picker
-    setCoverUri(
-      "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80",
-    );
+  const pickImageFromLibrary = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Thông báo", "Bạn cần cấp quyền truy cập thư viện ảnh.");
+      return null;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled) return null;
+
+    return result.assets?.[0]?.uri || null;
   };
 
-  const pickAvatar = () => {
-    // TODO: dùng expo-image-picker
-    setAvatarUri(
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80",
-    );
+  const pickCover = async () => {
+    try {
+      const uri = await pickImageFromLibrary();
+      if (uri) setCoverUri(uri);
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể chọn ảnh CLB.");
+    }
+  };
+
+  const pickAvatar = async () => {
+    try {
+      const uri = await pickImageFromLibrary();
+      if (uri) setAvatarUri(uri);
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể chọn ảnh đại diện.");
+    }
   };
 
   const openCalendar = () => {
-    // TODO: date picker
-    // tạm demo
+    // Tạm set demo, sau này có thể thay bằng date picker thật
     setFoundedDate("01/03/2026");
   };
 
-  const openProvincePicker = () => {
-    // TODO: mở bottom sheet picker
-    setProvince("Hà Nội");
-  };
+  const onSubmit = async () => {
+    if (!canSubmit || submitting) return;
 
-  const openDistrictPicker = () => {
-    // TODO: mở bottom sheet picker theo province
-    setDistrict("Cầu Giấy");
-  };
+    try {
+      setSubmitting(true);
 
-  const onSubmit = () => {
-    if (!canSubmit) return;
+      let uploadedCoverUrl = "";
 
-    const payload = {
-      name,
-      description: descHtml,
-      foundedDate,
-      playTime,
-      province,
-      district,
-      address,
-      coverUri,
-      avatarUri,
-    };
+      if (coverUri) {
+        const uploadRes = await uploadClubCover(coverUri);
+        uploadedCoverUrl = uploadRes?.coverUrl || "";
+      }
 
-    // TODO: gọi API tạo CLB
-    // console.log("Create club payload:", payload);
+      const payload = {
+        clubName: name.trim(),
+        description: descHtml,
+        foundedDate: foundedDate.trim(),
+        playTime: playTime.trim(),
+        province: province.trim(),
+        district: district.trim(),
+        address: address.trim(),
+        coverUrl: uploadedCoverUrl || null,
+        avatarUrl: avatarUri || null,
+      };
 
-    navigation.goBack();
+      const res = await createClub(payload);
+
+      Alert.alert("Thành công", res?.message || "Tạo CLB thành công.", [
+        {
+          text: "OK",
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      const message =
+        error?.response?.data?.message || error?.message || "Tạo CLB thất bại.";
+      Alert.alert("Lỗi", message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -148,7 +182,6 @@ export default function ClubCreateScreen({ navigation }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -172,8 +205,7 @@ export default function ClubCreateScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Ảnh CLB */}
-          <Label text="Ảnh CLB" required={false} />
+          <Label text="Ảnh CLB" />
           <Pressable style={styles.coverPick} onPress={pickCover}>
             {coverUri ? (
               <Image source={{ uri: coverUri }} style={styles.coverImage} />
@@ -185,7 +217,6 @@ export default function ClubCreateScreen({ navigation }) {
             )}
           </Pressable>
 
-          {/* Ảnh đại diện */}
           <View style={styles.avatarBlock}>
             <Pressable onPress={pickAvatar} style={styles.avatarCircle}>
               {avatarUri ? (
@@ -197,19 +228,17 @@ export default function ClubCreateScreen({ navigation }) {
             <Text style={styles.avatarLabel}>Ảnh đại diện</Text>
           </View>
 
-          {/* Tên */}
           <Label text="Tên" required />
           <View style={styles.inputBox}>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Tên"
+              placeholder="Tên CLB"
               placeholderTextColor="#9CA3AF"
               style={styles.input}
             />
           </View>
 
-          {/* Mô tả (Rich) */}
           <Label text="Mô tả" required />
           <RichTextBlock
             valueHtml={descHtml}
@@ -217,7 +246,6 @@ export default function ClubCreateScreen({ navigation }) {
             placeholder=""
           />
 
-          {/* Ngày thành lập */}
           <Label text="Ngày thành lập" required />
           <InputBox
             value={foundedDate}
@@ -227,49 +255,36 @@ export default function ClubCreateScreen({ navigation }) {
             onPressRight={openCalendar}
           />
 
-          {/* Thời gian chơi */}
           <Label text="Thời gian chơi" required />
           <InputBox
             value={playTime}
             onChangeText={setPlayTime}
-            placeholder="Thời gian chơi"
+            placeholder="Ví dụ: 18:00 - 21:00"
           />
 
-          {/* Khu vực */}
           <Label text="Khu vực" required />
           <View style={styles.twoColRow}>
-            <Pressable
-              style={[styles.inputBox, styles.twoCol]}
-              onPress={openProvincePicker}
-            >
-              <Text
-                style={[
-                  styles.fakeInputText,
-                  !province && styles.fakePlaceholder,
-                ]}
-              >
-                {province || "Tỉnh/Thành"}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color="#6B7280" />
-            </Pressable>
+            <View style={[styles.inputBox, styles.twoCol]}>
+              <TextInput
+                value={province}
+                onChangeText={setProvince}
+                placeholder="Tỉnh/Thành"
+                placeholderTextColor="#9CA3AF"
+                style={styles.input}
+              />
+            </View>
 
-            <Pressable
-              style={[styles.inputBox, styles.twoCol]}
-              onPress={openDistrictPicker}
-            >
-              <Text
-                style={[
-                  styles.fakeInputText,
-                  !district && styles.fakePlaceholder,
-                ]}
-              >
-                {district || "Quận/Huyện"}
-              </Text>
-              <Ionicons name="chevron-down" size={18} color="#6B7280" />
-            </Pressable>
+            <View style={[styles.inputBox, styles.twoCol]}>
+              <TextInput
+                value={district}
+                onChangeText={setDistrict}
+                placeholder="Quận/Huyện"
+                placeholderTextColor="#9CA3AF"
+                style={styles.input}
+              />
+            </View>
           </View>
 
-          {/* Địa chỉ */}
           <Label text="Địa chỉ" required />
           <View style={[styles.inputBox, styles.textAreaBox]}>
             <TextInput
@@ -283,20 +298,27 @@ export default function ClubCreateScreen({ navigation }) {
             />
           </View>
 
-          {/* Submit */}
           <Pressable
             onPress={onSubmit}
-            disabled={!canSubmit}
-            style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
+            disabled={!canSubmit || submitting}
+            style={[
+              styles.submitBtn,
+              canSubmit && !submitting && styles.submitBtnActiveRed,
+              (!canSubmit || submitting) && styles.submitBtnDisabled,
+            ]}
           >
-            <Text
-              style={[
-                styles.submitText,
-                !canSubmit && styles.submitTextDisabled,
-              ]}
-            >
-              Tạo CLB
-            </Text>
+            {submitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text
+                style={[
+                  styles.submitText,
+                  (!canSubmit || submitting) && styles.submitTextDisabled,
+                ]}
+              >
+                Tạo CLB
+              </Text>
+            )}
           </Pressable>
 
           <View style={{ height: 22 }} />
