@@ -1,4 +1,3 @@
-// src/screens/Tournament/TournamentScheduleScreen.js
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   View,
@@ -13,6 +12,8 @@ import {
   UIManager,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./scheduleStyles";
@@ -39,6 +40,95 @@ function formatTime(isoString) {
 
 function normalizeRoundKey(roundKey) {
   return String(roundKey || "").toLowerCase();
+}
+
+function normalizeUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function isYoutubeUrl(url) {
+  return /(?:youtube\.com|youtu\.be)/i.test(url || "");
+}
+
+function isFacebookUrl(url) {
+  return /(?:facebook\.com|fb\.watch|m\.facebook\.com)/i.test(url || "");
+}
+
+function extractYoutubeVideoId(url) {
+  try {
+    const normalized = normalizeUrl(url);
+
+    const shortMatch = normalized.match(/youtu\.be\/([a-zA-Z0-9_-]{6,})/i);
+    if (shortMatch?.[1]) return shortMatch[1];
+
+    const parsed = new URL(normalized);
+
+    const v = parsed.searchParams.get("v");
+    if (v) return v;
+
+    const shortsMatch = parsed.pathname.match(/\/shorts\/([a-zA-Z0-9_-]{6,})/i);
+    if (shortsMatch?.[1]) return shortsMatch[1];
+
+    const embedMatch = parsed.pathname.match(/\/embed\/([a-zA-Z0-9_-]{6,})/i);
+    if (embedMatch?.[1]) return embedMatch[1];
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function openExternalVideo(url) {
+  try {
+    const normalized = normalizeUrl(url);
+
+    if (!normalized) {
+      Alert.alert("Thông báo", "Không có link video.");
+      return;
+    }
+
+    if (isYoutubeUrl(normalized)) {
+      const videoId = extractYoutubeVideoId(normalized);
+      const youtubeAppUrl = videoId
+        ? `youtube://watch?v=${videoId}`
+        : normalized;
+
+      const canOpenYoutube = await Linking.canOpenURL(youtubeAppUrl);
+      if (canOpenYoutube) {
+        await Linking.openURL(youtubeAppUrl);
+        return;
+      }
+
+      await Linking.openURL(normalized);
+      return;
+    }
+
+    if (isFacebookUrl(normalized)) {
+      const fbAppUrl = `fb://facewebmodal/f?href=${encodeURIComponent(normalized)}`;
+      const canOpenFacebook = await Linking.canOpenURL(fbAppUrl);
+
+      if (canOpenFacebook) {
+        await Linking.openURL(fbAppUrl);
+        return;
+      }
+
+      await Linking.openURL(normalized);
+      return;
+    }
+
+    const canOpen = await Linking.canOpenURL(normalized);
+    if (canOpen) {
+      await Linking.openURL(normalized);
+      return;
+    }
+
+    Alert.alert("Lỗi", "Không thể mở liên kết này.");
+  } catch (e) {
+    Alert.alert("Lỗi", "Không mở được liên kết video.");
+  }
 }
 
 function mapApiMatchToScheduleItem(match, group, roundKey, index) {
@@ -76,6 +166,7 @@ function mapApiMatchToScheduleItem(match, group, roundKey, index) {
     winnerRegistrationId,
     team1RegistrationId,
     team2RegistrationId,
+    videoUrl: match.videoUrl || null,
     raw: match,
   };
 }
@@ -237,6 +328,7 @@ export default function TournamentScheduleScreen({ navigation, route }) {
     const isWinnerA = item.winnerSide === "A";
     const isWinnerB = item.winnerSide === "B";
     const hasWinner = item.hasWinner;
+    const hasVideo = !!item.videoUrl;
 
     return (
       <View>
@@ -296,16 +388,26 @@ export default function TournamentScheduleScreen({ navigation, route }) {
             </View>
 
             <View style={styles.actionsRow}>
-              <Pressable style={styles.actionItem} hitSlop={10}>
+              <Pressable
+                style={[styles.actionItem, !hasVideo && { opacity: 0.45 }]}
+                hitSlop={10}
+                disabled={!hasVideo}
+                onPress={() => openExternalVideo(item.videoUrl)}
+              >
                 <Ionicons
                   name="play-circle-outline"
                   size={18}
-                  color="#6B7280"
+                  color="#111827"
                 />
                 <Text style={styles.actionText}>Xem video</Text>
               </Pressable>
 
-              <Pressable style={styles.actionItem} hitSlop={10}>
+              <Pressable
+                style={styles.actionItem}
+                onPress={() => openExternalVideo(item.videoUrl)}
+                disabled={!hasVideo}
+                hitSlop={10}
+              >
                 <Ionicons name="flag-outline" size={18} color="#111827" />
                 <Text style={[styles.actionText, styles.actionTextStrong]}>
                   Diễn biến
