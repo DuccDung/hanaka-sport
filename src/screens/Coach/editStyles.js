@@ -82,16 +82,6 @@ export const styles = StyleSheet.create({
     marginTop: 14,
   },
 
-  // Submit (giống style hệ)
-  submitBtn: {
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#F3F4F6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   submitBtnDisabled: {
     backgroundColor: "#F3F4F6",
     borderColor: "#D1D5DB",
@@ -99,8 +89,34 @@ export const styles = StyleSheet.create({
   },
   submitText: { fontSize: 15, fontWeight: "700", color: "#9CA3AF" },
   submitTextDisabled: { color: "#9CA3AF" },
+  //=========
+  submitBtn: {
+    minHeight: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
 
-  // Nếu bạn muốn active giống Coach/styles.js thì dùng 2 dòng này
-  submitBtnActive: { backgroundColor: COLORS.BLUE, borderColor: COLORS.BLUE },
-  submitTextActive: { color: "#fff" },
+  submitBtnActive: {
+    backgroundColor: "#DC2626",
+  },
+
+  submitBtnDisabled: {
+    backgroundColor: "#E5E7EB",
+  },
+
+  submitText: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  submitTextActive: {
+    color: "#FFFFFF",
+  },
+
+  submitTextDisabled: {
+    color: "#9CA3AF",
+  },
 });

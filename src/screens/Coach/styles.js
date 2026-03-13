@@ -1,4 +1,3 @@
-// src/screens/Coach/styles.js
 import { StyleSheet } from "react-native";
 import { COLORS } from "../../constants/colors";
 
@@ -21,7 +20,6 @@ export const styles = StyleSheet.create({
   },
   addBtn: { padding: 6 },
 
-  // Search
   searchRow: { paddingHorizontal: 12, paddingBottom: 10, paddingTop: 6 },
   searchBox: {
     backgroundColor: "#F0F2F5",
@@ -34,7 +32,6 @@ export const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: "#1E2430" },
 
-  // Header row of table columns
   tableHeader: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,
@@ -51,7 +48,7 @@ export const styles = StyleSheet.create({
   colMember: { flex: 1, paddingRight: 10 },
 
   colScoreWrap: {
-    width: 150, // 2 cột điểm
+    width: 150,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -61,7 +58,6 @@ export const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
 
-  // Item row
   item: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,
@@ -72,13 +68,81 @@ export const styles = StyleSheet.create({
     borderTopColor: "#EEF2F8",
   },
 
-  sttText: { fontSize: 14, fontWeight: "400", color: "#1E2430" },
+  itemMine: {
+    backgroundColor: "#F5F8FF",
+  },
 
-  avatar: { width: 52, height: 52, borderRadius: 26, marginRight: 12 },
+  sttText: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#1E2430",
+  },
 
-  mid: { flex: 1, paddingRight: 10 },
-  name: { fontSize: 14, fontWeight: "600", color: "#1E2430" },
-  city: { fontSize: 12, color: "#6B7280", fontWeight: "400", marginTop: 2 },
+  sttMine: {
+    color: "#3157C7",
+    fontWeight: "700",
+  },
+
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginRight: 12,
+  },
+
+  avatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    marginRight: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  mid: {
+    flex: 1,
+    paddingRight: 10,
+    minWidth: 0,
+  },
+
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minWidth: 0,
+  },
+
+  name: {
+    flex: 1,
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E2430",
+    marginRight: 8,
+  },
+
+  mineBadge: {
+    flexShrink: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "#3157C7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  mineBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  city: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "400",
+    marginTop: 2,
+  },
 
   statusBad: {
     fontSize: 12,
@@ -86,6 +150,7 @@ export const styles = StyleSheet.create({
     color: "#EF4444",
     marginTop: 6,
   },
+
   statusGood: {
     fontSize: 12,
     fontWeight: "400",
@@ -108,11 +173,42 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   scoreText: {
     fontSize: 14,
     fontWeight: "400",
     color: "#1E2430",
   },
-  submitBtnActive: { backgroundColor: COLORS.BLUE, borderColor: COLORS.BLUE },
-  submitTextActive: { color: "#fff" },
+
+  submitBtnActive: {
+    backgroundColor: COLORS.BLUE,
+    borderColor: COLORS.BLUE,
+  },
+
+  submitTextActive: {
+    color: "#fff",
+  },
+
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  footerLoading: {
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyWrap: {
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyText: {
+    fontSize: 15,
+    color: "#6B7280",
+  },
 });

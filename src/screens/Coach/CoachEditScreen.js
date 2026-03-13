@@ -1,5 +1,4 @@
-// src/screens/Coach/CoachEditScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +9,18 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./editStyles";
 import RichTextBlock from "../../components/RichTextBlock";
+import { getMe } from "../../services/userService";
+import {
+  getMyCoachProfile,
+  registerMeAsCoach,
+  updateMyCoachProfile,
+} from "../../services/coachService";
 
 function FieldLabel({ label, required }) {
   return (
@@ -24,7 +31,6 @@ function FieldLabel({ label, required }) {
   );
 }
 
-// strip html để kiểm tra submit
 function stripHtml(html = "") {
   return html
     .replace(/<[^>]+>/g, "")
@@ -33,56 +39,137 @@ function stripHtml(html = "") {
     .trim();
 }
 
-export default function CoachEditScreen({ navigation, route }) {
-  const coach = route?.params?.coach;
+export default function CoachEditScreen({ navigation }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // initial data (create vs edit)
-  const initial = useMemo(
-    () => ({
-      name: coach?.name ?? "Nguyễn Đức Dũng",
-      nickname: coach?.nickname ?? "dung_dev",
-      gender: coach?.gender ?? "Nam",
-      city: coach?.city ?? "Bắc Giang",
-      avatar:
-        coach?.avatar ??
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80",
-      single: coach?.single ?? 2.4,
-      double: coach?.double ?? 2.5,
+  const [coachId, setCoachId] = useState(null);
 
-      // rich text content (HTML)
-      intro: coach?.intro ?? "",
-      area: coach?.area ?? "",
-      achievements: coach?.achievements ?? "",
-    }),
-    [coach],
-  );
+  const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [gender, setGender] = useState("");
+  const [city, setCity] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [single, setSingle] = useState(0);
+  const [doubleScore, setDoubleScore] = useState(0);
+  const [verified, setVerified] = useState(false);
 
-  // lưu HTML từ RichEditor
-  const [introHtml, setIntroHtml] = useState(initial.intro);
-  const [areaHtml, setAreaHtml] = useState(initial.area);
-  const [achievementsHtml, setAchievementsHtml] = useState(
-    initial.achievements,
-  );
+  const [introHtml, setIntroHtml] = useState("");
+  const [areaHtml, setAreaHtml] = useState("");
+  const [achievementsHtml, setAchievementsHtml] = useState("");
 
-  const canSubmit =
-    stripHtml(introHtml).length > 0 &&
-    stripHtml(areaHtml).length > 0 &&
-    stripHtml(achievementsHtml).length > 0;
+  useEffect(() => {
+    const bootstrap = async () => {
+      try {
+        setLoading(true);
 
-  const onSubmit = () => {
-    if (!canSubmit) return;
+        const me = await getMe();
 
-    const payload = {
-      ...initial,
-      intro: introHtml,
-      area: areaHtml,
-      achievements: achievementsHtml,
+        setName(me?.fullName ?? "");
+        setNickname(
+          me?.email?.split("@")?.[0] || me?.phone || me?.fullName || "",
+        );
+        setGender(me?.gender ?? "");
+        setCity(me?.city ?? "");
+        setAvatar(me?.avatarUrl ?? "");
+        setSingle(Number(me?.ratingSingle ?? 0));
+        setDoubleScore(Number(me?.ratingDouble ?? 0));
+
+        try {
+          const coach = await getMyCoachProfile();
+
+          setCoachId(coach?.coachId ?? null);
+          setVerified(!!coach?.verified);
+
+          setIntroHtml(coach?.introduction ?? "");
+          setAreaHtml(coach?.teachingArea ?? "");
+          setAchievementsHtml(coach?.achievements ?? "");
+        } catch (e) {
+          setCoachId(null);
+          setVerified(false);
+        }
+      } catch (e) {
+        const msg =
+          e?.response?.data?.message ||
+          e?.response?.data ||
+          e?.message ||
+          "Không tải được dữ liệu huấn luyện viên.";
+        Alert.alert("Lỗi", String(msg));
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // TODO: gọi API hoặc dispatch store
-    // console.log("payload", payload);
+    bootstrap();
+  }, []);
 
-    navigation.goBack();
+  const canSubmit = useMemo(() => {
+    return (
+      stripHtml(introHtml).length > 0 &&
+      stripHtml(areaHtml).length > 0 &&
+      stripHtml(achievementsHtml).length > 0 &&
+      !saving
+    );
+  }, [introHtml, areaHtml, achievementsHtml, saving]);
+
+  const onSubmit = async () => {
+    if (!canSubmit) return;
+
+    try {
+      setSaving(true);
+
+      let currentCoachId = coachId;
+      let currentVerified = verified;
+
+      if (!currentCoachId) {
+        const createdRes = await registerMeAsCoach({
+          coachType: "COACH",
+        });
+
+        const createdCoach = createdRes?.data;
+        currentCoachId = createdCoach?.coachId ?? null;
+        currentVerified = !!createdCoach?.verified;
+
+        setCoachId(currentCoachId);
+        setVerified(currentVerified);
+      }
+
+      const updated = await updateMyCoachProfile({
+        introduction: introHtml,
+        teachingArea: areaHtml,
+        achievements: achievementsHtml,
+      });
+
+      const updatedCoach = updated?.data;
+      setIntroHtml(updatedCoach?.introduction ?? introHtml);
+      setAreaHtml(updatedCoach?.teachingArea ?? areaHtml);
+      setAchievementsHtml(updatedCoach?.achievements ?? achievementsHtml);
+
+      Alert.alert(
+        "Thành công",
+        updated?.message || "Đã cập nhật hồ sơ huấn luyện viên.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("Coach", {
+                shouldReload: true,
+                refreshAt: Date.now(),
+              });
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data ||
+        e?.message ||
+        "Không thể cập nhật hồ sơ huấn luyện viên.";
+      Alert.alert("Lỗi", String(msg));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -90,7 +177,6 @@ export default function CoachEditScreen({ navigation, route }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -101,85 +187,139 @@ export default function CoachEditScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={20} color="#1E2430" />
           </Pressable>
 
-          <Text style={styles.headerTitle}>Sửa thông tin HLV</Text>
+          <Text style={styles.headerTitle}>
+            {coachId ? "Cập nhật thông tin HLV" : "Tạo hồ sơ HLV"}
+          </Text>
+
+          <View style={{ marginLeft: "auto" }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "600",
+                color: verified ? "#16A34A" : "#DC2626",
+              }}
+            >
+              {verified ? "Đã xác thực" : "Chưa xác thực"}
+            </Text>
+          </View>
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.body}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      {loading ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#fff",
+          }}
         >
-          {/* Info row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoLeft}>
-              <Text style={styles.bigName}>{initial.name}</Text>
-              <Text style={styles.infoText}>Nickname: {initial.nickname}</Text>
-              <Text style={styles.infoText}>Giới tính: {initial.gender}</Text>
-              <Text style={styles.infoText}>Tỉnh/Thành: {initial.city}</Text>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.body}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.infoRow}>
+              <View style={styles.infoLeft}>
+                <Text style={styles.bigName}>{name || "Chưa có tên"}</Text>
+                <Text style={styles.infoText}>
+                  Nickname: {nickname || "Chưa cập nhật"}
+                </Text>
+                <Text style={styles.infoText}>
+                  Giới tính: {gender || "Chưa cập nhật"}
+                </Text>
+                <Text style={styles.infoText}>
+                  Tỉnh/Thành: {city || "Chưa cập nhật"}
+                </Text>
+              </View>
+
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} />
+              ) : (
+                <View
+                  style={[
+                    styles.avatar,
+                    {
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#F3F4F6",
+                    },
+                  ]}
+                >
+                  <Ionicons name="person-outline" size={36} color="#9CA3AF" />
+                </View>
+              )}
             </View>
 
-            <Image source={{ uri: initial.avatar }} style={styles.avatar} />
-          </View>
+            <View style={styles.scoreRow}>
+              <Text style={styles.scoreLabel}>Điểm đơn: {single}</Text>
+              <Text style={styles.scoreLabel}>Điểm đôi: {doubleScore}</Text>
+            </View>
 
-          {/* Scores row */}
-          <View style={styles.scoreRow}>
-            <Text style={styles.scoreLabel}>Điểm đơn: {initial.single}</Text>
-            <Text style={styles.scoreLabel}>Điểm đôi: {initial.double}</Text>
-          </View>
+            <View style={{ height: 8 }} />
 
-          {/* Editors */}
-          <View style={{ height: 8 }} />
-          <FieldLabel label="Giới thiệu" required />
-          <RichTextBlock
-            valueHtml={introHtml}
-            onChangeHtml={setIntroHtml}
-            placeholder=""
-          />
+            <FieldLabel label="Giới thiệu" required />
+            <RichTextBlock
+              valueHtml={introHtml}
+              onChangeHtml={setIntroHtml}
+              placeholder=""
+            />
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <FieldLabel label="Khu vực giảng dạy" required />
-          <RichTextBlock
-            valueHtml={areaHtml}
-            onChangeHtml={setAreaHtml}
-            placeholder=""
-          />
+            <FieldLabel label="Khu vực giảng dạy" required />
+            <RichTextBlock
+              valueHtml={areaHtml}
+              onChangeHtml={setAreaHtml}
+              placeholder=""
+            />
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <FieldLabel label="Thành tích" required />
-          <RichTextBlock
-            valueHtml={achievementsHtml}
-            onChangeHtml={setAchievementsHtml}
-            placeholder=""
-          />
+            <FieldLabel label="Thành tích" required />
+            <RichTextBlock
+              valueHtml={achievementsHtml}
+              onChangeHtml={setAchievementsHtml}
+              placeholder=""
+            />
 
-          <View style={{ height: 18 }} />
+            <View style={{ height: 18 }} />
 
-          {/* Submit */}
-          <Pressable
-            onPress={onSubmit}
-            disabled={!canSubmit}
-            style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
-          >
-            <Text
+            <Pressable
+              onPress={onSubmit}
+              disabled={!canSubmit}
               style={[
-                styles.submitText,
-                !canSubmit && styles.submitTextDisabled,
+                styles.submitBtn,
+                canSubmit ? styles.submitBtnActive : styles.submitBtnDisabled,
               ]}
             >
-              Cập Nhật
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.submitText,
+                  canSubmit
+                    ? styles.submitTextActive
+                    : styles.submitTextDisabled,
+                ]}
+              >
+                {saving
+                  ? "Đang cập nhật..."
+                  : coachId
+                    ? "Cập Nhật"
+                    : "Tạo hồ sơ huấn luyện viên"}
+              </Text>
+            </Pressable>
 
-          <View style={{ height: 26 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+            <View style={{ height: 26 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
     </View>
   );
 }

@@ -1,5 +1,4 @@
-// src/screens/referee/refereeEditScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +9,18 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./editStyles";
 import RichTextBlock from "../../components/RichTextBlock";
+import { getMe } from "../../services/userService";
+import {
+  getMyRefereeProfile,
+  registerMeAsReferee,
+  updateMyRefereeProfile,
+} from "../../services/refereeService";
 
 function FieldLabel({ label, required }) {
   return (
@@ -24,7 +31,6 @@ function FieldLabel({ label, required }) {
   );
 }
 
-// strip html để kiểm tra submit
 function stripHtml(html = "") {
   return html
     .replace(/<[^>]+>/g, "")
@@ -33,56 +39,137 @@ function stripHtml(html = "") {
     .trim();
 }
 
-export default function RefereeEditScreen({ navigation, route }) {
-  const referee = route?.params?.referee;
+export default function RefereeEditScreen({ navigation }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // initial data (create vs edit)
-  const initial = useMemo(
-    () => ({
-      name: referee?.name ?? "Nguyễn Đức Dũng",
-      nickname: referee?.nickname ?? "dung_dev",
-      gender: referee?.gender ?? "Nam",
-      city: referee?.city ?? "Bắc Giang",
-      avatar:
-        referee?.avatar ??
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&q=80",
-      single: referee?.single ?? 2.4,
-      double: referee?.double ?? 2.5,
+  const [refereeId, setRefereeId] = useState(null);
 
-      // rich text content (HTML)
-      intro: referee?.intro ?? "",
-      area: referee?.area ?? "",
-      achievements: referee?.achievements ?? "",
-    }),
-    [referee],
-  );
+  const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [gender, setGender] = useState("");
+  const [city, setCity] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [single, setSingle] = useState(0);
+  const [doubleScore, setDoubleScore] = useState(0);
+  const [verified, setVerified] = useState(false);
 
-  // lưu HTML từ RichEditor
-  const [introHtml, setIntroHtml] = useState(initial.intro);
-  const [areaHtml, setAreaHtml] = useState(initial.area);
-  const [achievementsHtml, setAchievementsHtml] = useState(
-    initial.achievements,
-  );
+  const [introHtml, setIntroHtml] = useState("");
+  const [workingAreaHtml, setWorkingAreaHtml] = useState("");
+  const [achievementsHtml, setAchievementsHtml] = useState("");
 
-  const canSubmit =
-    stripHtml(introHtml).length > 0 &&
-    stripHtml(areaHtml).length > 0 &&
-    stripHtml(achievementsHtml).length > 0;
+  useEffect(() => {
+    const bootstrap = async () => {
+      try {
+        setLoading(true);
 
-  const onSubmit = () => {
-    if (!canSubmit) return;
+        const me = await getMe();
 
-    const payload = {
-      ...initial,
-      intro: introHtml,
-      area: areaHtml,
-      achievements: achievementsHtml,
+        setName(me?.fullName ?? "");
+        setNickname(
+          me?.email?.split("@")?.[0] || me?.phone || me?.fullName || "",
+        );
+        setGender(me?.gender ?? "");
+        setCity(me?.city ?? "");
+        setAvatar(me?.avatarUrl ?? "");
+        setSingle(Number(me?.ratingSingle ?? 0));
+        setDoubleScore(Number(me?.ratingDouble ?? 0));
+
+        try {
+          const referee = await getMyRefereeProfile();
+
+          setRefereeId(referee?.refereeId ?? null);
+          setVerified(!!referee?.verified);
+
+          setIntroHtml(referee?.introduction ?? "");
+          setWorkingAreaHtml(referee?.workingArea ?? "");
+          setAchievementsHtml(referee?.achievements ?? "");
+        } catch (e) {
+          setRefereeId(null);
+          setVerified(false);
+        }
+      } catch (e) {
+        const msg =
+          e?.response?.data?.message ||
+          e?.response?.data ||
+          e?.message ||
+          "Không tải được dữ liệu trọng tài.";
+        Alert.alert("Lỗi", String(msg));
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // TODO: gọi API hoặc dispatch store
-    // console.log("payload", payload);
+    bootstrap();
+  }, []);
 
-    navigation.goBack();
+  const canSubmit = useMemo(() => {
+    return (
+      stripHtml(introHtml).length > 0 &&
+      stripHtml(workingAreaHtml).length > 0 &&
+      stripHtml(achievementsHtml).length > 0 &&
+      !saving
+    );
+  }, [introHtml, workingAreaHtml, achievementsHtml, saving]);
+
+  const onSubmit = async () => {
+    if (!canSubmit) return;
+
+    try {
+      setSaving(true);
+
+      let currentRefereeId = refereeId;
+      let currentVerified = verified;
+
+      if (!currentRefereeId) {
+        const createdRes = await registerMeAsReferee({
+          refereeType: "REFEREE",
+        });
+
+        const createdReferee = createdRes?.data;
+        currentRefereeId = createdReferee?.refereeId ?? null;
+        currentVerified = !!createdReferee?.verified;
+
+        setRefereeId(currentRefereeId);
+        setVerified(currentVerified);
+      }
+
+      const updated = await updateMyRefereeProfile({
+        introduction: introHtml,
+        workingArea: workingAreaHtml,
+        achievements: achievementsHtml,
+      });
+
+      const updatedReferee = updated?.data;
+      setIntroHtml(updatedReferee?.introduction ?? introHtml);
+      setWorkingAreaHtml(updatedReferee?.workingArea ?? workingAreaHtml);
+      setAchievementsHtml(updatedReferee?.achievements ?? achievementsHtml);
+
+      Alert.alert(
+        "Thành công",
+        updated?.message || "Đã cập nhật hồ sơ trọng tài.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("Referee", {
+                shouldReload: true,
+                refreshAt: Date.now(),
+              });
+            },
+          },
+        ],
+      );
+    } catch (e) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data ||
+        e?.message ||
+        "Không thể cập nhật hồ sơ trọng tài.";
+      Alert.alert("Lỗi", String(msg));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -90,7 +177,6 @@ export default function RefereeEditScreen({ navigation, route }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -101,85 +187,139 @@ export default function RefereeEditScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={20} color="#1E2430" />
           </Pressable>
 
-          <Text style={styles.headerTitle}>Sửa thông tin</Text>
+          <Text style={styles.headerTitle}>
+            {refereeId ? "Cập nhật thông tin Trọng tài" : "Tạo hồ sơ Trọng tài"}
+          </Text>
+
+          <View style={{ marginLeft: "auto" }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: "600",
+                color: verified ? "#16A34A" : "#DC2626",
+              }}
+            >
+              {verified ? "Đã xác thực" : "Chưa xác thực"}
+            </Text>
+          </View>
         </View>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.body}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+      {loading ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#fff",
+          }}
         >
-          {/* Info row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoLeft}>
-              <Text style={styles.bigName}>{initial.name}</Text>
-              <Text style={styles.infoText}>Nickname: {initial.nickname}</Text>
-              <Text style={styles.infoText}>Giới tính: {initial.gender}</Text>
-              <Text style={styles.infoText}>Tỉnh/Thành: {initial.city}</Text>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
+        >
+          <ScrollView
+            contentContainerStyle={styles.body}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.infoRow}>
+              <View style={styles.infoLeft}>
+                <Text style={styles.bigName}>{name || "Chưa có tên"}</Text>
+                <Text style={styles.infoText}>
+                  Nickname: {nickname || "Chưa cập nhật"}
+                </Text>
+                <Text style={styles.infoText}>
+                  Giới tính: {gender || "Chưa cập nhật"}
+                </Text>
+                <Text style={styles.infoText}>
+                  Tỉnh/Thành: {city || "Chưa cập nhật"}
+                </Text>
+              </View>
+
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} />
+              ) : (
+                <View
+                  style={[
+                    styles.avatar,
+                    {
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "#F3F4F6",
+                    },
+                  ]}
+                >
+                  <Ionicons name="person-outline" size={36} color="#9CA3AF" />
+                </View>
+              )}
             </View>
 
-            <Image source={{ uri: initial.avatar }} style={styles.avatar} />
-          </View>
+            <View style={styles.scoreRow}>
+              <Text style={styles.scoreLabel}>Điểm đơn: {single}</Text>
+              <Text style={styles.scoreLabel}>Điểm đôi: {doubleScore}</Text>
+            </View>
 
-          {/* Scores row */}
-          <View style={styles.scoreRow}>
-            <Text style={styles.scoreLabel}>Điểm đơn: {initial.single}</Text>
-            <Text style={styles.scoreLabel}>Điểm đôi: {initial.double}</Text>
-          </View>
+            <View style={{ height: 8 }} />
 
-          {/* Editors */}
-          <View style={{ height: 8 }} />
-          <FieldLabel label="Giới thiệu" required />
-          <RichTextBlock
-            valueHtml={introHtml}
-            onChangeHtml={setIntroHtml}
-            placeholder=""
-          />
+            <FieldLabel label="Giới thiệu" required />
+            <RichTextBlock
+              valueHtml={introHtml}
+              onChangeHtml={setIntroHtml}
+              placeholder=""
+            />
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <FieldLabel label="Khu vực giảng dạy" required />
-          <RichTextBlock
-            valueHtml={areaHtml}
-            onChangeHtml={setAreaHtml}
-            placeholder=""
-          />
+            <FieldLabel label="Khu vực làm việc" required />
+            <RichTextBlock
+              valueHtml={workingAreaHtml}
+              onChangeHtml={setWorkingAreaHtml}
+              placeholder=""
+            />
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <FieldLabel label="Thành tích" required />
-          <RichTextBlock
-            valueHtml={achievementsHtml}
-            onChangeHtml={setAchievementsHtml}
-            placeholder=""
-          />
+            <FieldLabel label="Thành tích" required />
+            <RichTextBlock
+              valueHtml={achievementsHtml}
+              onChangeHtml={setAchievementsHtml}
+              placeholder=""
+            />
 
-          <View style={{ height: 18 }} />
+            <View style={{ height: 18 }} />
 
-          {/* Submit */}
-          <Pressable
-            onPress={onSubmit}
-            disabled={!canSubmit}
-            style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
-          >
-            <Text
+            <Pressable
+              onPress={onSubmit}
+              disabled={!canSubmit}
               style={[
-                styles.submitText,
-                !canSubmit && styles.submitTextDisabled,
+                styles.submitBtn,
+                canSubmit ? styles.submitBtnActive : styles.submitBtnDisabled,
               ]}
             >
-              Cập Nhật
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.submitText,
+                  canSubmit
+                    ? styles.submitTextActive
+                    : styles.submitTextDisabled,
+                ]}
+              >
+                {saving
+                  ? "Đang cập nhật..."
+                  : refereeId
+                    ? "Cập Nhật"
+                    : "Tạo hồ sơ trọng tài"}
+              </Text>
+            </Pressable>
 
-          <View style={{ height: 26 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+            <View style={{ height: 26 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      )}
     </View>
   );
 }

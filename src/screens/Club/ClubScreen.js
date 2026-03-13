@@ -11,10 +11,11 @@ import {
   Keyboard,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./styles";
-import { getClubs } from "../../services/clubService";
+import { getClubs, joinClub } from "../../services/clubService";
 
 function Stars({ value }) {
   const full = Math.round(Number(value || 0));
@@ -32,6 +33,76 @@ function Stars({ value }) {
   );
 }
 
+function RelationButton({ item, navigation, onJoin, joiningClubId }) {
+  const status = item?.myClubStatus || "NONE";
+  const isJoining = joiningClubId === item?.clubId;
+
+  if (status === "MANAGER") {
+    return (
+      <Pressable
+        style={[
+          styles.btnPrimary,
+          { backgroundColor: "#16A34A", borderColor: "#16A34A" },
+        ]}
+        onPress={() =>
+          navigation.navigate("ClubDetail", {
+            clubId: item.clubId,
+            club: item,
+            initialTab: "Chờ duyệt",
+          })
+        }
+      >
+        <Text style={styles.btnText}>Quản lý</Text>
+      </Pressable>
+    );
+  }
+
+  if (status === "MEMBER") {
+    return (
+      <Pressable
+        style={[
+          styles.btnPrimary,
+          { backgroundColor: "#16A34A", borderColor: "#16A34A" },
+        ]}
+        disabled
+      >
+        <Text style={styles.btnText}>Thành viên</Text>
+      </Pressable>
+    );
+  }
+
+  if (status === "PENDING") {
+    return (
+      <Pressable
+        style={[
+          styles.btnPrimary,
+          { backgroundColor: "#F59E0B", borderColor: "#F59E0B" },
+        ]}
+        disabled
+      >
+        <Text style={styles.btnText}>Chờ duyệt</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <Pressable
+      style={[
+        styles.btnPrimary,
+        { backgroundColor: "#DC2626", borderColor: "#DC2626" },
+      ]}
+      onPress={() => onJoin(item)}
+      disabled={isJoining}
+    >
+      {isJoining ? (
+        <ActivityIndicator color="#fff" size="small" />
+      ) : (
+        <Text style={styles.btnText}>Xin vào</Text>
+      )}
+    </Pressable>
+  );
+}
+
 export default function ClubScreen({ navigation }) {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
@@ -43,6 +114,7 @@ export default function ClubScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [joiningClubId, setJoiningClubId] = useState(null);
 
   const canLoadMore = useMemo(
     () => items.length < total,
@@ -101,9 +173,40 @@ export default function ClubScreen({ navigation }) {
     fetchClubs({ reset: true, keyword: submittedQuery });
   };
 
+  const handleJoinClub = async (item) => {
+    try {
+      setJoiningClubId(item.clubId);
+
+      const res = await joinClub(item.clubId);
+
+      Alert.alert("Thông báo", res?.message || "Đã gửi yêu cầu tham gia.");
+
+      setItems((prev) =>
+        prev.map((club) =>
+          club.clubId === item.clubId
+            ? {
+                ...club,
+                myClubStatus: "PENDING",
+                myMemberRole: "MEMBER",
+                canManage: false,
+              }
+            : club,
+        ),
+      );
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể gửi yêu cầu tham gia.";
+      Alert.alert("Lỗi", message);
+    } finally {
+      setJoiningClubId(null);
+    }
+  };
+
   const renderItem = ({ item }) => {
-    const membersCount = item.membersCount ?? item.members ?? 0;
-    const coverUrl = item.coverUrl || item.cover || "";
+    const membersCount = item.membersCount ?? 0;
+    const coverUrl = item.coverUrl || "";
     const areaText = item.areaText || "Chưa có khu vực";
     const ratingAvg = Number(item.ratingAvg || 0);
     const reviewsCount = Number(item.reviewsCount || 0);
@@ -161,16 +264,20 @@ export default function ClubScreen({ navigation }) {
           </View>
 
           <View style={styles.btnRow}>
-            <Pressable style={styles.btnPrimary}>
-              <Text style={styles.btnText}>Xin Vào</Text>
-            </Pressable>
+            <RelationButton
+              item={item}
+              navigation={navigation}
+              onJoin={handleJoinClub}
+              joiningClubId={joiningClubId}
+            />
+
             <Pressable
-              onPress={() => {
+              onPress={() =>
                 navigation.navigate("ClubDetail", {
                   clubId: item.clubId,
                   club: item,
-                });
-              }}
+                })
+              }
               style={styles.btnSecondary}
             >
               <Text style={styles.btnText}>Xem chi tiết</Text>

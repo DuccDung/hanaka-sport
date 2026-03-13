@@ -16,6 +16,7 @@ import { styles } from "./loginStyles";
 import { login } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
 import { getMe } from "../../services/userService";
+import { COLORS } from "../../constants/colors";
 function isEmailLike(v = "") {
   const s = v.trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -44,10 +45,22 @@ export default function LoginScreen({ navigation }) {
         identifier: email.trim(),
         password,
       });
+
+      // Lấy thông tin user đầy đủ sau khi có accessToken
+      let me = data.user;
+      try {
+        me = await getMe();
+      } catch (e) {
+        console.log(
+          "getMe after login failed:",
+          e?.response?.data || e?.message,
+        );
+      }
+
       await setAuthSession({
         accessToken: data.accessToken,
         expiresAtUtc: data.expiresAtUtc,
-        user: data.user,
+        user: me,
       });
 
       Keyboard.dismiss();
@@ -126,6 +139,14 @@ export default function LoginScreen({ navigation }) {
             >
               <Text style={styles.submitText}>
                 {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => navigation.navigate("Register")}
+              style={{ marginTop: 16, alignItems: "center" }}
+            >
+              <Text style={{ fontSize: 14, color: COLORS.PRIMARY_DARK }}>
+                Chưa có tài khoản? Đăng ký
               </Text>
             </Pressable>
           </View>

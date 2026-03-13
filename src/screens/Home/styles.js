@@ -62,12 +62,11 @@ export const styles = StyleSheet.create({
 
   /* MENU */
   menuItemOuter: {
-    borderRadius: 22,
     marginBottom: 16,
   },
 
   menuItemInner: {
-    borderRadius: 22,
+    borderRadius: 5,
     backgroundColor: COLORS.PRIMARY,
     alignItems: "center",
     justifyContent: "center",

@@ -1,5 +1,4 @@
-// src/screens/Coach/CoachScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +9,15 @@ import {
   FlatList,
   Image,
   Keyboard,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { styles } from "./styles";
-import { coachesSeed } from "./data/coaches";
+import { getCoaches } from "../../services/coachService";
+import { useAuth } from "../../context/AuthContext";
 
 function normalize(str = "") {
   return str
@@ -22,17 +26,104 @@ function normalize(str = "") {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-export default function CoachScreen({ navigation }) {
-  const [query, setQuery] = useState("");
+function formatScore(v) {
+  const n = Number(v || 0);
+  return n % 1 === 0 ? `${n}` : n.toFixed(2).replace(/\.?0+$/, "");
+}
 
-  const data = useMemo(() => {
-    const q = normalize(query.trim());
-    if (!q) return coachesSeed;
-    return coachesSeed.filter((m) => {
-      const hay = normalize(`${m.name} ${m.city}`);
-      return hay.includes(q);
-    });
-  }, [query]);
+export default function CoachScreen({ navigation, route }) {
+  const { session } = useAuth();
+
+  const [query, setQuery] = useState("");
+  const [coaches, setCoaches] = useState([]);
+
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const hasMore = useMemo(
+    () => coaches.length < total,
+    [coaches.length, total],
+  );
+
+  const fetchCoaches = useCallback(
+    async ({ nextPage = 1, isRefresh = false, isLoadMore = false } = {}) => {
+      try {
+        if (isRefresh) setRefreshing(true);
+        else if (isLoadMore) setLoadingMore(true);
+        else setLoading(true);
+
+        const res = await getCoaches({
+          query: normalize(query.trim()),
+          page: nextPage,
+          pageSize,
+        });
+
+        const items = res?.items || [];
+
+        setTotal(Number(res?.total || 0));
+        setPage(nextPage);
+
+        if (nextPage === 1) {
+          setCoaches(items);
+        } else {
+          setCoaches((prev) => {
+            const merged = [...prev, ...items];
+            const map = new Map();
+            merged.forEach((x) => map.set(x.coachId, x));
+            return Array.from(map.values());
+          });
+        }
+      } catch (e) {
+        const msg =
+          e?.response?.data?.message ||
+          e?.response?.data ||
+          e?.message ||
+          "Không tải được danh sách huấn luyện viên.";
+        Alert.alert("Lỗi", String(msg));
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
+      }
+    },
+    [pageSize, query],
+  );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchCoaches({ nextPage: 1 });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [query, fetchCoaches]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const shouldReload = route?.params?.shouldReload;
+
+      if (shouldReload) {
+        fetchCoaches({ nextPage: 1 });
+        navigation.setParams({
+          shouldReload: false,
+          refreshAt: null,
+        });
+      }
+    }, [route?.params?.shouldReload, fetchCoaches, navigation]),
+  );
+
+  const onRefresh = () => {
+    fetchCoaches({ nextPage: 1, isRefresh: true });
+  };
+
+  const onEndReached = () => {
+    if (loading || loadingMore || refreshing || !hasMore) return;
+    fetchCoaches({ nextPage: page + 1, isLoadMore: true });
+  };
 
   const renderHeader = () => (
     <View style={styles.tableHeader}>
@@ -41,7 +132,7 @@ export default function CoachScreen({ navigation }) {
       </View>
 
       <View style={styles.colMember}>
-        <Text style={styles.thText}>Thành Viên</Text>
+        <Text style={styles.thText}>Huấn luyện viên</Text>
       </View>
 
       <View style={styles.colScoreWrap}>
@@ -57,21 +148,47 @@ export default function CoachScreen({ navigation }) {
 
   const renderItem = ({ item, index }) => {
     const stt = index + 1;
+    const avatarUrl = item.avatarUrl || "";
 
     return (
-      <View style={styles.item}>
+      <Pressable
+        style={[styles.item, item.isMine && styles.itemMine]}
+        onPress={() =>
+          item.isMine
+            ? navigation.navigate("CoachEdit")
+            : navigation.navigate("CoachDetail", { coachId: item.coachId })
+        }
+      >
         <View style={styles.colStt}>
-          <Text style={styles.sttText}>{stt}</Text>
+          <Text style={[styles.sttText, item.isMine && styles.sttMine]}>
+            {stt}
+          </Text>
         </View>
 
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarFallback}>
+            <Ionicons name="person-outline" size={22} color="#9CA3AF" />
+          </View>
+        )}
 
         <View style={styles.mid}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.name}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.fullName}
+            </Text>
 
-          <Text style={styles.city}>{item.city}</Text>
+            {item.isMine ? (
+              <View style={styles.mineBadge}>
+                <Text style={styles.mineBadgeText}>Tôi</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Text style={styles.city} numberOfLines={1}>
+            {item.city || "Chưa cập nhật"}
+          </Text>
 
           <Text style={item.verified ? styles.statusGood : styles.statusBad}>
             {item.verified ? "Đã xác thực" : "Chưa xác thực"}
@@ -80,12 +197,25 @@ export default function CoachScreen({ navigation }) {
 
         <View style={styles.right}>
           <View style={styles.scoreBox}>
-            <Text style={styles.scoreText}>{item.single}</Text>
+            <Text style={styles.scoreText}>
+              {formatScore(item.levelSingle)}
+            </Text>
           </View>
           <View style={styles.scoreBox}>
-            <Text style={styles.scoreText}>{item.double}</Text>
+            <Text style={styles.scoreText}>
+              {formatScore(item.levelDouble)}
+            </Text>
           </View>
         </View>
+      </Pressable>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return <View style={{ height: 16 }} />;
+    return (
+      <View style={styles.footerLoading}>
+        <ActivityIndicator />
       </View>
     );
   };
@@ -95,7 +225,6 @@ export default function CoachScreen({ navigation }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -112,14 +241,29 @@ export default function CoachScreen({ navigation }) {
             <Pressable
               style={styles.addBtn}
               hitSlop={10}
-              onPress={() => navigation.navigate("CoachEdit")}
+              onPress={() => {
+                if (!session?.accessToken) {
+                  Alert.alert(
+                    "Bạn chưa đăng nhập",
+                    "Vui lòng đăng nhập để tạo hoặc cập nhật hồ sơ huấn luyện viên.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => navigation.navigate("Login"),
+                      },
+                    ],
+                  );
+                  return;
+                }
+
+                navigation.navigate("CoachEdit");
+              }}
             >
               <Ionicons name="add" size={26} color="#1E2430" />
             </Pressable>
           </View>
         </View>
 
-        {/* Search */}
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
             <TextInput
@@ -138,12 +282,29 @@ export default function CoachScreen({ navigation }) {
         {renderHeader()}
       </View>
 
-      <FlatList
-        data={data}
-        keyExtractor={(it) => it.id}
-        renderItem={renderItem}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading && coaches.length === 0 ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator />
+        </View>
+      ) : (
+        <FlatList
+          data={coaches}
+          keyExtractor={(it) => String(it.coachId)}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+          onEndReachedThreshold={0.25}
+          onEndReached={onEndReached}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>Không có huấn luyện viên nào</Text>
+            </View>
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        />
+      )}
     </View>
   );
 }

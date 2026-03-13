@@ -9,6 +9,7 @@ export const courtsSeed = [
     images: [
       "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=800&q=80",
       "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=801&q=80",
+      "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=801&q=80",
     ],
   },
   {

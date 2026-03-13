@@ -182,14 +182,12 @@ export async function adminUpdateTournament(tournamentId, req = {}) {
  */
 export function mapTabToAdminStatus(tab) {
   switch (tab) {
-    case "upcoming":
-      return "OPEN"; // hoặc DRAFT tuỳ quy ước
     case "ongoing":
-      return "OPEN"; // nếu đang diễn ra vẫn OPEN
+      return "OPEN";
     case "finished":
       return "CLOSED";
     default:
-      return "ALL";
+      return "OPEN";
   }
 }
 export async function publicGetTournamentDetail(tournamentId) {
@@ -241,5 +239,34 @@ export async function getTournamentRoundsWithMatches(tournamentId) {
   const res = await apiClient.get(
     `/tournaments/${tournamentId}/rounds-with-matches`,
   );
+  return res.data;
+}
+/**
+ * Public Tournaments
+ * Route server:
+ * GET /api/public/tournaments?page=1&pageSize=10&status=OPEN&query=abc
+ */
+
+function normalizePublicTournamentStatus(status) {
+  if (!status) return undefined;
+  const s = String(status).trim().toUpperCase();
+  return s;
+}
+
+export async function publicListTournaments({
+  page = 1,
+  pageSize = 10,
+  status = "ALL",
+  query = "",
+} = {}) {
+  const res = await apiClient.get("/public/tournaments", {
+    params: {
+      page,
+      pageSize,
+      status: normalizePublicTournamentStatus(status),
+      query: query?.trim() || undefined,
+    },
+  });
+
   return res.data;
 }

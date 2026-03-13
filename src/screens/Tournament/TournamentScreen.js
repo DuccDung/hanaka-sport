@@ -44,14 +44,13 @@ function formatDateTime(value) {
 }
 
 const TAB = {
-  upcoming: "Sắp",
   ongoing: "Đang",
   finished: "Kết thúc",
 };
 
 export default function TournamentScreen({ navigation }) {
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState("upcoming"); // upcoming | ongoing | finished
+  const [tab, setTab] = useState("ongoing"); //  ongoing | finished
 
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);

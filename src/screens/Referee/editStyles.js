@@ -1,11 +1,9 @@
-// src/screens/Coach/editStyles.js
 import { StyleSheet } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 export const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#EEF2F8" },
 
-  // Header giống system của app
   headerWrap: { backgroundColor: "#fff" },
   headerTop: {
     height: 56,
@@ -22,14 +20,12 @@ export const styles = StyleSheet.create({
     paddingBottom: 18,
   },
 
-  // Info block
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
   },
   infoLeft: { flex: 1, paddingRight: 12 },
 
-  // Tên to hơn một chút nhưng vẫn hợp hệ
   bigName: {
     fontSize: 16,
     fontWeight: "600",
@@ -37,7 +33,6 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
-  // Text thông tin giống meta của app
   infoText: {
     fontSize: 12,
     fontWeight: "400",
@@ -52,7 +47,6 @@ export const styles = StyleSheet.create({
     backgroundColor: "#D1D5DB",
   },
 
-  // Điểm (nhỏ, cùng hệ)
   scoreRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -61,7 +55,6 @@ export const styles = StyleSheet.create({
   },
   scoreLabel: { fontSize: 14, fontWeight: "400", color: "#1E2430" },
 
-  // Label + dấu *
   fieldLabelRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -82,7 +75,6 @@ export const styles = StyleSheet.create({
     marginTop: 14,
   },
 
-  // Submit (giống style hệ)
   submitBtn: {
     height: 44,
     borderRadius: 10,
@@ -100,7 +92,6 @@ export const styles = StyleSheet.create({
   submitText: { fontSize: 15, fontWeight: "700", color: "#9CA3AF" },
   submitTextDisabled: { color: "#9CA3AF" },
 
-  // Nếu bạn muốn active giống Coach/styles.js thì dùng 2 dòng này
   submitBtnActive: { backgroundColor: COLORS.BLUE, borderColor: COLORS.BLUE },
   submitTextActive: { color: "#fff" },
 });

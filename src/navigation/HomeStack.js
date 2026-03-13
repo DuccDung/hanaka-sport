@@ -28,6 +28,9 @@ import ChangePasswordScreen from "../screens/Account/ChangePasswordScreen";
 import MemberDetailScreen from "../screens/Members/MemberDetailScreen";
 import SelfRatingScreen from "../screens/Members/SelfRatingScreen";
 import ClubDetailScreen from "../screens/Club/ClubDetailScreen";
+import CoachDetailScreen from "../screens/Coach/CoachDetailScreen";
+import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
+import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -171,6 +174,21 @@ export default function HomeStack() {
       <Stack.Screen
         name="ClubDetail"
         component={ClubDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="CoachDetail"
+        component={CoachDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="CourtDetail"
+        component={CourtDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="RefereeDetail"
+        component={RefereeDetailScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

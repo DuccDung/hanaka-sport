@@ -16,7 +16,6 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-// Optional: nếu API trả 401 thì auto logout
 apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {

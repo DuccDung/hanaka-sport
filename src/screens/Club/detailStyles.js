@@ -105,10 +105,6 @@ export const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  tabsRowNoHero: {
-    marginTop: 0,
-  },
-
   tabBtn: {
     flex: 1,
     alignItems: "center",
@@ -251,11 +247,6 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
     color: "#404040",
-    marginBottom: 10,
-  },
-
-  emojiLine: {
-    fontSize: 18,
   },
 
   infoBlock: {
@@ -274,6 +265,84 @@ export const styles = StyleSheet.create({
     color: "#1F2937",
   },
 
+  challengeCard: {
+    marginTop: 4,
+    marginBottom: 20,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    padding: 14,
+  },
+
+  challengeHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  challengeTitleWrap: {
+    flex: 1,
+  },
+
+  challengeTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  challengeDesc: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#6B7280",
+  },
+
+  challengeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+
+  challengeBadgeOn: {
+    backgroundColor: "#DCFCE7",
+  },
+
+  challengeBadgeOff: {
+    backgroundColor: "#F3F4F6",
+  },
+
+  challengeBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  challengeBtn: {
+    marginTop: 14,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  challengeBtnEnable: {
+    backgroundColor: "#16A34A",
+  },
+
+  challengeBtnDisable: {
+    backgroundColor: "#DC2626",
+  },
+
+  challengeBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+
   emptyTabWrap: {
     alignItems: "center",
     justifyContent: "center",
@@ -289,26 +358,28 @@ export const styles = StyleSheet.create({
   },
 
   memberTabWrap: {
-    backgroundColor: "#EDEFF7",
+    backgroundColor: "#F3F5FB",
     paddingHorizontal: 14,
     paddingTop: 14,
     paddingBottom: 20,
   },
 
   searchMemberBox: {
-    height: 54,
-    borderRadius: 8,
-    backgroundColor: "#E2E5EC",
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
     gap: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   searchMemberInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: "#1E2430",
   },
 
@@ -339,41 +410,51 @@ export const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  memberRow: {
-    minHeight: 66,
-    backgroundColor: "#EDEFF7",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 10,
-  },
-
-  memberRowAlt: {
+  memberCard: {
     backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
-  memberIndexText: {
-    fontSize: 15,
-    color: "#333333",
+  memberCardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
 
-  memberInfoCell: {
+  memberLeft: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 6,
+    minWidth: 0,
+  },
+
+  memberIndexBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#EEF2FF",
+    color: "#3157C7",
+    textAlign: "center",
+    lineHeight: 28,
+    fontWeight: "700",
+    fontSize: 13,
+    marginRight: 10,
   },
 
   memberAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     marginRight: 10,
   },
 
   memberAvatarFallback: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     marginRight: 10,
     backgroundColor: "#F3F4F6",
     alignItems: "center",
@@ -382,25 +463,82 @@ export const styles = StyleSheet.create({
 
   memberNameBlock: {
     flex: 1,
-    justifyContent: "center",
+    minWidth: 0,
   },
 
   memberName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#2B2B2B",
+    color: "#1F2937",
     lineHeight: 20,
   },
 
   memberRole: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
-    marginTop: 2,
+    marginTop: 3,
   },
 
-  memberScoreText: {
+  memberStatsRow: {
+    flexDirection: "row",
+    marginTop: 12,
+    gap: 10,
+  },
+
+  memberStatBox: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  memberStatLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+
+  memberStatValue: {
     fontSize: 16,
-    color: "#333333",
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  memberActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  actionBtn: {
+    minHeight: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  actionBtnApprove: {
+    backgroundColor: "#16A34A",
+  },
+
+  actionBtnReject: {
+    backgroundColor: "#DC2626",
+  },
+
+  actionBtnRole: {
+    backgroundColor: "#3157C7",
+  },
+
+  actionBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   memberEmptyWrap: {

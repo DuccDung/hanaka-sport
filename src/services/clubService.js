@@ -42,6 +42,11 @@ export async function getClubs({ keyword = "", page = 1, pageSize = 10 } = {}) {
   return res.data;
 }
 
+export async function joinClub(clubId) {
+  const res = await apiClient.post(`/clubs/${clubId}/join`);
+  return res.data;
+}
+
 export async function getClubOverview(clubId) {
   const res = await apiClient.get(`/clubs/${clubId}/overview`);
   return res.data;
@@ -61,6 +66,48 @@ export async function getPendingClubMembers({
 } = {}) {
   const res = await apiClient.get(`/clubs/${clubId}/pending-members`, {
     params: { page, pageSize },
+  });
+  return res.data;
+}
+
+export async function approvePendingClubMember(clubId, userId) {
+  const res = await apiClient.post(
+    `/clubs/${clubId}/pending-members/${userId}/approve`,
+  );
+  return res.data;
+}
+
+export async function rejectPendingClubMember(clubId, userId) {
+  const res = await apiClient.delete(
+    `/clubs/${clubId}/pending-members/${userId}`,
+  );
+  return res.data;
+}
+
+export async function removeClubMember(clubId, userId) {
+  const res = await apiClient.delete(`/clubs/${clubId}/members/${userId}`);
+  return res.data;
+}
+
+export async function updateClubMemberRole(clubId, userId, memberRole) {
+  const res = await apiClient.put(`/clubs/${clubId}/members/${userId}/role`, {
+    memberRole,
+  });
+  return res.data;
+}
+export async function updateClubChallengeMode(clubId, allowChallenge) {
+  const res = await apiClient.put(`/clubs/${clubId}/challenge-mode`, {
+    allowChallenge,
+  });
+  return res.data;
+}
+export async function getChallengingClubs({
+  keyword = "",
+  page = 1,
+  pageSize = 10,
+} = {}) {
+  const res = await apiClient.get("/clubs/challenging", {
+    params: { keyword, page, pageSize },
   });
   return res.data;
 }

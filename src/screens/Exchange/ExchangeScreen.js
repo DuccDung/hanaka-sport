@@ -1,5 +1,4 @@
-// src/screens/Exchange/ExchangeScreen.js
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,98 +9,221 @@ import {
   FlatList,
   Image,
   Keyboard,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./styles";
-import { exchangesSeed } from "./data/exchanges";
+import { getChallengingClubs } from "../../services/clubService";
 
-function normalize(str = "") {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function formatUpdatedTime(value) {
+  if (!value) return "Chưa cập nhật";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa cập nhật";
+
+  return date.toLocaleString("vi-VN");
 }
 
-function TeamLogo({ uri, placeholder }) {
+function ClubCover({ uri, clubName }) {
+  if (uri) {
+    return <Image source={{ uri }} style={styles.coverImage} />;
+  }
+
   return (
-    <View style={styles.logoCircle}>
-      {uri ? (
-        <Image source={{ uri }} style={styles.logoImg} />
-      ) : (
-        <Text style={{ fontSize: 18, fontWeight: "700", color: "#111827" }}>
-          {placeholder}
-        </Text>
-      )}
+    <View style={styles.coverFallback}>
+      <Ionicons name="image-outline" size={28} color="#9CA3AF" />
+      <Text style={styles.coverFallbackText} numberOfLines={1}>
+        {clubName || "Câu lạc bộ"}
+      </Text>
     </View>
   );
 }
 
 export default function ExchangeScreen({ navigation }) {
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
 
-  const data = useMemo(() => {
-    const q = normalize(query.trim());
-    if (!q) return exchangesSeed;
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [total, setTotal] = useState(0);
 
-    return exchangesSeed.filter((it) => {
-      const hay = normalize(
-        `${it.left.name} ${it.right.name} ${it.locationText} ${it.timeText}`,
-      );
-      return hay.includes(q);
-    });
-  }, [query]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      {/* top row */}
-      <View style={styles.topRow}>
-        {/* left team */}
-        <View style={styles.teamCol}>
-          <TeamLogo uri={item.left.logo} placeholder="?" />
-          <Text style={styles.teamName}>{item.left.name}</Text>
-          <Text style={styles.wld}>
-            {item.left.w}W {item.left.l}L {item.left.d}D
+  const canLoadMore = useMemo(
+    () => items.length < total,
+    [items.length, total],
+  );
+
+  const fetchChallengingClubs = useCallback(
+    async ({ reset = false, keyword = submittedQuery } = {}) => {
+      try {
+        if (reset) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        const nextPage = reset ? 1 : page;
+
+        const res = await getChallengingClubs({
+          keyword: keyword.trim(),
+          page: nextPage,
+          pageSize,
+        });
+
+        const nextItems = res?.items || [];
+
+        setTotal(res?.total || 0);
+
+        if (reset) {
+          setItems(nextItems);
+          setPage(2);
+        } else {
+          setItems((prev) => [...prev, ...nextItems]);
+          setPage((prev) => prev + 1);
+        }
+      } catch (error) {
+        const msg =
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không tải được danh sách câu lạc bộ đang khiêu chiến.";
+        Alert.alert("Lỗi", msg);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [page, submittedQuery],
+  );
+
+  useEffect(() => {
+    fetchChallengingClubs({ reset: true, keyword: submittedQuery });
+  }, [submittedQuery, fetchChallengingClubs]);
+
+  const onSearch = () => {
+    Keyboard.dismiss();
+    setSubmittedQuery(query);
+  };
+
+  const onRefresh = () => {
+    fetchChallengingClubs({ reset: true, keyword: submittedQuery });
+  };
+
+  const renderItem = ({ item }) => {
+    const coverUrl = item.coverUrl || "";
+    const areaText = item.areaText || "Chưa có khu vực";
+    const membersCount = Number(item.membersCount || 0);
+    const matchesPlayed = Number(item.matchesPlayed || 0);
+    const matchesWin = Number(item.matchesWin || 0);
+    const matchesDraw = Number(item.matchesDraw || 0);
+    const matchesLoss = Number(item.matchesLoss || 0);
+    const updatedText = formatUpdatedTime(
+      item.challengeUpdatedAt || item.updatedAt || item.createdAt,
+    );
+
+    return (
+      <Pressable
+        style={styles.card}
+        onPress={() =>
+          navigation.navigate("ClubDetail", {
+            clubId: item.clubId,
+            club: item,
+          })
+        }
+      >
+        <ClubCover uri={coverUrl} clubName={item.clubName} />
+
+        <View style={styles.cardBody}>
+          <View style={styles.statusRow}>
+            <View style={styles.liveBadge}>
+              <Ionicons name="flash-outline" size={14} color="#fff" />
+              <Text style={styles.liveBadgeText}>Đang khiêu chiến</Text>
+            </View>
+          </View>
+
+          <Text style={styles.clubName} numberOfLines={2}>
+            {item.clubName}
           </Text>
 
+          <View style={styles.metaLine}>
+            <Ionicons name="location-outline" size={16} color="#6B7280" />
+            <Text style={styles.metaText}>{areaText}</Text>
+          </View>
+
+          <View style={styles.metaLine}>
+            <Ionicons name="people-outline" size={16} color="#6B7280" />
+            <Text style={styles.metaText}>{membersCount} thành viên</Text>
+          </View>
+
+          <View style={styles.metaLine}>
+            <Ionicons name="time-outline" size={16} color="#6B7280" />
+            <Text style={styles.metaText}>Cập nhật: {updatedText}</Text>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{matchesPlayed}</Text>
+              <Text style={styles.statLabel}>Trận</Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{matchesWin}</Text>
+              <Text style={styles.statLabel}>Thắng</Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{matchesDraw}</Text>
+              <Text style={styles.statLabel}>Hòa</Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{matchesLoss}</Text>
+              <Text style={styles.statLabel}>Thua</Text>
+            </View>
+          </View>
+
           <View style={styles.actionRow}>
-            <Pressable style={styles.actionBtn} hitSlop={10}>
-              <Ionicons name="call" size={16} color="#2563EB" />
-            </Pressable>
-            <Pressable style={styles.actionBtn} hitSlop={10}>
-              <Ionicons name="chatbubble" size={16} color="#2563EB" />
+            <Pressable
+              style={styles.detailBtn}
+              onPress={() =>
+                navigation.navigate("ClubDetail", {
+                  clubId: item.clubId,
+                  club: item,
+                })
+              }
+            >
+              <Text style={styles.detailBtnText}>Xem chi tiết</Text>
             </Pressable>
           </View>
         </View>
+      </Pressable>
+    );
+  };
 
-        {/* score */}
-        <View style={styles.scoreCol}>
-          <Text style={styles.scoreText}>{item.scoreText}</Text>
-        </View>
+  const renderFooter = () => {
+    if (!loading) return <View style={{ height: 12 }} />;
 
-        {/* right team */}
-        <View style={styles.teamCol}>
-          <TeamLogo uri={item.right.logo} placeholder="?" />
-          <Text style={styles.statusText}>{item.right.name}</Text>
-        </View>
+    return (
+      <View style={{ paddingVertical: 16 }}>
+        <ActivityIndicator />
       </View>
+    );
+  };
 
-      {/* bottom meta */}
-      <View style={styles.metaRow}>
-        <View style={styles.metaLine}>
-          <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-          <Text style={styles.metaText}>
-            <Text style={styles.metaStrong}>{item.timeText}</Text>{" "}
-            {item.agoText}
-          </Text>
-        </View>
+  const renderEmpty = () => {
+    if (loading || refreshing) return null;
 
-        <View style={styles.metaLine}>
-          <Ionicons name="location-outline" size={16} color="#6B7280" />
-          <Text style={styles.metaText}>{item.locationText}</Text>
-        </View>
+    return (
+      <View style={styles.emptyWrap}>
+        <Ionicons name="flash-outline" size={34} color="#9CA3AF" />
+        <Text style={styles.emptyText}>Không có CLB nào đang khiêu chiến</Text>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.safe}>
@@ -122,7 +244,7 @@ export default function ExchangeScreen({ navigation }) {
 
           <View style={styles.headerRight}>
             <Pressable style={styles.addBtn} hitSlop={10}>
-              <Ionicons name="add" size={26} color="#1E2430" />
+              <Ionicons name="flash-outline" size={22} color="#1E2430" />
             </Pressable>
           </View>
         </View>
@@ -132,31 +254,48 @@ export default function ExchangeScreen({ navigation }) {
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Tìm kiếm..."
+              placeholder="Tìm CLB đang khiêu chiến..."
               placeholderTextColor="#9CA3AF"
               style={styles.searchInput}
               returnKeyType="search"
-              onSubmitEditing={() => Keyboard.dismiss()}
+              onSubmitEditing={onSearch}
             />
-            <Ionicons name="search" size={18} color="#9CA3AF" />
+            <Pressable onPress={onSearch} hitSlop={10}>
+              <Ionicons name="search" size={18} color="#9CA3AF" />
+            </Pressable>
           </View>
         </View>
 
         <View style={styles.filterRow}>
           <Pressable style={styles.filterBtn}>
-            <Ionicons name="location-outline" size={14} color="#6B7280" />
-            <Text style={styles.filterText}>Khu vực: Tất cả</Text>
-            <Ionicons name="chevron-down" size={14} color="#6B7280" />
+            <Ionicons name="flash-outline" size={14} color="#16A34A" />
+            <Text style={styles.filterText}>
+              {submittedQuery
+                ? `Từ khóa: ${submittedQuery}`
+                : "Đang hiển thị CLB bật khiêu chiến"}
+            </Text>
           </Pressable>
         </View>
       </View>
 
       <FlatList
         contentContainerStyle={styles.listPad}
-        data={data}
-        keyExtractor={(it) => it.id}
+        data={items}
+        keyExtractor={(it) => String(it.clubId)}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        onEndReachedThreshold={0.25}
+        onEndReached={() => {
+          if (!loading && canLoadMore) {
+            fetchChallengingClubs({ reset: false });
+          }
+        }}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </View>
   );
