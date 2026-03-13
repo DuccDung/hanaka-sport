@@ -35,7 +35,6 @@ export const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  // tabs
   topTabs: {
     marginTop: 10,
     flexDirection: "row",
@@ -56,7 +55,6 @@ export const styles = StyleSheet.create({
   topTabText: { fontSize: 13, fontWeight: "600", color: "#E5ECFF" },
   topTabTextActive: { color: "#1E2430" },
 
-  // search
   searchRow: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10 },
   searchBox: {
     backgroundColor: "#F0F2F5",
@@ -69,8 +67,7 @@ export const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: "#1E2430" },
 
-  // list
-  listPad: { paddingHorizontal: 16, paddingBottom: 18 },
+  listPad: { paddingHorizontal: 16, paddingBottom: 18, flexGrow: 1 },
 
   card: {
     backgroundColor: "#fff",
@@ -98,6 +95,13 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  subMeta: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#6B7280",
+  },
+
   playersGrid: {
     marginTop: 12,
     flexDirection: "row",
@@ -106,15 +110,129 @@ export const styles = StyleSheet.create({
   teamCol: { flex: 1, gap: 10 },
 
   playerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  playerAvatar: { width: 28, height: 28, borderRadius: 14 },
-  playerName: { fontSize: 13, fontWeight: "600", color: "#1E2430" },
+  playerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#EEF2FF",
+  },
+  playerName: { fontSize: 13, fontWeight: "600", color: "#1E2430", flex: 1 },
 
   scoreUnder: {
     flexDirection: "row",
     alignItems: "center",
     gap: 18,
-    marginLeft: 36, // canh dưới avatar
+    marginLeft: 36,
     marginTop: 2,
   },
   scoreSmall: { fontSize: 12, fontWeight: "400", color: "#1E2430" },
+
+  playHintRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  playHintText: {
+    fontSize: 12,
+    color: "#111827",
+    fontWeight: "600",
+  },
+
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  stateText: {
+    fontSize: 14,
+    color: "#4B5563",
+    textAlign: "center",
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#DC2626",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  retryBtn: {
+    marginTop: 6,
+    backgroundColor: COLORS.BLUE,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  retryBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  subMeta: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#6B7280",
+  },
+
+  playHintRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  playHintText: {
+    fontSize: 12,
+    color: "#111827",
+    fontWeight: "600",
+  },
+
+  centerState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+
+  stateText: {
+    fontSize: 14,
+    color: "#4B5563",
+    textAlign: "center",
+  },
+
+  errorText: {
+    fontSize: 14,
+    color: "#DC2626",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  retryBtn: {
+    marginTop: 6,
+    backgroundColor: COLORS.BLUE,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  retryBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  avatarWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
 });

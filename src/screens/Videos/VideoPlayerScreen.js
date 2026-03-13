@@ -6,7 +6,8 @@ import {
   ActivityIndicator,
   Linking,
   SafeAreaView,
-  Platform,
+  ImageBackground,
+  StyleSheet,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,26 +21,66 @@ function getYoutubeId(url = "") {
     if (u.pathname.startsWith("/shorts/")) return u.pathname.split("/")[2];
     if (u.pathname.startsWith("/embed/")) return u.pathname.split("/")[2];
   } catch (e) {}
+
   return null;
 }
 
-function buildPlayableUrl(rawUrl = "") {
+function buildPlayableSource(rawUrl = "") {
   const url = (rawUrl || "").trim();
-
   const ytId = getYoutubeId(url);
+
   if (ytId) {
     return {
-      kind: "youtube",
-      url: `https://www.youtube.com/embed/${ytId}?autoplay=1&playsinline=1`,
+      kind: "youtube-web",
+      source: { uri: `https://m.youtube.com/watch?v=${ytId}` },
     };
   }
 
-  return { kind: "web", url };
+  return {
+    kind: "web",
+    source: { uri: url },
+  };
+}
+
+function FallbackPoster({ poster, title, tournamentTitle, onOpenExternal }) {
+  return (
+    <ImageBackground
+      source={poster ? { uri: poster } : undefined}
+      style={styles.posterWrap}
+      imageStyle={styles.posterImage}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay} />
+
+      <View style={styles.centerBox}>
+        <Ionicons name="play-circle-outline" size={54} color="#fff" />
+        <Text style={styles.posterTitle} numberOfLines={2}>
+          {title || "Không phát được video trong ứng dụng"}
+        </Text>
+
+        {!!tournamentTitle && (
+          <Text style={styles.posterSub} numberOfLines={1}>
+            {tournamentTitle}
+          </Text>
+        )}
+
+        <Text style={styles.posterDesc}>
+          Không mở được video trong WebView. Bạn có thể mở bằng YouTube hoặc
+          trình duyệt ngoài.
+        </Text>
+
+        <Pressable style={styles.posterBtn} onPress={onOpenExternal}>
+          <Ionicons name="open-outline" size={18} color="#111" />
+          <Text style={styles.posterBtnText}>Mở video bên ngoài</Text>
+        </Pressable>
+      </View>
+    </ImageBackground>
+  );
 }
 
 export default function VideoPlayerScreen({ route, navigation }) {
-  const { title, videoUrl } = route.params || {};
-  const playable = useMemo(() => buildPlayableUrl(videoUrl), [videoUrl]);
+  const { title, videoUrl, poster, tournamentTitle } = route.params || {};
+  const playable = useMemo(() => buildPlayableSource(videoUrl), [videoUrl]);
   const [loadError, setLoadError] = useState(false);
 
   const onOpenExternal = useCallback(async () => {
@@ -49,38 +90,27 @@ export default function VideoPlayerScreen({ route, navigation }) {
     } catch (e) {}
   }, [videoUrl]);
 
-  // Một số trang (đặc biệt Facebook) redirect hoặc mở link ngoài:
-  const onShouldStartLoadWithRequest = useCallback(
-    (req) => {
-      const nextUrl = req?.url || "";
-      if (!nextUrl) return true;
+  const onShouldStartLoadWithRequest = useCallback((req) => {
+    const nextUrl = req?.url || "";
+    if (!nextUrl) return true;
 
-      // Chặn các scheme lạ
-      if (
-        nextUrl.startsWith("fb://") ||
-        nextUrl.startsWith("intent://") ||
-        nextUrl.startsWith("tel:") ||
-        nextUrl.startsWith("mailto:")
-      ) {
-        Linking.openURL(nextUrl).catch(() => {});
-        return false;
-      }
+    if (
+      nextUrl.startsWith("fb://") ||
+      nextUrl.startsWith("intent://") ||
+      nextUrl.startsWith("tel:") ||
+      nextUrl.startsWith("mailto:")
+    ) {
+      Linking.openURL(nextUrl).catch(() => {});
+      return false;
+    }
 
-      // Nếu đang xem YouTube embed thì cho phép
-      if (playable.kind === "youtube") return true;
-
-      // Nếu facebook chuyển qua URL khác, vẫn cho phép load trong WebView;
-      // trường hợp không play được sẽ rơi vào onError -> fallback.
-      return true;
-    },
-    [playable.kind],
-  );
+    return true;
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <SafeAreaView style={{ backgroundColor: "#000" }} />
 
-      {/* Header */}
       <View
         style={{
           height: 52,
@@ -111,61 +141,27 @@ export default function VideoPlayerScreen({ route, navigation }) {
         </Pressable>
       </View>
 
-      {/* Body */}
-      {!videoUrl ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-        >
-          <Text style={{ color: "#fff", opacity: 0.85 }}>
-            Không có link video.
-          </Text>
-        </View>
-      ) : loadError ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            gap: 10,
-          }}
-        >
-          <Ionicons name="alert-circle-outline" size={28} color="#fff" />
-          <Text style={{ color: "#fff", opacity: 0.9, textAlign: "center" }}>
-            Video không mở được trong WebView (thường gặp với Facebook
-            Live/share). Bạn có thể mở bằng app/trình duyệt.
-          </Text>
-
-          <Pressable
-            onPress={onOpenExternal}
-            style={{
-              marginTop: 6,
-              backgroundColor: "#fff",
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 10,
-            }}
-          >
-            <Text style={{ color: "#111", fontWeight: "700" }}>
-              Mở bằng app/trình duyệt
-            </Text>
-          </Pressable>
-        </View>
+      {!videoUrl || loadError ? (
+        <FallbackPoster
+          poster={poster}
+          title={title}
+          tournamentTitle={tournamentTitle}
+          onOpenExternal={onOpenExternal}
+        />
       ) : (
         <WebView
-          source={{ uri: playable.url }}
+          source={playable.source}
           originWhitelist={["*"]}
           allowsFullscreenVideo
           javaScriptEnabled
           domStorageEnabled
           mediaPlaybackRequiresUserAction={false}
+          allowsInlineMediaPlayback
           startInLoadingState
           setSupportMultipleWindows={false}
+          userAgent={
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
+          }
           onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
           onError={() => setLoadError(true)}
           onHttpError={() => setLoadError(true)}
@@ -175,6 +171,7 @@ export default function VideoPlayerScreen({ route, navigation }) {
                 flex: 1,
                 alignItems: "center",
                 justifyContent: "center",
+                backgroundColor: "#000",
               }}
             >
               <ActivityIndicator />
@@ -188,3 +185,63 @@ export default function VideoPlayerScreen({ route, navigation }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  posterWrap: {
+    flex: 1,
+    backgroundColor: "#111",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  posterImage: {
+    opacity: 0.8,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  centerBox: {
+    width: "86%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  posterTitle: {
+    marginTop: 12,
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  posterSub: {
+    marginTop: 6,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  posterDesc: {
+    marginTop: 10,
+    color: "rgba(255,255,255,0.82)",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  posterBtn: {
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  posterBtnText: {
+    color: "#111",
+    fontWeight: "700",
+  },
+});
