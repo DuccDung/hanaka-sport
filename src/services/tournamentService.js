@@ -270,3 +270,54 @@ export async function publicListTournaments({
 
   return res.data;
 }
+/**
+ * GET: /api/tournaments/:tournamentId/round-maps/:roundMapId/standings
+ */
+export async function getTournamentRoundStandings(tournamentId, roundMapId) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  if (!roundMapId) throw new Error("roundMapId is required");
+
+  const res = await apiClient.get(
+    `/tournaments/${tournamentId}/round-maps/${roundMapId}/standings`,
+  );
+  return res.data;
+}
+
+/**
+ * Helper:
+ * lấy danh sách round từ API rounds-with-matches
+ * vì standings API của bạn đang nhận roundMapId
+ */
+export async function getTournamentStandingRounds(tournamentId) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+
+  const data = await getTournamentRoundsWithMatches(tournamentId);
+
+  return (data?.rounds || []).map((r) => ({
+    key: String(r.roundKey),
+    label: r.roundLabel || r.roundKey,
+    roundMapId: r.tournamentRoundMapId,
+    roundKey: r.roundKey,
+    roundLabel: r.roundLabel,
+    sortOrder: r.sortOrder ?? 0,
+  }));
+}
+/**
+ * GET: /api/tournaments/:tournamentId/rule
+ * Lấy riêng thể lệ giải theo tournamentId
+ *
+ * Response dự kiến:
+ * {
+ *   tournamentId: number,
+ *   title: string,
+ *   tournamentRule: string | null
+ * }
+ */
+export async function getTournamentRule(tournamentId) {
+  if (!tournamentId) {
+    throw new Error("tournamentId is required");
+  }
+
+  const res = await apiClient.get(`/tournaments/${tournamentId}/rule`);
+  return res.data;
+}

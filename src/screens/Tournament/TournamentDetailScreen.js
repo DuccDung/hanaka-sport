@@ -312,7 +312,15 @@ export default function TournamentDetailScreen({ navigation, route }) {
               <Text style={styles.actionText}>Danh sách đăng ký</Text>
             </Pressable>
 
-            <Pressable style={styles.actionBtn}>
+            <Pressable
+              style={styles.actionBtn}
+              onPress={() =>
+                navigation.navigate("TournamentRule", {
+                  tournamentId: t.tournamentId,
+                  title: "Thể lệ giải",
+                })
+              }
+            >
               <Ionicons name="hammer" size={16} color="#1E2430" />
               <Text style={styles.actionText}>Thể lệ giải</Text>
             </Pressable>

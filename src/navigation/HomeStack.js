@@ -31,6 +31,7 @@ import ClubDetailScreen from "../screens/Club/ClubDetailScreen";
 import CoachDetailScreen from "../screens/Coach/CoachDetailScreen";
 import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
 import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
+import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -189,6 +190,11 @@ export default function HomeStack() {
       <Stack.Screen
         name="RefereeDetail"
         component={RefereeDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TournamentRule"
+        component={TournamentRuleScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
