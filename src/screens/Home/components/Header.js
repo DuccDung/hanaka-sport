@@ -41,7 +41,10 @@ export default function Header({ sport, onToggleSport, onPressAvatar }) {
           <Pressable style={styles.headerIcon}>
             <Ionicons name="notifications-outline" size={22} color="#fff" />
           </Pressable>
-          <Pressable style={styles.headerIcon}>
+          <Pressable
+            style={styles.headerIcon}
+            onPress={() => navigation.navigate("Settings")}
+          >
             <Ionicons name="settings-outline" size={22} color="#fff" />
           </Pressable>
 

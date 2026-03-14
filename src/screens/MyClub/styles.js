@@ -116,4 +116,75 @@ export const styles = StyleSheet.create({
   },
   statText: { fontSize: 14, fontWeight: "500", color: "#1E2430" },
   statStrong: { fontWeight: "800" },
+  summaryRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  summaryText: {
+    color: "#E5ECFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  badgeRow: {
+    marginTop: 8,
+    flexDirection: "row",
+  },
+  badge: {
+    paddingHorizontal: 10,
+    height: 28,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeManager: {
+    backgroundColor: "#DCFCE7",
+  },
+  badgeMember: {
+    backgroundColor: "#DBEAFE",
+  },
+  badgePending: {
+    backgroundColor: "#FEF3C7",
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1E2430",
+  },
+
+  centerBox: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  emptyTitle: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1E2430",
+  },
+  emptyText: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: "center",
+    color: "#6B7280",
+  },
+  avatarWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
 });

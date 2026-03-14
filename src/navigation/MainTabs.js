@@ -6,7 +6,8 @@ import { COLORS } from "../constants/colors";
 import VideosScreen from "../screens/Videos/VideosScreen";
 import Placeholder from "../components/Placeholder";
 import HomeStack from "./HomeStack";
-import MyClubsScreen from "../screens/MyClub/MyClubsScreen";
+import MyClubStack from "./MyClubStack";
+import ChatStack from "./ChatStack";
 const Tab = createBottomTabNavigator();
 
 export default function MainTabs() {
@@ -46,12 +47,12 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="CLB"
-        component={MyClubsScreen}
+        component={MyClubStack}
         options={{ title: "CLB" }}
       />
       <Tab.Screen
         name="Chat"
-        component={() => <Placeholder title="Tin nhắn" />}
+        component={ChatStack}
         options={{ title: "Tin nhắn" }}
       />
     </Tab.Navigator>
