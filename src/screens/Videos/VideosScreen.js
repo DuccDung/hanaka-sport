@@ -306,10 +306,6 @@ export default function VideosScreen({ navigation, route }) {
 
           <View style={styles.headerIcons}>
             <Pressable style={styles.headerIconBtn} hitSlop={10}>
-              <Ionicons name="help-circle-outline" size={20} color="#fff" />
-            </Pressable>
-
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
               <Ionicons name="notifications-outline" size={20} color="#fff" />
             </Pressable>
 

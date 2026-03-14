@@ -33,6 +33,9 @@ import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
 import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
 import SettingsScreen from "../screens/Setting/SettingsScreen";
+import NotificationScreen from "../screens/Setting/NotificationScreen";
+import GuideScreen from "../screens/Setting/GuideScreen";
+import WebViewScreen from "../screens/Setting/WebViewScreen";
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -201,6 +204,22 @@ export default function HomeStack() {
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Notification"
+        component={NotificationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Guide"
+        component={GuideScreen}
+        options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="AppWebView"
+        component={WebViewScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
