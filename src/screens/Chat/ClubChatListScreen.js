@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../constants/colors";
 import { getMyClubChatRooms } from "../../services/chatService";
 import { styles } from "./styles";
+import { addRealtimeListener } from "../../services/realtimeService";
 
 function formatTime(value) {
   if (!value) return "";
@@ -62,7 +63,23 @@ export default function ClubChatListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    fetchRooms();
 
+    const unsubscribe = addRealtimeListener((event) => {
+      if (
+        event?.type === "club.notification" ||
+        event?.type === "club.message.created" ||
+        event?.type === "club.message.deleted"
+      ) {
+        fetchRooms({ isRefresh: false });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchRooms]);
   const fetchRooms = useCallback(async ({ isRefresh = false } = {}) => {
     try {
       if (isRefresh) setRefreshing(true);

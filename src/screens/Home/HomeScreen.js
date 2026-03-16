@@ -5,45 +5,70 @@ import {
   ActivityIndicator,
   Text,
   RefreshControl,
+  Alert,
+  Linking,
 } from "react-native";
 import { styles } from "./styles";
 import Header from "./components/Header";
 import MenuGrid from "./components/MenuGrid";
 import BannerCarousel from "./components/BannerCarousel";
-import { menuItems } from "./data/menuItems";
+import { menuItems as baseMenuItems } from "./data/menuItems";
 import { getHomeBanners } from "../../services/bannerService";
+import { getYoutubeGuideLink } from "../../services/publicLinkService";
+
 export default function HomeScreen({ navigation }) {
   const [sport, setSport] = useState("Pickleball");
   const [bannerIndex, setBannerIndex] = useState(0);
   const [banners, setBanners] = useState([]);
   const [loadingBanners, setLoadingBanners] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [bannerError, setBannerError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [menuItems, setMenuItems] = useState(baseMenuItems);
+  const [loadingMenu, setLoadingMenu] = useState(true);
 
   useEffect(() => {
-    loadBanners();
+    loadAll();
   }, []);
 
-  const toggleSport = () =>
-    setSport((s) => (s === "Pickleball" ? "Tennis" : "Pickleball"));
-
-  const handlePressItem = (item) => {
-    if (item.key === "rules") navigation.navigate("Rules");
-    if (item.key === "members") navigation.navigate("Members");
-    if (item.key === "coach") navigation.navigate("Coach");
-    if (item.key === "club") navigation.navigate("Club");
-    if (item.key === "court") navigation.navigate("Court");
-    if (item.key === "ref") navigation.navigate("Referee");
-    if (item.key === "tournament") navigation.navigate("Tournament");
-    if (item.key === "exchange") navigation.navigate("Exchange");
-    if (item.key === "match") navigation.navigate("MatchList");
+  const loadAll = async () => {
+    await Promise.all([loadGuideLink(), loadBanners()]);
   };
 
-  async function loadBanners() {
+  const loadGuideLink = async () => {
+    try {
+      setLoadingMenu(true);
+
+      const youtubeUrl = await getYoutubeGuideLink();
+
+      const nextItems = baseMenuItems.map((item) => {
+        if (item.key === "guide") {
+          return {
+            ...item,
+            url: youtubeUrl,
+          };
+        }
+        return item;
+      });
+
+      setMenuItems(nextItems);
+    } catch (error) {
+      console.log(
+        "loadGuideLink error:",
+        error?.response?.data || error?.message,
+      );
+      setMenuItems(baseMenuItems);
+    } finally {
+      setLoadingMenu(false);
+    }
+  };
+
+  const loadBanners = async () => {
     try {
       setBannerError("");
+
       const items = await getHomeBanners();
-      setBanners(items);
+      setBanners(items || []);
       setBannerIndex(0);
     } catch (error) {
       console.log(
@@ -57,12 +82,88 @@ export default function HomeScreen({ navigation }) {
       setLoadingBanners(false);
       setRefreshing(false);
     }
-  }
+  };
 
-  async function onRefresh() {
+  const onRefresh = async () => {
     setRefreshing(true);
-    await loadBanners();
-  }
+    await loadAll();
+    setRefreshing(false);
+  };
+
+  const toggleSport = () => {
+    setSport((prev) => (prev === "Pickleball" ? "Tennis" : "Pickleball"));
+  };
+
+  const openUrl = async (url) => {
+    if (!url) {
+      Alert.alert("Thông báo", "Chưa có liên kết hướng dẫn.");
+      return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(url);
+
+      if (!supported) {
+        Alert.alert("Thông báo", "Không thể mở liên kết hướng dẫn.");
+        return;
+      }
+
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert("Thông báo", "Mở liên kết thất bại.");
+    }
+  };
+
+  const handlePressItem = async (item) => {
+    if (item.key === "guide") {
+      await openUrl(item.url);
+      return;
+    }
+
+    if (item.key === "rules") {
+      navigation.navigate("Rules");
+      return;
+    }
+
+    if (item.key === "members") {
+      navigation.navigate("Members");
+      return;
+    }
+
+    if (item.key === "coach") {
+      navigation.navigate("Coach");
+      return;
+    }
+
+    if (item.key === "club") {
+      navigation.navigate("Club");
+      return;
+    }
+
+    if (item.key === "court") {
+      navigation.navigate("Court");
+      return;
+    }
+
+    if (item.key === "ref") {
+      navigation.navigate("Referee");
+      return;
+    }
+
+    if (item.key === "tournament") {
+      navigation.navigate("Tournament");
+      return;
+    }
+
+    if (item.key === "exchange") {
+      navigation.navigate("Exchange");
+      return;
+    }
+
+    if (item.key === "match") {
+      navigation.navigate("MatchList");
+    }
+  };
 
   return (
     <View style={styles.safe}>
@@ -83,7 +184,13 @@ export default function HomeScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <MenuGrid items={menuItems} onPressItem={handlePressItem} />
+        {loadingMenu ? (
+          <View style={styles.bannerLoadingWrap}>
+            <ActivityIndicator size="small" />
+          </View>
+        ) : (
+          <MenuGrid items={menuItems} onPressItem={handlePressItem} />
+        )}
 
         {loadingBanners ? (
           <View style={styles.bannerLoadingWrap}>

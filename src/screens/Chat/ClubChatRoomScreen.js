@@ -27,6 +27,12 @@ import {
   getClubMessages,
   sendClubMessage,
 } from "../../services/chatService";
+import {
+  addRealtimeListener,
+  subscribeClubRoom,
+  unsubscribeClubRoom,
+  sendTyping,
+} from "../../services/realtimeService";
 
 function formatMessageTime(value) {
   if (!value) return "";
@@ -75,7 +81,6 @@ function MessageItem({ item, isMine, onDelete }) {
 
         <View style={styles.msgMetaRow}>
           <Text style={styles.msgTime}>{formatMessageTime(item.sentAt)}</Text>
-
           {isMine && (
             <Pressable onPress={() => onDelete?.(item)} hitSlop={8}>
               <Text style={styles.msgDelete}>Xoá</Text>
@@ -99,45 +104,106 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
 
   const flatListRef = useRef(null);
-  const pollingRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-  const fetchMessages = useCallback(
-    async ({ silent = false } = {}) => {
-      try {
-        if (!silent) setLoading(true);
+  const fetchMessages = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        const res = await getClubMessages({
-          clubId,
-          page: 1,
-          pageSize: 100,
-        });
+      const res = await getClubMessages({
+        clubId,
+        page: 1,
+        pageSize: 100,
+      });
 
-        setItems(res?.items || []);
-      } catch (error) {
-        console.log(
-          "getClubMessages error",
-          error?.response?.data || error?.message,
-        );
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    },
-    [clubId],
-  );
+      setItems(res?.items || []);
+    } catch (error) {
+      console.log(
+        "getClubMessages error",
+        error?.response?.data || error?.message,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [clubId]);
 
   useEffect(() => {
     fetchMessages();
+  }, [fetchMessages]);
 
-    pollingRef.current = setInterval(() => {
-      fetchMessages({ silent: true });
-    }, 4000);
+  useEffect(() => {
+    subscribeClubRoom(clubId);
+
+    const unsubscribe = addRealtimeListener((event) => {
+      if (!event?.type) return;
+
+      if (
+        event.type === "club.message.created" &&
+        String(event.clubId) === String(clubId)
+      ) {
+        const newItem = event.item;
+        if (!newItem) return;
+
+        setItems((prev) => {
+          const exists = prev.some(
+            (x) => String(x.messageId) === String(newItem.messageId),
+          );
+          if (exists) return prev;
+
+          const withoutTemp = prev.filter(
+            (x) =>
+              !(
+                String(x.senderUserId) === String(newItem.senderUserId) &&
+                x.messageId?.toString?.().startsWith?.("temp-") &&
+                x.content === newItem.content
+              ),
+          );
+
+          return [...withoutTemp, newItem];
+        });
+      }
+
+      if (
+        event.type === "club.message.deleted" &&
+        String(event.clubId) === String(clubId)
+      ) {
+        setItems((prev) =>
+          prev.filter((x) => String(x.messageId) !== String(event.messageId)),
+        );
+      }
+
+      if (
+        event.type === "club.typing" &&
+        String(event.clubId) === String(clubId)
+      ) {
+        if (String(event.userId) === String(myUserId)) return;
+
+        setTypingUsers((prev) => {
+          const others = prev.filter(
+            (x) => String(x.userId) !== String(event.userId),
+          );
+          if (!event.isTyping) return others;
+
+          return [
+            ...others,
+            {
+              userId: event.userId,
+              fullName: event.fullName || "Thành viên",
+            },
+          ];
+        });
+      }
+    });
 
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      unsubscribeClubRoom(clubId);
+      unsubscribe();
+      sendTyping(clubId, false);
     };
-  }, [fetchMessages]);
+  }, [clubId, myUserId]);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -146,6 +212,23 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       }, 100);
     }
   }, [items.length]);
+
+  const onChangeText = useCallback(
+    (value) => {
+      setText(value);
+
+      sendTyping(clubId, value.trim().length > 0);
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTyping(clubId, false);
+      }, 1200);
+    },
+    [clubId],
+  );
 
   const onSend = useCallback(async () => {
     const content = text.trim();
@@ -167,6 +250,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
 
       setItems((prev) => [...prev, optimistic]);
       setText("");
+      sendTyping(clubId, false);
 
       const res = await sendClubMessage(clubId, {
         messageType: "TEXT",
@@ -179,10 +263,16 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           const withoutTemp = prev.filter(
             (x) => x.messageId !== optimistic.messageId,
           );
+
+          const exists = withoutTemp.some(
+            (x) => String(x.messageId) === String(savedItem.messageId),
+          );
+          if (exists) return withoutTemp;
+
           return [...withoutTemp, savedItem];
         });
       } else {
-        fetchMessages({ silent: true });
+        fetchMessages();
       }
     } catch (error) {
       console.log(
@@ -190,7 +280,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         error?.response?.data || error?.message,
       );
       setText(content);
-      fetchMessages({ silent: true });
+      fetchMessages();
     } finally {
       setSending(false);
     }
@@ -211,6 +301,13 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     [clubId],
   );
 
+  const typingText = useMemo(() => {
+    if (!typingUsers.length) return "";
+    if (typingUsers.length === 1)
+      return `${typingUsers[0].fullName} đang nhập...`;
+    return `${typingUsers.length} người đang nhập...`;
+  }, [typingUsers]);
+
   const header = useMemo(() => {
     return (
       <View style={styles.roomHeader}>
@@ -222,11 +319,13 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           <Text style={styles.roomHeaderTitle} numberOfLines={1}>
             {clubName}
           </Text>
-          <Text style={styles.roomHeaderSub}>Chat thành viên CLB</Text>
+          <Text style={styles.roomHeaderSub}>
+            {typingText || "Chat thành viên CLB"}
+          </Text>
         </View>
       </View>
     );
-  }, [navigation, clubName]);
+  }, [navigation, clubName, typingText]);
 
   return (
     <View style={styles.safe}>
@@ -267,7 +366,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
             <View style={styles.inputBar}>
               <TextInput
                 value={text}
-                onChangeText={setText}
+                onChangeText={onChangeText}
                 placeholder="Nhập tin nhắn..."
                 placeholderTextColor="#9CA3AF"
                 style={styles.input}

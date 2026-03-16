@@ -1,5 +1,5 @@
-// ĐỔI baseURL theo môi trường bạn đang test:
 export const API_BASE_URL = "https://hanakasport.click";
+export const WS_BASE_URL = "wss://hanakasport.click";
 
 export const API_TIMEOUT = 15000;
 
