@@ -23,12 +23,17 @@ export const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  label: { fontSize: 13, fontWeight: "700", color: "#1E2430", marginBottom: 8 },
+  label: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E2430",
+    marginBottom: 8,
+  },
 
   inputWrap: {
     backgroundColor: "#F3F4F6",
     borderRadius: 10,
-    height: 44,
+    minHeight: 44,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",

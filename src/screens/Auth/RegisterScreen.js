@@ -15,17 +15,16 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registerStyles";
 import { register } from "../../services/authApi";
-import { useAuth } from "../../context/AuthContext";
+
 function isEmail(email = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 export default function RegisterScreen({ navigation }) {
-  const [fullName, setFullName] = useState("Nguyễn Văn A");
-  const [email, setEmail] = useState("a@test.com");
-  const [password, setPassword] = useState("123456");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
-  const { setAuthSession } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
 
@@ -45,30 +44,20 @@ export default function RegisterScreen({ navigation }) {
     setSubmitting(true);
     setErrorText("");
 
-    const payload = {
-      fullName: fullName.trim(),
-      email: email.trim(),
-      password: password, // giữ nguyên (không trim) để tránh mất space nếu user cố tình đặt
-    };
-
     try {
-      // ✅ gọi API + lưu token/user trong service
-      const data = await register(payload);
-      await setAuthSession(data); // data gồm accessToken, expiresAtUtc, user
-      // data = { accessToken, expiresAtUtc, user }
-      Alert.alert("Thành công", `Chào ${data?.user?.fullName || "bạn"}!`);
+      const data = await register({
+        fullName: fullName.trim(),
+        email: email.trim(),
+        password,
+      });
 
-      // Tuỳ flow app bạn:
-      // 1) Quay về login:
-      // navigation.goBack();
+      Alert.alert("Thành công", data?.message || "OTP đã được gửi tới email.");
 
-      // 2) Hoặc chuyển thẳng vào Home:
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
+      navigation.navigate("RegisterOtp", {
+        email: email.trim(),
+        fullName: fullName.trim(),
       });
     } catch (e) {
-      // Map lỗi phổ biến từ axios / asp.net
       const msg =
         e?.response?.data?.message ||
         e?.response?.data?.title ||
@@ -87,7 +76,6 @@ export default function RegisterScreen({ navigation }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -108,7 +96,6 @@ export default function RegisterScreen({ navigation }) {
       >
         <View style={styles.centerWrap}>
           <View style={styles.card}>
-            {/* Full name */}
             <Text style={styles.label}>Họ và tên</Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -122,7 +109,6 @@ export default function RegisterScreen({ navigation }) {
               />
             </View>
 
-            {/* Email */}
             <Text style={[styles.label, { marginTop: 12 }]}>Email</Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -138,7 +124,6 @@ export default function RegisterScreen({ navigation }) {
               />
             </View>
 
-            {/* Password */}
             <Text style={[styles.label, { marginTop: 12 }]}>Mật khẩu</Text>
             <View style={styles.inputWrap}>
               <TextInput
@@ -167,24 +152,21 @@ export default function RegisterScreen({ navigation }) {
               </Pressable>
             </View>
 
-            {/* Hint */}
             <Text style={styles.hint}>Mật khẩu tối thiểu 6 ký tự.</Text>
 
-            {/* Error */}
             {errorText ? (
               <Text style={{ marginTop: 8, color: "#DC2626" }}>
                 {errorText}
               </Text>
             ) : null}
 
-            {/* Submit */}
             <Pressable
               onPress={onSubmit}
               disabled={!canSubmit}
               style={[styles.submitBtn, canSubmit && styles.submitBtnActive]}
             >
               {submitting ? (
-                <ActivityIndicator />
+                <ActivityIndicator color="#fff" />
               ) : (
                 <Text
                   style={[
@@ -197,7 +179,6 @@ export default function RegisterScreen({ navigation }) {
               )}
             </Pressable>
 
-            {/* Footer */}
             <View style={styles.footerRow}>
               <Text style={styles.footerText}>Đã có tài khoản?</Text>
               <Pressable

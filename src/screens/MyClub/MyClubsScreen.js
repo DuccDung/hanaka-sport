@@ -153,7 +153,10 @@ export default function MyClubsScreen({ navigation }) {
   const avatarUrl = user?.avatarUrl || null;
   const displayName =
     user?.fullName || user?.name || user?.username || user?.email || "Bạn";
-
+  const rootNavigation =
+    navigation.getParent?.()?.getParent?.() ||
+    navigation.getParent?.() ||
+    navigation;
   const [tab, setTab] = useState("ALL");
   const [query, setQuery] = useState("");
   const [serverData, setServerData] = useState([]);
@@ -228,23 +231,27 @@ export default function MyClubsScreen({ navigation }) {
           </Text>
 
           <View style={styles.headerIcons}>
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
-              <Ionicons name="help-circle-outline" size={20} color="#fff" />
-            </Pressable>
-
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
+            <Pressable
+              style={styles.headerIconBtn}
+              hitSlop={10}
+              onPress={() => rootNavigation.navigate("Notification")}
+            >
               <Ionicons name="notifications-outline" size={20} color="#fff" />
             </Pressable>
 
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
+            <Pressable
+              style={styles.headerIconBtn}
+              hitSlop={10}
+              onPress={() => rootNavigation.navigate("Settings")}
+            >
               <Ionicons name="settings-outline" size={20} color="#fff" />
             </Pressable>
 
             <Pressable
               onPress={() =>
                 user
-                  ? navigation.navigate("Account")
-                  : navigation.navigate("Login")
+                  ? rootNavigation.navigate("Account")
+                  : rootNavigation.navigate("Login")
               }
               hitSlop={10}
               style={styles.avatarWrap}

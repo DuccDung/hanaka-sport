@@ -19,51 +19,9 @@ export default function NotificationScreen() {
   const [notifications] = useState([
     {
       id: "1",
-      title: "Sport Connect - Thông báo",
+      title: "Hanaka Sport - Thông báo",
       message: "Bạn chuẩn bị thi đấu tại sân D lúc 13h",
       time: "27/11/2025 08:50",
-    },
-    {
-      id: "2",
-      title: "Sport Connect - Thông báo",
-      message: "Bạn chuẩn bị thi đấu tại sân D lúc 13h",
-      time: "27/11/2025 08:50",
-    },
-    {
-      id: "3",
-      title: "Sport Connect - Thông báo",
-      message: "Bạn chuẩn bị thi đấu tại sân D lúc 13h",
-      time: "27/11/2025 08:49",
-    },
-    {
-      id: "4",
-      title: "Sport Connect - Thông báo",
-      message: "Cảm ơn các bạn đã quan tâm, ủng hộ SPORT CONNECT",
-      time: "26/11/2025 14:04",
-    },
-    {
-      id: "5",
-      title: "Sport Connect - Thông báo",
-      message: "Bạn chuẩn bị thi đấu tại sân D lúc 13h",
-      time: "26/11/2025 14:03",
-    },
-    {
-      id: "6",
-      title: "Sport Connect - Thông báo",
-      message: "Bạn chuẩn bị thi đấu tại sân D lúc 13h",
-      time: "26/11/2025 14:03",
-    },
-    {
-      id: "7",
-      title: "Sport Connect - Thông báo",
-      message: "Bạn chuẩn bị thi đấu tại sân D lúc 13h",
-      time: "26/11/2025 13:54",
-    },
-    {
-      id: "8",
-      title: "Sport Connect - Thông báo",
-      message: "Thông báo từ hệ thống SportConnect",
-      time: "25/11/2025 10:20",
     },
   ]);
 

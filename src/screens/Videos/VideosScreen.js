@@ -194,7 +194,7 @@ export default function VideosScreen({ navigation, route }) {
   const [errorText, setErrorText] = useState("");
 
   const mountedRef = useRef(true);
-
+  const rootNavigation = navigation.getParent?.() || navigation;
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -305,19 +305,27 @@ export default function VideosScreen({ navigation, route }) {
           </Text>
 
           <View style={styles.headerIcons}>
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
+            <Pressable
+              style={styles.headerIconBtn}
+              hitSlop={10}
+              onPress={() => rootNavigation.navigate("Notification")}
+            >
               <Ionicons name="notifications-outline" size={20} color="#fff" />
             </Pressable>
 
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
+            <Pressable
+              style={styles.headerIconBtn}
+              hitSlop={10}
+              onPress={() => rootNavigation.navigate("Settings")}
+            >
               <Ionicons name="settings-outline" size={20} color="#fff" />
             </Pressable>
 
             <Pressable
               onPress={() =>
                 user
-                  ? navigation.navigate("Account")
-                  : navigation.navigate("Login")
+                  ? rootNavigation.navigate("Account")
+                  : rootNavigation.navigate("Login")
               }
               hitSlop={10}
               style={styles.avatarWrap}

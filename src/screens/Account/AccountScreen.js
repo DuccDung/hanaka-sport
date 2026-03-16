@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   Image,
@@ -12,91 +11,154 @@ import {
   Modal,
   FlatList,
   Platform,
+  ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
 
 import { useAuth } from "../../context/AuthContext";
 import { styles } from "./styles";
 import { COLORS } from "../../constants/colors";
-
-import { getMe, updateMe } from "../../services/userService";
-import * as ImagePicker from "expo-image-picker";
-import { uploadAvatar } from "../../services/userService";
+import { getMe, updateMe, uploadAvatar } from "../../services/userService";
 
 const GENDERS = ["Nam", "Nữ", "Khác"];
-const PROVINCES = ["Bắc Giang", "Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng"]; // thay list thật sau
+const PROVINCES = ["Bắc Giang", "Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng"];
 
 function formatDateDDMMYYYY(date) {
   if (!date) return "";
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
+
   return `${dd}/${mm}/${yyyy}`;
 }
 
 function toIsoDateOnly(date) {
-  // "YYYY-MM-DD"
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
+
   return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeAvatarUrl(value) {
+  if (!value) return null;
+  const s = String(value).trim();
+  if (!s || s === "null" || s === "undefined") return null;
+  return s;
 }
 
 export default function AccountScreen({ navigation }) {
   const { session, logout, setAuthSession } = useAuth();
-  const userInSession = session?.user;
-  const disabled = !session?.accessToken; // chỉ cần token là được (đỡ phụ thuộc session.user)
+
+  const accessToken = session?.accessToken || null;
+  const userInSession = session?.user || null;
+  const isLoggedIn = !!accessToken;
+  const disabled = !isLoggedIn;
 
   const [loading, setLoading] = useState(false);
+  const [refreshingProfile, setRefreshingProfile] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
-  // profile state
-  const [avatarUrl, setAvatarUrl] = useState(userInSession?.avatarUrl ?? null);
+  const [userId, setUserId] = useState(userInSession?.userId ?? null);
+  const [avatarUrl, setAvatarUrl] = useState(
+    normalizeAvatarUrl(userInSession?.avatarUrl),
+  );
   const [fullName, setFullName] = useState(userInSession?.fullName ?? "");
   const [phone, setPhone] = useState(userInSession?.phone ?? "");
   const [email, setEmail] = useState(userInSession?.email ?? "");
   const [gender, setGender] = useState(userInSession?.gender ?? "");
   const [province, setProvince] = useState(userInSession?.city ?? "");
   const [bio, setBio] = useState(userInSession?.bio ?? "");
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  // date
   const [dobDate, setDobDate] = useState(
     userInSession?.birthOfDate ? new Date(userInSession.birthOfDate) : null,
   );
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // modals
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [genderModal, setGenderModal] = useState(false);
   const [provinceModal, setProvinceModal] = useState(false);
 
   const verifiedText = useMemo(() => {
-    if (!session?.accessToken) return "Chưa đăng nhập";
+    if (!isLoggedIn) return "Chưa đăng nhập";
     return userInSession?.verified ? "Đã xác thực" : "Chờ xác thực";
-  }, [session?.accessToken, userInSession?.verified]);
+  }, [isLoggedIn, userInSession?.verified]);
 
-  const onPickAvatar = async () => {
-    if (!session?.accessToken) {
-      Alert.alert("Bạn chưa đăng nhập", "Vui lòng đăng nhập để cập nhật ảnh.", [
-        { text: "OK", onPress: () => navigation.navigate("Login") },
-      ]);
-      return;
-    }
+  const requireLogin = () => {
+    if (isLoggedIn) return false;
+
+    Alert.alert(
+      "Bạn chưa đăng nhập",
+      "Vui lòng đăng nhập để xem và cập nhật thông tin tài khoản.",
+      [{ text: "OK", onPress: () => navigation.navigate("Login") }],
+    );
+
+    return true;
+  };
+
+  const syncUserToState = (user) => {
+    if (!user) return;
+
+    setUserId(user?.userId ?? null);
+    setAvatarUrl(normalizeAvatarUrl(user?.avatarUrl));
+    setFullName(user?.fullName ?? "");
+    setPhone(user?.phone ?? "");
+    setEmail(user?.email ?? "");
+    setGender(user?.gender ?? "");
+    setProvince(user?.city ?? "");
+    setBio(user?.bio ?? "");
+    setDobDate(user?.birthOfDate ? new Date(user.birthOfDate) : null);
+  };
+
+  const refreshProfile = async () => {
+    if (!accessToken) return;
 
     try {
-      // xin quyền
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert("Thiếu quyền", "Bạn cần cho phép truy cập thư viện ảnh.");
+      setRefreshingProfile(true);
+      const me = await getMe();
+
+      syncUserToState(me);
+
+      await setAuthSession({
+        accessToken: session.accessToken,
+        expiresAtUtc: session.expiresAtUtc,
+        user: me,
+      });
+    } catch (error) {
+      Alert.alert("Lỗi", "Không lấy được thông tin tài khoản.");
+    } finally {
+      setRefreshingProfile(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!accessToken) return;
+    refreshProfile();
+  }, [accessToken]);
+
+  const onPickAvatar = async () => {
+    if (requireLogin()) return;
+
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert("Thiếu quyền", "Bạn cần cấp quyền truy cập thư viện ảnh.");
         return;
       }
 
-      // mở picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1], // crop hình vuông cho avatar
+        aspect: [1, 1],
         quality: 0.85,
       });
 
@@ -107,18 +169,19 @@ export default function AccountScreen({ navigation }) {
 
       setAvatarUploading(true);
 
-      // upload
-      const { avatarUrl: newAvatarUrl } = await uploadAvatar(fileUri);
+      const response = await uploadAvatar(fileUri);
+      const safeAvatar = normalizeAvatarUrl(response?.avatarUrl);
 
-      if (!newAvatarUrl) {
-        throw new Error("Upload thành công nhưng không nhận được avatarUrl");
+      if (!safeAvatar) {
+        throw new Error("Upload thành công nhưng không nhận được avatarUrl.");
       }
 
-      // update UI
-      setAvatarUrl(newAvatarUrl);
+      setAvatarUrl(safeAvatar);
 
-      // update session.user để chỗ khác sync avatar
-      const nextUser = { ...(session.user || {}), avatarUrl: newAvatarUrl };
+      const nextUser = {
+        ...(session?.user || {}),
+        avatarUrl: safeAvatar,
+      };
 
       await setAuthSession({
         accessToken: session.accessToken,
@@ -127,11 +190,11 @@ export default function AccountScreen({ navigation }) {
       });
 
       Alert.alert("Thành công", "Đã cập nhật ảnh đại diện.");
-    } catch (e) {
+    } catch (error) {
       const msg =
-        e?.response?.data?.message ||
-        e?.response?.data ||
-        e?.message ||
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
         "Upload ảnh thất bại.";
       Alert.alert("Lỗi", String(msg));
     } finally {
@@ -139,52 +202,6 @@ export default function AccountScreen({ navigation }) {
     }
   };
 
-  const requireLogin = () => {
-    if (!session?.accessToken) {
-      Alert.alert(
-        "Bạn chưa đăng nhập",
-        "Vui lòng đăng nhập để xem thông tin tài khoản.",
-        [{ text: "OK", onPress: () => navigation.navigate("Login") }],
-      );
-      return true;
-    }
-    return false;
-  };
-
-  useEffect(() => {
-    (async () => {
-      if (!session?.accessToken) return;
-
-      try {
-        setLoading(true);
-        const me = await getMe();
-
-        // update UI state
-        setAvatarUrl(me?.avatarUrl ?? null);
-        setFullName(me?.fullName ?? "");
-        setPhone(me?.phone ?? "");
-        setEmail(me?.email ?? "");
-        setGender(me?.gender ?? "");
-        setProvince(me?.city ?? "");
-        setBio(me?.bio ?? "");
-        setDobDate(me?.birthOfDate ? new Date(me.birthOfDate) : null);
-
-        // update session.user để header/avatar chỗ khác sync theo
-        await setAuthSession({
-          accessToken: session.accessToken,
-          expiresAtUtc: session.expiresAtUtc,
-          user: me,
-        });
-      } catch (e) {
-        Alert.alert("Lỗi", "Không lấy được thông tin tài khoản (getMe).");
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.accessToken]);
-
-  //  Update profile (PUT /users/me)
   const onUpdate = async () => {
     if (requireLogin()) return;
 
@@ -192,19 +209,18 @@ export default function AccountScreen({ navigation }) {
       setLoading(true);
 
       const payload = {
-        fullName: fullName?.trim(),
-        phone: phone?.trim(),
+        fullName: fullName?.trim() || "",
+        phone: phone?.trim() || "",
         gender: gender || null,
         city: province || null,
-        bio: bio || null,
-        birthOfDate: dobDate ? toIsoDateOnly(dobDate) : null, // server nhận DateTime? ok
+        bio: bio?.trim() || null,
+        birthOfDate: dobDate ? toIsoDateOnly(dobDate) : null,
         avatarUrl: avatarUrl || null,
       };
 
       const updated = await updateMe(payload);
 
-      // sync UI + session
-      setAvatarUrl(updated?.avatarUrl ?? null);
+      syncUserToState(updated);
 
       await setAuthSession({
         accessToken: session.accessToken,
@@ -213,9 +229,12 @@ export default function AccountScreen({ navigation }) {
       });
 
       Alert.alert("Thành công", "Cập nhật thông tin thành công.");
-    } catch (e) {
+    } catch (error) {
       const msg =
-        e?.response?.data?.message || e?.response?.data || "Cập nhật thất bại.";
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        "Cập nhật thất bại.";
       Alert.alert("Lỗi", String(msg));
     } finally {
       setLoading(false);
@@ -229,19 +248,45 @@ export default function AccountScreen({ navigation }) {
         text: "Đăng xuất",
         style: "destructive",
         onPress: async () => {
-          await logout();
-          navigation.reset({ index: 0, routes: [{ name: "Home" }] });
+          try {
+            await logout();
+          } finally {
+            navigation.reset({
+              index: 0,
+              routes: [
+                {
+                  name: "MainTabs",
+                  state: {
+                    index: 0,
+                    routes: [{ name: "Home" }],
+                  },
+                },
+              ],
+            });
+          }
         },
       },
     ]);
   };
 
+  const onChangeDate = (event, selectedDate) => {
+    if (Platform.OS !== "ios") {
+      setShowDatePicker(false);
+    }
+
+    if (event?.type === "set" && selectedDate) {
+      setDobDate(selectedDate);
+    }
+
+    if (event?.type === "dismissed") {
+      setShowDatePicker(false);
+    }
+  };
+
   return (
-    <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.header}>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -250,19 +295,27 @@ export default function AccountScreen({ navigation }) {
         >
           <Ionicons name="arrow-back" size={20} color="#111827" />
         </Pressable>
+
         <Text style={styles.headerTitle}>
-          Thông tin tài khoản{loading ? "..." : ""}
+          Thông tin tài khoản
+          {refreshingProfile ? "..." : ""}
         </Text>
-        <View style={{ width: 32 }} />
+
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Avatar */}
-        <View style={styles.avatarWrap}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.avatarSection}>
           <Pressable
             onPress={onPickAvatar}
             disabled={disabled || avatarUploading}
-            style={styles.avatarWrap}
+            style={({ pressed }) => [
+              styles.avatarPressable,
+              pressed && !disabled ? styles.pressed : null,
+            ]}
           >
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatar} />
@@ -270,65 +323,84 @@ export default function AccountScreen({ navigation }) {
               <View style={styles.avatarFallback}>
                 <Ionicons
                   name="person-circle-outline"
-                  size={86}
+                  size={92}
                   color={COLORS.BLUE}
                 />
               </View>
             )}
+
+            <View style={styles.cameraBadge}>
+              {avatarUploading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="camera" size={16} color="#fff" />
+              )}
+            </View>
           </Pressable>
+
+          <Text style={styles.avatarHint}>
+            {disabled
+              ? "Đăng nhập để cập nhật ảnh"
+              : "Chạm để đổi ảnh đại diện"}
+          </Text>
         </View>
 
-        {/* Status */}
         <Text style={styles.statusText}>
-          Thành Viên: <Text style={styles.statusBold}>{verifiedText}</Text>
+          Thành viên: <Text style={styles.statusBold}>{verifiedText}</Text>
         </Text>
 
-        {/* Form */}
         <View style={styles.card}>
-          <Label text="Họ tên" required />
+          <Label text="User ID" />
+          <TextInput
+            value={userId != null ? String(userId) : ""}
+            style={[styles.input, styles.inputDisabled]}
+            editable={false}
+            placeholder="Chưa có dữ liệu"
+            placeholderTextColor="#9CA3AF"
+          />
+
+          <Label text="Họ tên" required style={styles.labelSpacing} />
           <TextInput
             value={fullName}
             onChangeText={setFullName}
             style={styles.input}
             editable={!disabled}
             placeholder="Nhập họ tên"
+            placeholderTextColor="#9CA3AF"
           />
 
-          <Label text="Số điện thoại" required style={{ marginTop: 12 }} />
+          <Label text="Số điện thoại" required style={styles.labelSpacing} />
           <TextInput
             value={phone}
             onChangeText={setPhone}
             style={styles.input}
             editable={!disabled}
             keyboardType="phone-pad"
-            placeholder="vd: 096..."
+            placeholder="Ví dụ: 096..."
+            placeholderTextColor="#9CA3AF"
           />
 
-          <Label text="Email" style={{ marginTop: 12 }} />
+          <Label text="Email" style={styles.labelSpacing} />
           <TextInput
             value={email}
             style={[styles.input, styles.inputDisabled]}
             editable={false}
+            placeholder="Chưa có email"
+            placeholderTextColor="#9CA3AF"
           />
 
-          {/* Date of birth - bấm mở lịch */}
-          <Label text="Ngày sinh" style={{ marginTop: 12 }} />
+          <Label text="Ngày sinh" style={styles.labelSpacing} />
           <Pressable
             onPress={() => {
               if (requireLogin()) return;
               setShowDatePicker(true);
             }}
-            style={[styles.rowInput, disabled && styles.selectDisabled]}
+            style={[styles.select, disabled && styles.selectDisabled]}
           >
-            <TextInput
-              value={dobDate ? formatDateDDMMYYYY(dobDate) : ""}
-              style={[styles.input, { flex: 1 }]}
-              editable={false}
-              placeholder="Chọn ngày sinh"
-            />
-            <View style={styles.iconBox}>
-              <Ionicons name="calendar-outline" size={18} color="#6B7280" />
-            </View>
+            <Text style={dobDate ? styles.selectText : styles.placeholderText}>
+              {dobDate ? formatDateDDMMYYYY(dobDate) : "Chọn ngày sinh"}
+            </Text>
+            <Ionicons name="calendar-outline" size={18} color="#6B7280" />
           </Pressable>
 
           {showDatePicker ? (
@@ -337,22 +409,11 @@ export default function AccountScreen({ navigation }) {
               mode="date"
               display={Platform.OS === "ios" ? "spinner" : "default"}
               maximumDate={new Date()}
-              onChange={(event, selected) => {
-                // Android: dismiss khi chọn/huỷ
-                if (Platform.OS !== "ios") setShowDatePicker(false);
-
-                if (event.type === "set" && selected) {
-                  setDobDate(selected);
-                }
-                if (event.type === "dismissed") {
-                  setShowDatePicker(false);
-                }
-              }}
+              onChange={onChangeDate}
             />
           ) : null}
 
-          {/* Gender */}
-          <Label text="Giới tính" style={{ marginTop: 12 }} />
+          <Label text="Giới tính" style={styles.labelSpacing} />
           <Pressable
             onPress={() => {
               if (requireLogin()) return;
@@ -360,12 +421,13 @@ export default function AccountScreen({ navigation }) {
             }}
             style={[styles.select, disabled && styles.selectDisabled]}
           >
-            <Text style={styles.selectText}>{gender || "Chọn giới tính"}</Text>
+            <Text style={gender ? styles.selectText : styles.placeholderText}>
+              {gender || "Chọn giới tính"}
+            </Text>
             <Ionicons name="chevron-down" size={18} color="#6B7280" />
           </Pressable>
 
-          {/* Province */}
-          <Label text="Tỉnh/Thành" style={{ marginTop: 12 }} />
+          <Label text="Tỉnh/Thành" style={styles.labelSpacing} />
           <Pressable
             onPress={() => {
               if (requireLogin()) return;
@@ -373,14 +435,13 @@ export default function AccountScreen({ navigation }) {
             }}
             style={[styles.select, disabled && styles.selectDisabled]}
           >
-            <Text style={styles.selectText}>
+            <Text style={province ? styles.selectText : styles.placeholderText}>
               {province || "Chọn tỉnh/thành"}
             </Text>
             <Ionicons name="chevron-down" size={18} color="#6B7280" />
           </Pressable>
 
-          {/* Bio */}
-          <Label text="Giới thiệu" style={{ marginTop: 12 }} />
+          <Label text="Giới thiệu" style={styles.labelSpacing} />
           <TextInput
             value={bio}
             onChangeText={setBio}
@@ -388,9 +449,9 @@ export default function AccountScreen({ navigation }) {
             editable={!disabled}
             multiline
             placeholder="Viết vài dòng giới thiệu..."
+            placeholderTextColor="#9CA3AF"
           />
 
-          {/* Buttons */}
           <Pressable
             onPress={onUpdate}
             style={[
@@ -401,7 +462,7 @@ export default function AccountScreen({ navigation }) {
             disabled={disabled || loading}
           >
             <Text style={styles.btnPrimaryText}>
-              {loading ? "Đang lưu..." : "Cập nhật thay đổi thông tin"}
+              {loading ? "Đang lưu..." : "Cập nhật thông tin"}
             </Text>
           </Pressable>
 
@@ -430,44 +491,42 @@ export default function AccountScreen({ navigation }) {
           </Pressable>
 
           <Pressable onPress={onLogout} style={[styles.btn, styles.btnDanger]}>
-            <Text style={styles.btnDangerText}>Đăng Xuất</Text>
+            <Text style={styles.btnDangerText}>Đăng xuất</Text>
           </Pressable>
         </View>
       </ScrollView>
 
-      {/* Gender Modal */}
       <SelectModal
         visible={genderModal}
         title="Chọn giới tính"
         options={GENDERS}
         selected={gender}
         onClose={() => setGenderModal(false)}
-        onSelect={(v) => {
-          setGender(v);
+        onSelect={(value) => {
+          setGender(value);
           setGenderModal(false);
         }}
       />
 
-      {/* Province Modal */}
       <SelectModal
         visible={provinceModal}
         title="Chọn tỉnh/thành"
         options={PROVINCES}
         selected={province}
         onClose={() => setProvinceModal(false)}
-        onSelect={(v) => {
-          setProvince(v);
+        onSelect={(value) => {
+          setProvince(value);
           setProvinceModal(false);
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
-function Label({ text, required, style }) {
+function Label({ text, required = false, style }) {
   return (
     <Text style={[styles.label, style]}>
-      {text} {required ? <Text style={{ color: "#EF4444" }}>*</Text> : null}
+      {text} {required ? <Text style={styles.required}>*</Text> : null}
     </Text>
   );
 }
@@ -480,54 +539,25 @@ function SelectModal({ visible, title, options, selected, onClose, onSelect }) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable
-        onPress={onClose}
-        style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.4)",
-          padding: 16,
-          justifyContent: "center",
-        }}
-      >
-        <Pressable
-          onPress={() => {}}
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <View
-            style={{
-              padding: 14,
-              borderBottomWidth: 1,
-              borderBottomColor: "#eee",
-            }}
-          >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#111827" }}>
-              {title}
-            </Text>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={() => {}}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
           </View>
 
           <FlatList
             data={options}
             keyExtractor={(item) => item}
+            showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
               const active = item === selected;
+
               return (
                 <Pressable
                   onPress={() => onSelect(item)}
-                  style={{
-                    paddingVertical: 14,
-                    paddingHorizontal: 14,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    borderBottomWidth: 1,
-                    borderBottomColor: "#f2f2f2",
-                  }}
+                  style={styles.modalItem}
                 >
-                  <Text style={{ fontSize: 15, color: "#111827" }}>{item}</Text>
+                  <Text style={styles.modalItemText}>{item}</Text>
                   {active ? (
                     <Ionicons name="checkmark" size={20} color="#16A34A" />
                   ) : null}
@@ -536,15 +566,8 @@ function SelectModal({ visible, title, options, selected, onClose, onSelect }) {
             }}
           />
 
-          <Pressable
-            onPress={onClose}
-            style={{
-              paddingVertical: 12,
-              alignItems: "center",
-              backgroundColor: "#F3F4F6",
-            }}
-          >
-            <Text style={{ fontWeight: "700", color: "#111827" }}>Đóng</Text>
+          <Pressable onPress={onClose} style={styles.modalCloseBtn}>
+            <Text style={styles.modalCloseText}>Đóng</Text>
           </Pressable>
         </Pressable>
       </Pressable>

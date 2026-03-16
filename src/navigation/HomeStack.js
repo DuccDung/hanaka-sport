@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import HomeScreen from "../screens/Home/HomeScreen";
 import RulesScreen from "../screens/Rules/RulesScreen";
 import MembersScreen from "../screens/Members/MembersScreen";
@@ -18,13 +19,8 @@ import MatchListScreen from "../screens/Match/MatchListScreen";
 import TournamentDetailScreen from "../screens/Tournament/TournamentDetailScreen";
 import RegistrationListScreen from "../screens/Tournament/RegistrationListScreen";
 import TournamentScheduleScreen from "../screens/Tournament/TournamentScheduleScreen";
-
 import TournamentStandingsScreen from "../screens/Tournament/TournamentStandingsScreen";
 import TournamentStandingsGroupScreen from "../screens/Tournament/TournamentStandingsGroupScreen";
-import RegisterScreen from "../screens/Auth/RegisterScreen";
-import LoginScreen from "../screens/Auth/LoginScreen";
-import AccountScreen from "../screens/Account/AccountScreen";
-import ChangePasswordScreen from "../screens/Account/ChangePasswordScreen";
 import MemberDetailScreen from "../screens/Members/MemberDetailScreen";
 import SelfRatingScreen from "../screens/Members/SelfRatingScreen";
 import ClubDetailScreen from "../screens/Club/ClubDetailScreen";
@@ -32,10 +28,7 @@ import CoachDetailScreen from "../screens/Coach/CoachDetailScreen";
 import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
 import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
-import SettingsScreen from "../screens/Setting/SettingsScreen";
-import NotificationScreen from "../screens/Setting/NotificationScreen";
-import GuideScreen from "../screens/Setting/GuideScreen";
-import WebViewScreen from "../screens/Setting/WebViewScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -53,7 +46,6 @@ export default function HomeStack() {
         options={({ navigation }) => ({
           title: "Luật Chơi",
           headerTitleStyle: { fontWeight: "800" },
-
           headerBackVisible: false,
           headerLeft: () => (
             <Pressable
@@ -65,6 +57,7 @@ export default function HomeStack() {
           ),
         })}
       />
+
       <Stack.Screen
         name="Members"
         component={MembersScreen}
@@ -140,30 +133,9 @@ export default function HomeStack() {
         component={TournamentStandingsScreen}
         options={{ headerShown: false }}
       />
-
       <Stack.Screen
         name="TournamentStandingsGroup"
         component={TournamentStandingsGroupScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Register"
-        component={RegisterScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Account"
-        component={AccountScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="ChangePassword"
-        component={ChangePasswordScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -199,27 +171,6 @@ export default function HomeStack() {
       <Stack.Screen
         name="TournamentRule"
         component={TournamentRuleScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Notification"
-        component={NotificationScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="Guide"
-        component={GuideScreen}
-        options={{ headerShown: false }}
-      />
-
-      <Stack.Screen
-        name="AppWebView"
-        component={WebViewScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

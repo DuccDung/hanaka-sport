@@ -25,8 +25,8 @@ function isEmailLike(v = "") {
 export default function LoginScreen({ navigation }) {
   const { setAuthSession } = useAuth();
 
-  const [email, setEmail] = useState("Dung@gmail.com");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,7 +69,15 @@ export default function LoginScreen({ navigation }) {
 
       navigation.reset({
         index: 0,
-        routes: [{ name: "Home" }],
+        routes: [
+          {
+            name: "MainTabs",
+            state: {
+              index: 0,
+              routes: [{ name: "Home" }],
+            },
+          },
+        ],
       });
     } catch (err) {
       console.log("Login error:", err?.response?.data || err.message);

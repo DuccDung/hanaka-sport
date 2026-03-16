@@ -14,13 +14,23 @@ import { COLORS } from "../../../constants/colors";
 import { styles } from "../styles";
 import { useAuth } from "../../../context/AuthContext";
 
+function normalizeAvatarUrl(value) {
+  if (!value) return null;
+
+  const s = String(value).trim();
+
+  if (!s) return null;
+  if (s === "null" || s === "undefined") return null;
+
+  return s;
+}
+
 export default function Header({ sport, onToggleSport, onPressAvatar }) {
   const { session } = useAuth();
-  const user = session?.user;
+  const user = session?.user || null;
 
   const navigation = useNavigation();
-
-  const avatarUrl = user?.avatarUrl;
+  const avatarUrl = normalizeAvatarUrl(user?.avatarUrl);
 
   return (
     <>
@@ -41,6 +51,7 @@ export default function Header({ sport, onToggleSport, onPressAvatar }) {
           >
             <Ionicons name="notifications-outline" size={22} color="#fff" />
           </Pressable>
+
           <Pressable
             style={styles.headerIcon}
             onPress={() => navigation.navigate("Settings")}
@@ -48,7 +59,6 @@ export default function Header({ sport, onToggleSport, onPressAvatar }) {
             <Ionicons name="settings-outline" size={22} color="#fff" />
           </Pressable>
 
-          {/* Nếu có user -> hiện avatar + vào Account, nếu không -> hiện nút login (onPressAvatar) */}
           {user ? (
             <Pressable
               onPress={() => navigation.navigate("Account")}

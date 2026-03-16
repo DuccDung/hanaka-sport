@@ -12,7 +12,6 @@ import MenuGrid from "./components/MenuGrid";
 import BannerCarousel from "./components/BannerCarousel";
 import { menuItems } from "./data/menuItems";
 import { getHomeBanners } from "../../services/bannerService";
-
 export default function HomeScreen({ navigation }) {
   const [sport, setSport] = useState("Pickleball");
   const [bannerIndex, setBannerIndex] = useState(0);
@@ -70,7 +69,11 @@ export default function HomeScreen({ navigation }) {
       <Header
         sport={sport}
         onToggleSport={toggleSport}
-        onPressAvatar={() => navigation.navigate("Login")}
+        onPressAvatar={() =>
+          navigation.navigate("AuthStack", {
+            screen: "Login",
+          })
+        }
       />
 
       <ScrollView

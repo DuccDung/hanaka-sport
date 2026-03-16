@@ -1,44 +1,70 @@
 import { apiClient } from "./apiClient";
-import { saveAuthSession } from "./authStorage";
 
 /**
- * payload:
- * { fullName: string, email: string, password: string }
- *
- * response mẫu bạn đưa:
+ * REGISTER
+ * response:
  * {
- *  accessToken: string,
- *  expiresAtUtc: string,
- *  user: {...}
+ *   message: string,
+ *   email: string,
+ *   otpExpiredAtUtc: string
  * }
  */
-export async function register({ fullName, email, password }) {
+export async function register({
+  fullName,
+  email,
+  password,
+  phone,
+  city,
+  gender,
+}) {
   const res = await apiClient.post("/auths/register", {
     fullName,
     email,
     password,
+    phone,
+    city,
+    gender,
   });
-  const data = res.data;
 
-  if (!data?.accessToken || !data?.user) {
-    throw new Error("API trả về dữ liệu không hợp lệ (thiếu accessToken/user)");
-  }
-  return data;
+  return res.data;
 }
+
 /**
- * Login bằng email hoặc phone
- * payload:
- * {
- *   identifier: string,
- *   password: string
- * }
- *
+ * CONFIRM OTP
  * response:
  * {
  *   accessToken: string,
  *   expiresAtUtc: string,
  *   user: {...}
  * }
+ */
+export async function confirmOtp({ email, otp }) {
+  const res = await apiClient.post("/auths/confirm-otp", {
+    email,
+    otp,
+  });
+
+  const data = res.data;
+  if (!data?.accessToken || !data?.user) {
+    throw new Error("API trả về dữ liệu không hợp lệ (thiếu accessToken/user)");
+  }
+
+  return data;
+}
+
+/**
+ * RESEND OTP
+ */
+export async function resendOtp({ email }) {
+  const res = await apiClient.post("/auths/resend-otp", {
+    email,
+  });
+
+  return res.data;
+}
+
+/**
+ * LOGIN
  */
 export async function login({ identifier, password }) {
   const res = await apiClient.post("/auths/login", {

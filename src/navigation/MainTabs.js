@@ -4,10 +4,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/colors";
 
 import VideosScreen from "../screens/Videos/VideosScreen";
-import Placeholder from "../components/Placeholder";
 import HomeStack from "./HomeStack";
 import MyClubStack from "./MyClubStack";
 import ChatStack from "./ChatStack";
+
 const Tab = createBottomTabNavigator();
 
 export default function MainTabs() {
@@ -29,8 +29,8 @@ export default function MainTabs() {
             Videos: focused ? "play-circle" : "play-circle-outline",
             CLB: focused ? "copy" : "copy-outline",
             Chat: focused ? "chatbubbles" : "chatbubbles-outline",
-            Contacts: focused ? "people" : "people-outline",
           };
+
           return <Ionicons name={map[route.name]} size={size} color={color} />;
         },
       })}
