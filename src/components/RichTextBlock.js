@@ -16,7 +16,6 @@ export default function RichTextBlock({
 
   return (
     <View style={s.wrap}>
-      {/* Toolbar (có tác dụng thật) */}
       <RichToolbar
         editor={editorRef}
         style={s.toolbar}
@@ -37,7 +36,6 @@ export default function RichTextBlock({
         ]}
       />
 
-      {/* Khung input màu xám như ảnh */}
       <View style={s.greyBox}>
         <RichEditor
           ref={editorRef}

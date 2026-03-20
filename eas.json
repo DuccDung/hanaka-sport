@@ -1,7 +1,28 @@
 {
   "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "distribution": "store"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6760590488"
+      }
+    }
+  },
+  "cli": {
+    "appVersionSource": "remote"
   }
 }

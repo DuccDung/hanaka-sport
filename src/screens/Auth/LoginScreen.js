@@ -17,6 +17,7 @@ import { login } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
 import { getMe } from "../../services/userService";
 import { COLORS } from "../../constants/colors";
+
 function isEmailLike(v = "") {
   const s = v.trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
@@ -46,7 +47,6 @@ export default function LoginScreen({ navigation }) {
         password,
       });
 
-      // Lấy thông tin user đầy đủ sau khi có accessToken
       let me = data.user;
       try {
         me = await getMe();
@@ -80,14 +80,8 @@ export default function LoginScreen({ navigation }) {
         ],
       });
     } catch (err) {
-      console.log("Login error:", err?.response?.data || err.message);
-
-      const message =
-        err?.response?.data?.message ||
-        err?.response?.data ||
-        "Đăng nhập thất bại";
-
-      Alert.alert("Lỗi", message);
+      console.log("Login error:", err?.response?.data || err?.message);
+      Alert.alert("Lỗi", "Sai thông tin đăng nhập!");
     } finally {
       setLoading(false);
     }
@@ -149,6 +143,7 @@ export default function LoginScreen({ navigation }) {
                 {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
               </Text>
             </Pressable>
+
             <Pressable
               onPress={() => navigation.navigate("Register")}
               style={{ marginTop: 16, alignItems: "center" }}

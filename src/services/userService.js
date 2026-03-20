@@ -85,3 +85,7 @@ export async function updateMySelfRating({ ratingSingle, ratingDouble }) {
   });
   return res.data;
 }
+export async function deleteMe() {
+  const res = await apiClient.delete("/users/me");
+  return res.data;
+}

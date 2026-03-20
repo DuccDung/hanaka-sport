@@ -21,7 +21,12 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context/AuthContext";
 import { styles } from "./styles";
 import { COLORS } from "../../constants/colors";
-import { getMe, updateMe, uploadAvatar } from "../../services/userService";
+import {
+  getMe,
+  updateMe,
+  uploadAvatar,
+  deleteMe,
+} from "../../services/userService";
 
 const GENDERS = ["Nam", "Nữ", "Khác"];
 const PROVINCES = ["Bắc Giang", "Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng"];
@@ -67,6 +72,7 @@ export default function AccountScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [refreshingProfile, setRefreshingProfile] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const [userId, setUserId] = useState(userInSession?.userId ?? null);
   const [avatarUrl, setAvatarUrl] = useState(
@@ -239,6 +245,63 @@ export default function AccountScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onDeleteAccount = async () => {
+    if (requireLogin()) return;
+
+    Alert.alert(
+      "Xóa tài khoản",
+      "Tài khoản sẽ bị vô hiệu hóa và bạn sẽ bị đăng xuất. Bạn có chắc chắn muốn tiếp tục?",
+      [
+        { text: "Huỷ", style: "cancel" },
+        {
+          text: "Xóa tài khoản",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeletingAccount(true);
+
+              await deleteMe();
+
+              Alert.alert("Thành công", "Tài khoản của bạn đã được xóa.", [
+                {
+                  text: "OK",
+                  onPress: async () => {
+                    try {
+                      await logout();
+                    } finally {
+                      navigation.reset({
+                        index: 0,
+                        routes: [
+                          {
+                            name: "MainTabs",
+                            state: {
+                              index: 0,
+                              routes: [{ name: "Home" }],
+                            },
+                          },
+                        ],
+                      });
+                    }
+                  },
+                },
+              ]);
+            } catch (error) {
+              const msg =
+                error?.response?.data?.message ||
+                error?.response?.data ||
+                error?.message ||
+                "Xóa tài khoản thất bại.";
+
+              Alert.alert("Lỗi", String(msg));
+            } finally {
+              setDeletingAccount(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const onLogout = async () => {
@@ -483,11 +546,28 @@ export default function AccountScreen({ navigation }) {
 
           <Pressable
             onPress={() =>
-              Alert.alert("Chính sách", "Bạn có thể mở link policy ở đây.")
+              navigation.navigate("PolicyWebView", {
+                title: "Chính sách quyền riêng tư",
+                url: "https://hanakasport.click/policy/index",
+              })
             }
             style={[styles.btn, styles.btnGreen]}
           >
             <Text style={styles.btnGreenText}>Chính sách quyền riêng tư</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={onDeleteAccount}
+            style={[
+              styles.btn,
+              styles.btnDanger,
+              (disabled || deletingAccount) && styles.btnDisabled,
+            ]}
+            disabled={disabled || deletingAccount}
+          >
+            <Text style={styles.btnDangerText}>
+              {deletingAccount ? "Đang xóa tài khoản..." : "Xóa tài khoản"}
+            </Text>
           </Pressable>
 
           <Pressable onPress={onLogout} style={[styles.btn, styles.btnDanger]}>
