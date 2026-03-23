@@ -12,10 +12,13 @@ import {
   Keyboard,
   ActivityIndicator,
   RefreshControl,
+  Linking,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registrationStyles";
 import { publicListTournamentRegistrations } from "../../services/tournamentService";
+import { getZaloGroupLink } from "../../services/publicLinkService";
 
 function normalize(str = "") {
   return String(str)
@@ -27,6 +30,7 @@ function normalize(str = "") {
 function pad2(n) {
   return String(n).padStart(2, "0");
 }
+
 function fmtDateTime(value) {
   if (!value) return "";
   const d = new Date(value);
@@ -35,10 +39,10 @@ function fmtDateTime(value) {
     d.getHours(),
   )}:${pad2(d.getMinutes())}`;
 }
+
 function getInitial(name = "") {
   const s = String(name || "").trim();
   if (!s) return "?";
-  // lấy ký tự đầu của từ cuối (thường là tên)
   const parts = s.split(/\s+/);
   const last = parts[parts.length - 1] || s;
   return last[0]?.toUpperCase() || "?";
@@ -50,7 +54,6 @@ function isValidHttpUrl(uri) {
   return s.startsWith("http://") || s.startsWith("https://");
 }
 
-// Avatar tròn: có ảnh thì show ảnh, không có ảnh thì show chữ cái đầu
 function AvatarCircle({ uri, name, size = 44 }) {
   const initial = getInitial(name);
   const showImage = isValidHttpUrl(uri);
@@ -64,7 +67,7 @@ function AvatarCircle({ uri, name, size = 44 }) {
         overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#E5E7EB", // xám nhạt
+        backgroundColor: "#E5E7EB",
       }}
     >
       {showImage ? (
@@ -75,7 +78,11 @@ function AvatarCircle({ uri, name, size = 44 }) {
         />
       ) : (
         <Text
-          style={{ fontSize: size * 0.42, fontWeight: "700", color: "#374151" }}
+          style={{
+            fontSize: size * 0.42,
+            fontWeight: "700",
+            color: "#374151",
+          }}
         >
           {initial}
         </Text>
@@ -83,23 +90,23 @@ function AvatarCircle({ uri, name, size = 44 }) {
     </View>
   );
 }
+
 export default function RegistrationListScreen({ navigation, route }) {
   const tournament = route?.params?.tournament;
   const tournamentId = tournament?.tournamentId || route?.params?.tournamentId;
 
   const [query, setQuery] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-
-  // server response
   const [resp, setResp] = useState(null);
+  const [openingZalo, setOpeningZalo] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
       setErrorMsg("");
       setLoading(true);
+
       const res = await publicListTournamentRegistrations(tournamentId, "ALL");
       setResp(res);
     } catch (e) {
@@ -121,6 +128,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     try {
       setErrorMsg("");
       setRefreshing(true);
+
       const res = await publicListTournamentRegistrations(tournamentId, "ALL");
       setResp(res);
     } catch (e) {
@@ -134,12 +142,35 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
-  // map server items -> UI items như registrationsSeed cũ (vdv1/vdv2)
+  const handleOpenZaloGroup = useCallback(async () => {
+    try {
+      setOpeningZalo(true);
+
+      const zaloLink = await getZaloGroupLink();
+
+      if (!zaloLink) {
+        Alert.alert("Thông báo", "Hiện chưa có link nhóm Zalo.");
+        return;
+      }
+
+      const supported = await Linking.canOpenURL(zaloLink);
+
+      if (!supported) {
+        Alert.alert("Thông báo", "Không thể mở link nhóm Zalo.");
+        return;
+      }
+
+      await Linking.openURL(zaloLink);
+    } catch (error) {
+      Alert.alert("Lỗi", "Mở link nhóm Zalo thất bại.");
+    } finally {
+      setOpeningZalo(false);
+    }
+  }, []);
+
   const allItems = useMemo(() => {
     const successItems = resp?.successItems || [];
     const waitingItems = resp?.waitingItems || [];
-
-    // gộp theo index để list hiển thị liên tục (bạn có thể tách section sau)
     const merged = [...successItems, ...waitingItems];
 
     return merged.map((r) => {
@@ -170,7 +201,6 @@ export default function RegistrationListScreen({ navigation, route }) {
               isGuest: !!v2?.isGuest,
             }
           : {
-              // waiting pair => show placeholder
               name: "Chờ ghép",
               avatar: "",
               level: 0,
@@ -181,7 +211,6 @@ export default function RegistrationListScreen({ navigation, route }) {
     });
   }, [resp]);
 
-  // search
   const data = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return allItems;
@@ -194,9 +223,9 @@ export default function RegistrationListScreen({ navigation, route }) {
     });
   }, [query, allItems]);
 
-  // stats từ server counts
   const stats = useMemo(() => {
     const c = resp?.counts;
+
     if (!c) {
       return {
         success: 0,
@@ -204,6 +233,7 @@ export default function RegistrationListScreen({ navigation, route }) {
         capacity: tournament?.expectedTeams ?? 0,
       };
     }
+
     return {
       success: c.success ?? 0,
       waitingPair: c.waiting ?? 0,
@@ -220,7 +250,11 @@ export default function RegistrationListScreen({ navigation, route }) {
           size={styles.avatar?.width || 44}
         />
       </View>
-      <Text style={styles.playerName}>{p.name}</Text>
+
+      <Text style={styles.playerName} numberOfLines={2}>
+        {p.name}
+      </Text>
+
       <Text style={styles.playerLevel}>({p.level})</Text>
 
       {p.verified ? (
@@ -237,7 +271,6 @@ export default function RegistrationListScreen({ navigation, route }) {
 
   const renderItem = ({ item }) => (
     <View style={styles.item}>
-      {/* header row */}
       <View style={styles.itemHeaderRow}>
         <Text style={styles.idx}>{item.index}</Text>
         <Text style={styles.itemHeaderText}>
@@ -246,7 +279,6 @@ export default function RegistrationListScreen({ navigation, route }) {
         </Text>
       </View>
 
-      {/* grid */}
       <View style={styles.gridRow}>
         {renderPlayer(item.vdv1)}
         {renderPlayer(item.vdv2)}
@@ -258,12 +290,21 @@ export default function RegistrationListScreen({ navigation, route }) {
     </View>
   );
 
+  const renderEmpty = () => {
+    if (loading) return null;
+
+    return (
+      <View style={{ paddingTop: 24, alignItems: "center" }}>
+        <Text style={{ color: "#6B7280" }}>Không có dữ liệu đăng ký.</Text>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.safe}>
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -273,11 +314,11 @@ export default function RegistrationListScreen({ navigation, route }) {
           >
             <Ionicons name="arrow-back" size={20} color="#1E2430" />
           </Pressable>
+
           <Text style={styles.headerTitle}>Danh sách đăng ký</Text>
         </View>
       </View>
 
-      {/* error / loading */}
       {loading ? (
         <View style={{ paddingTop: 12 }}>
           <ActivityIndicator />
@@ -287,34 +328,31 @@ export default function RegistrationListScreen({ navigation, route }) {
       {errorMsg ? (
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <Text style={{ color: "#DC2626" }}>{errorMsg}</Text>
+
           <Pressable onPress={fetchData} style={{ marginTop: 8 }}>
             <Text style={{ color: "#2563EB" }}>Thử lại</Text>
           </Pressable>
         </View>
       ) : null}
 
-      {/* links */}
       <View style={styles.linksRow}>
-        <Pressable style={styles.linkItem} hitSlop={10}>
-          <Ionicons
-            name="globe-outline"
-            size={16}
-            color={styles.linkText.color}
-          />
-          <Text style={styles.linkText}>Web đăng ký</Text>
-        </Pressable>
-
-        <Pressable style={styles.linkItem} hitSlop={10}>
+        <Pressable
+          style={styles.linkItem}
+          hitSlop={10}
+          onPress={handleOpenZaloGroup}
+          disabled={openingZalo}
+        >
           <Ionicons
             name="link-outline"
             size={16}
             color={styles.linkText.color}
           />
-          <Text style={styles.linkText}>Link nhóm Zalo</Text>
+          <Text style={styles.linkText}>
+            {openingZalo ? "Đang mở nhóm Zalo..." : "Link nhóm Zalo"}
+          </Text>
         </Pressable>
       </View>
 
-      {/* stats */}
       <View style={styles.statsRow}>
         <View style={[styles.statBadge, styles.statGreen]}>
           <Text style={[styles.statText, styles.statGreenText]}>
@@ -336,7 +374,6 @@ export default function RegistrationListScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* search */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <TextInput
@@ -352,7 +389,6 @@ export default function RegistrationListScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* table header */}
       <View style={styles.tableHeader}>
         <View style={styles.colVdv1}>
           <Text style={styles.thText}>VĐV1</Text>
@@ -365,12 +401,12 @@ export default function RegistrationListScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* list */}
       <FlatList
         contentContainerStyle={styles.listPad}
         data={data}
         keyExtractor={(it) => it.id}
         renderItem={renderItem}
+        ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

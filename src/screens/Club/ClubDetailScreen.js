@@ -365,25 +365,6 @@ function MemberTable({
                   <>
                     {String(item.memberRole).toUpperCase() !== "OWNER" ? (
                       <Pressable
-                        style={[styles.actionBtn, styles.actionBtnRole]}
-                        onPress={() => onToggleRole?.(item)}
-                        disabled={loadingRole}
-                      >
-                        {loadingRole ? (
-                          <ActivityIndicator color="#fff" size="small" />
-                        ) : (
-                          <Text style={styles.actionBtnText}>
-                            {String(item.memberRole).toUpperCase() ===
-                            "VICE_OWNER"
-                              ? "Hạ quyền"
-                              : "Phó nhóm"}
-                          </Text>
-                        )}
-                      </Pressable>
-                    ) : null}
-
-                    {String(item.memberRole).toUpperCase() !== "OWNER" ? (
-                      <Pressable
                         style={[styles.actionBtn, styles.actionBtnReject]}
                         onPress={() => onRemove?.(item)}
                         disabled={loadingRemove}

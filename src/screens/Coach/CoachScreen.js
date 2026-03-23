@@ -249,7 +249,11 @@ export default function CoachScreen({ navigation, route }) {
                     [
                       {
                         text: "OK",
-                        onPress: () => navigation.navigate("Login"),
+                        onPress: () => {
+                          navigation.navigate("AuthStack", {
+                            screen: "Login",
+                          });
+                        },
                       },
                     ],
                   );

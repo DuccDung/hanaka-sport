@@ -2,7 +2,6 @@ import { apiClient } from "./apiClient";
 
 /**
  * GET: /api/users/me
- * JWT Bearer tự gắn bởi interceptor trong apiClient
  */
 export async function getMe() {
   const res = await apiClient.get("/users/me");
@@ -12,7 +11,6 @@ export async function getMe() {
 /**
  * PUT: /api/users/me
  * req = { fullName?, phone?, gender?, city?, bio?, birthOfDate?, avatarUrl? }
- * birthOfDate nên gửi ISO: "2004-06-02"
  */
 export async function updateMe(req) {
   const res = await apiClient.put("/users/me", req);
@@ -20,13 +18,12 @@ export async function updateMe(req) {
 }
 
 /**
- * POST: /api/users/me/avatar (multipart)
- * fileUri: uri từ expo-image-picker (file:///...)
+ * POST: /api/users/me/avatar
+ * fileUri: uri từ expo-image-picker
  */
 export async function uploadAvatar(fileUri) {
   const formData = new FormData();
 
-  // Nếu uri không có đuôi file rõ ràng thì cứ gửi jpeg
   const ext = (fileUri.split(".").pop() || "jpg").toLowerCase();
   const type =
     ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
@@ -37,12 +34,10 @@ export async function uploadAvatar(fileUri) {
     type,
   });
 
-  //  Để axios tự set boundary, vẫn OK khi set multipart như dưới
   const res = await apiClient.post("/users/me/avatar", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
 
-  // { avatarUrl: "http://..." }
   return res.data;
 }
 
@@ -56,27 +51,45 @@ export async function changePassword({
     newPassword,
     confirmPassword,
   });
-  return res.data; // { message: "..." }
+  return res.data;
 }
 
 /**
- * GET /users/members
- * params: { query?: string, page?: number, pageSize?: number }
+ * GET /api/users/members
  */
 export async function getMembers({ query = "", page = 1, pageSize = 20 } = {}) {
   const res = await apiClient.get("/users/members", {
     params: { query, page, pageSize },
   });
-  return res.data; // { page, pageSize, total, items }
+  return res.data;
 }
 
+/**
+ * GET /api/users/{userId}
+ */
 export async function getUserDetail(userId) {
   const res = await apiClient.get(`/users/${userId}`);
   return res.data;
 }
+
+/**
+ * GET /api/users/{userId}/rating-history
+ */
+export async function getUserRatingHistory(userId) {
+  const res = await apiClient.get(`/users/${userId}/rating-history`);
+  return res.data;
+}
+
+/**
+ * GET /api/users/me/rating-history
+ */
+export async function getMyRatingHistory() {
+  const res = await apiClient.get("/users/me/rating-history");
+  return res.data;
+}
+
 /**
  * PUT /api/users/me/self-rating
- * body: { ratingSingle, ratingDouble }
  */
 export async function updateMySelfRating({ ratingSingle, ratingDouble }) {
   const res = await apiClient.put("/users/me/self-rating", {
@@ -85,7 +98,35 @@ export async function updateMySelfRating({ ratingSingle, ratingDouble }) {
   });
   return res.data;
 }
+
 export async function deleteMe() {
   const res = await apiClient.delete("/users/me");
+  return res.data;
+}
+/**
+ * GET /api/users/{userId}/achievements
+ */
+export async function getUserAchievements(userId) {
+  const res = await apiClient.get(`/users/${userId}/achievements`);
+  return res.data;
+}
+
+/**
+ * GET /api/users/me/achievements
+ */
+export async function getMyAchievements() {
+  const res = await apiClient.get("/users/me/achievements");
+  return res.data;
+}
+/**
+ * GET /api/videos/users/{userId}/videos
+ */
+export async function getUserMatchVideos(
+  userId,
+  { tab = "all", page = 1, pageSize = 10 } = {},
+) {
+  const res = await apiClient.get(`/videos/users/${userId}/videos`, {
+    params: { tab, page, pageSize },
+  });
   return res.data;
 }

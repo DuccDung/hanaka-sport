@@ -38,11 +38,64 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  input: { flex: 1, fontSize: 15, color: "#1E2430" },
 
-  eyeBtn: { position: "absolute", right: 10, padding: 6 },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: "#1E2430",
+  },
 
-  hint: { marginTop: 8, fontSize: 12, color: "#6B7280" },
+  eyeBtn: {
+    position: "absolute",
+    right: 10,
+    padding: 6,
+  },
+
+  hint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  genderRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  genderOption: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+
+  genderOptionActive: {
+    backgroundColor: COLORS.BLUE,
+    borderColor: COLORS.BLUE,
+  },
+
+  genderText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+  },
+
+  genderTextActive: {
+    color: "#FFFFFF",
+  },
+
+  errorText: {
+    marginTop: 10,
+    color: "#DC2626",
+    fontSize: 13,
+  },
 
   submitBtn: {
     marginTop: 14,
@@ -52,10 +105,20 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  submitBtnActive: { backgroundColor: COLORS.BLUE },
 
-  submitText: { fontSize: 15, fontWeight: "700", color: "#9CA3AF" },
-  submitTextActive: { color: "#fff" },
+  submitBtnActive: {
+    backgroundColor: COLORS.BLUE,
+  },
+
+  submitText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#9CA3AF",
+  },
+
+  submitTextActive: {
+    color: "#fff",
+  },
 
   footerRow: {
     marginTop: 14,
@@ -63,6 +126,15 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  footerText: { fontSize: 13, color: "#6B7280" },
-  footerLink: { fontSize: 13, fontWeight: "700", color: COLORS.BLUE },
+
+  footerText: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+
+  footerLink: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.BLUE,
+  },
 });

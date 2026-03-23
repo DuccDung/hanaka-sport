@@ -1,6 +1,7 @@
-export const API_BASE_URL = "https://hanakasport.click";
+// export const API_BASE_URL = "https://hanakasport.click";
+export const API_BASE_URL = "http://192.168.0.101:5062";
 export const WS_BASE_URL = "wss://hanakasport.click";
-
+//http://192.168.0.101:5062/
 export const API_TIMEOUT = 15000;
 
 export const STORAGE_KEYS = {

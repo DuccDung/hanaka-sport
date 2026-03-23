@@ -299,9 +299,7 @@ export default function TournamentScreen({ navigation }) {
         {/* Filter UI (chưa wire API filter theo area - để nguyên) */}
         <View style={styles.filterRow}>
           <Pressable style={styles.filterBtn}>
-            <Ionicons name="location-outline" size={14} color="#6B7280" />
-            <Text style={styles.filterText}>Khu vực: Tất cả</Text>
-            <Ionicons name="chevron-down" size={14} color="#6B7280" />
+            <Text style={styles.filterText}>Tất cả giải đấu</Text>
           </Pressable>
         </View>
 

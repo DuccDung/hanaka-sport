@@ -251,7 +251,11 @@ export default function RefereeScreen({ navigation, route }) {
                     [
                       {
                         text: "OK",
-                        onPress: () => navigation.navigate("Login"),
+                        onPress: () => {
+                          navigation.navigate("AuthStack", {
+                            screen: "Login",
+                          });
+                        },
                       },
                     ],
                   );

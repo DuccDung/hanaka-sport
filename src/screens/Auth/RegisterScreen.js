@@ -24,6 +24,7 @@ export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [gender, setGender] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
@@ -33,12 +34,36 @@ export default function RegisterScreen({ navigation }) {
       fullName.trim().length >= 2 &&
       isEmail(email) &&
       password.trim().length >= 6 &&
+      (gender === "Nam" || gender === "Nữ") &&
       !submitting
     );
-  }, [fullName, email, password, submitting]);
+  }, [fullName, email, password, gender, submitting]);
 
   const onSubmit = async () => {
-    if (!canSubmit) return;
+    if (!fullName.trim()) {
+      setErrorText("Vui lòng nhập họ và tên.");
+      return;
+    }
+
+    if (fullName.trim().length < 2) {
+      setErrorText("Họ và tên phải có ít nhất 2 ký tự.");
+      return;
+    }
+
+    if (!isEmail(email)) {
+      setErrorText("Email không hợp lệ.");
+      return;
+    }
+
+    if (password.trim().length < 6) {
+      setErrorText("Mật khẩu tối thiểu 6 ký tự.");
+      return;
+    }
+
+    if (gender !== "Nam" && gender !== "Nữ") {
+      setErrorText("Vui lòng chọn giới tính.");
+      return;
+    }
 
     Keyboard.dismiss();
     setSubmitting(true);
@@ -49,6 +74,7 @@ export default function RegisterScreen({ navigation }) {
         fullName: fullName.trim(),
         email: email.trim(),
         password,
+        gender,
       });
 
       Alert.alert("Thành công", data?.message || "OTP đã được gửi tới email.");
@@ -56,6 +82,7 @@ export default function RegisterScreen({ navigation }) {
       navigation.navigate("RegisterOtp", {
         email: email.trim(),
         fullName: fullName.trim(),
+        gender,
       });
     } catch (e) {
       const msg =
@@ -154,10 +181,61 @@ export default function RegisterScreen({ navigation }) {
 
             <Text style={styles.hint}>Mật khẩu tối thiểu 6 ký tự.</Text>
 
+            <Text style={[styles.label, { marginTop: 12 }]}>Giới tính</Text>
+            <View style={styles.genderRow}>
+              <Pressable
+                onPress={() => setGender("Nam")}
+                disabled={submitting}
+                style={[
+                  styles.genderOption,
+                  gender === "Nam" && styles.genderOptionActive,
+                ]}
+              >
+                <Ionicons
+                  name={
+                    gender === "Nam" ? "radio-button-on" : "radio-button-off"
+                  }
+                  size={18}
+                  color={gender === "Nam" ? "#FFFFFF" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.genderText,
+                    gender === "Nam" && styles.genderTextActive,
+                  ]}
+                >
+                  Nam
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setGender("Nữ")}
+                disabled={submitting}
+                style={[
+                  styles.genderOption,
+                  gender === "Nữ" && styles.genderOptionActive,
+                ]}
+              >
+                <Ionicons
+                  name={
+                    gender === "Nữ" ? "radio-button-on" : "radio-button-off"
+                  }
+                  size={18}
+                  color={gender === "Nữ" ? "#FFFFFF" : "#6B7280"}
+                />
+                <Text
+                  style={[
+                    styles.genderText,
+                    gender === "Nữ" && styles.genderTextActive,
+                  ]}
+                >
+                  Nữ
+                </Text>
+              </Pressable>
+            </View>
+
             {errorText ? (
-              <Text style={{ marginTop: 8, color: "#DC2626" }}>
-                {errorText}
-              </Text>
+              <Text style={styles.errorText}>{errorText}</Text>
             ) : null}
 
             <Pressable

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { memo, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -22,17 +22,21 @@ function ScoreSelector({ value, onChange }) {
   return (
     <View style={styles.scoreSelectorRow}>
       {SCORE_OPTIONS.map((score) => {
-        const active = value === score;
+        const isActive = value === score;
+
         return (
           <Pressable
             key={score}
             onPress={() => onChange(score)}
-            style={[styles.scoreChip, active && styles.scoreChipActive]}
+            style={[
+              styles.scoreChip,
+              isActive ? styles.scoreChipActive : styles.scoreChipInactive,
+            ]}
           >
             <Text
               style={[
                 styles.scoreChipText,
-                active && styles.scoreChipTextActive,
+                isActive && styles.scoreChipTextActive,
               ]}
             >
               {score}
@@ -44,44 +48,121 @@ function ScoreSelector({ value, onChange }) {
   );
 }
 
-function SectionCard({ section, value, onChangeSingle, onChangeDouble }) {
+const RatingColumn = memo(function RatingColumn({ title, value, onChange }) {
+  return (
+    <View style={styles.ratingColumn}>
+      <Text style={styles.ratingColumnTitle}>{title}</Text>
+      <ScoreSelector value={value} onChange={onChange} />
+    </View>
+  );
+});
+
+const SectionCard = memo(function SectionCard({
+  section,
+  value,
+  onChangeSingle,
+  onChangeDouble,
+}) {
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>{section.title}</Text>
 
-      <View style={styles.descBox}>
-        {section.description.map((line, index) => (
-          <Text key={index} style={styles.descText}>
-            - {line}
-          </Text>
-        ))}
+      {!!section.description?.length && (
+        <View style={styles.descBox}>
+          {section.description.map((line, index) => (
+            <Text key={`${section.key}-desc-${index}`} style={styles.descText}>
+              • {line}
+            </Text>
+          ))}
+        </View>
+      )}
+
+      <View style={styles.sectionColumns}>
+        <RatingColumn
+          title="Điểm đơn"
+          value={value.single}
+          onChange={onChangeSingle}
+        />
+
+        <RatingColumn
+          title="Điểm đôi"
+          value={value.double}
+          onChange={onChangeDouble}
+        />
+      </View>
+    </View>
+  );
+});
+
+function ResultPanel({ result, submitting, onReset, onSubmit }) {
+  return (
+    <View style={styles.bottomWrap}>
+      <Text style={styles.bottomTitle}>Kết quả tự chấm</Text>
+
+      <View style={styles.resultTableHeader}>
+        <Text style={[styles.resultHeaderCell, styles.resultHeaderLabel]} />
+        <Text style={styles.resultHeaderCell}>Đơn</Text>
+        <Text style={styles.resultHeaderCell}>Đôi</Text>
       </View>
 
-      <View style={styles.columnsHeader}>
-        <Text style={styles.colTitle}>Điểm đơn</Text>
-        <Text style={styles.colTitle}>Điểm đôi</Text>
+      <View style={styles.resultTableRow}>
+        <Text style={[styles.resultLabelCell, styles.resultMainLabel]}>
+          Điểm trình
+        </Text>
+
+        <View style={styles.resultValueBox}>
+          <Text style={styles.resultValue}>{result.singleRaw}</Text>
+        </View>
+
+        <View style={styles.resultValueBox}>
+          <Text style={styles.resultValue}>{result.doubleRaw}</Text>
+        </View>
       </View>
 
-      <View style={styles.columnsBody}>
-        <View style={styles.colBox}>
-          <ScoreSelector value={value.single} onChange={onChangeSingle} />
+      <View style={styles.resultTableRow}>
+        <Text style={styles.resultLabelCell}>Mức tham chiếu</Text>
+
+        <View style={styles.referenceBox}>
+          <Text style={styles.referenceText}>{result.singleLevel}</Text>
         </View>
 
-        <View style={styles.colBox}>
-          <ScoreSelector value={value.double} onChange={onChangeDouble} />
+        <View style={styles.referenceBox}>
+          <Text style={styles.referenceText}>{result.doubleLevel}</Text>
         </View>
+      </View>
+
+      <View style={styles.bottomBtnsRow}>
+        <Pressable
+          style={[styles.resetBtn, submitting && styles.btnDisabled]}
+          onPress={onReset}
+          disabled={submitting}
+        >
+          <Text style={styles.resetBtnText}>Đặt lại</Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.updateBtn, submitting && styles.btnDisabled]}
+          onPress={onSubmit}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.updateBtnText}>Cập nhật</Text>
+          )}
+        </Pressable>
       </View>
     </View>
   );
 }
 
 export default function SelfRatingScreen({ navigation }) {
-  const [values, setValues] = useState(buildInitialValues());
+  const [values, setValues] = useState(() => buildInitialValues());
   const [submitting, setSubmitting] = useState(false);
 
   const result = useMemo(() => calculateSelfRating(values), [values]);
 
-  const handleChangeScore = (sectionKey, mode, score) => {
+  const handleChangeScore = useCallback((sectionKey, mode, score) => {
     setValues((prev) => ({
       ...prev,
       [sectionKey]: {
@@ -89,13 +170,13 @@ export default function SelfRatingScreen({ navigation }) {
         [mode]: score,
       },
     }));
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setValues(buildInitialValues());
-  };
+  }, []);
 
-  const handleUpdate = async () => {
+  const handleUpdate = useCallback(async () => {
     try {
       setSubmitting(true);
 
@@ -108,23 +189,24 @@ export default function SelfRatingScreen({ navigation }) {
 
       Alert.alert(
         "Thành công",
-        res?.message || "Đã cập nhật điểm tự chấm trình.",
+        res?.message || "Đã cập nhật điểm tự chấm trình thành công.",
       );
     } catch (error) {
       const message =
         error?.response?.data?.message ||
         error?.message ||
         "Cập nhật điểm tự chấm trình thất bại.";
+
       Alert.alert("Lỗi", message);
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [result.singleLevel, result.doubleLevel]);
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <SafeAreaView style={styles.safeTop} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>
         <Pressable
@@ -137,14 +219,12 @@ export default function SelfRatingScreen({ navigation }) {
 
         <Text style={styles.headerTitle}>Tự chấm trình</Text>
 
-        <View style={{ width: 32 }} />
+        <View style={styles.headerRightSpace} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        contentInset={{ bottom: 220 }}
-        scrollIndicatorInsets={{ bottom: 220 }}
       >
         {SELF_RATING_SECTIONS.map((section) => (
           <SectionCard
@@ -159,58 +239,16 @@ export default function SelfRatingScreen({ navigation }) {
             }
           />
         ))}
+
+        <View style={styles.scrollBottomSpace} />
       </ScrollView>
 
-      <View style={styles.bottomWrap}>
-        <View style={styles.resultHeaderRow}>
-          <Text style={styles.resultHeaderSpacer} />
-          <Text style={styles.resultHeaderText}>Điểm đơn</Text>
-          <Text style={styles.resultHeaderText}>Điểm đôi</Text>
-        </View>
-
-        <View style={styles.resultRow}>
-          <Text style={styles.resultLabel}>Điểm trình</Text>
-
-          <View style={styles.resultBox}>
-            <Text style={styles.resultValue}>{result.singleRaw}</Text>
-          </View>
-
-          <View style={styles.resultBox}>
-            <Text style={styles.resultValue}>{result.doubleRaw}</Text>
-          </View>
-        </View>
-
-        <View style={styles.rawRow}>
-          <Text style={styles.rawText}>
-            Mức tham chiếu: {result.singleLevel}
-          </Text>
-          <Text style={styles.rawText}>
-            Mức tham chiếu: {result.doubleLevel}
-          </Text>
-        </View>
-
-        <View style={styles.bottomBtnsRow}>
-          <Pressable
-            style={styles.resetBtn}
-            onPress={handleReset}
-            disabled={submitting}
-          >
-            <Text style={styles.resetBtnText}>Đặt lại</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.updateBtn, submitting && { opacity: 0.7 }]}
-            onPress={handleUpdate}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.updateBtnText}>Cập Nhật</Text>
-            )}
-          </Pressable>
-        </View>
-      </View>
+      <ResultPanel
+        result={result}
+        submitting={submitting}
+        onReset={handleReset}
+        onSubmit={handleUpdate}
+      />
     </View>
   );
 }

@@ -164,7 +164,7 @@ export default function MembersScreen({ navigation }) {
 
             <Pressable
               hitSlop={10}
-              onPress={() => navigation.navigate("SelfRating")}
+              onPress={() => navigation.navigate("HanakaRatingInfo")}
             >
               <Text style={styles.headerLink}>Tự chấm trình</Text>
             </Pressable>

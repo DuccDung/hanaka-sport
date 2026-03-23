@@ -28,7 +28,7 @@ import CoachDetailScreen from "../screens/Coach/CoachDetailScreen";
 import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
 import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
-
+import HanakaRatingInfoScreen from "../screens/Members/HanakaRatingInfoScreen";
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
@@ -171,6 +171,11 @@ export default function HomeStack() {
       <Stack.Screen
         name="TournamentRule"
         component={TournamentRuleScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="HanakaRatingInfo"
+        component={HanakaRatingInfoScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
