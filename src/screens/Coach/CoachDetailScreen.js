@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,26 +12,148 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getCoachDetail } from "../../services/coachService";
-import { styles } from "./detailStyles";
 
 function formatScore(v) {
   const n = Number(v || 0);
   return n % 1 === 0 ? `${n}` : n.toFixed(2).replace(/\.?0+$/, "");
 }
 
-function HtmlText({ html }) {
-  const plain = String(html || "")
+function formatDate(value) {
+  if (!value) return "—";
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  } catch {
+    return String(value);
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, "0");
+    const min = String(date.getMinutes()).padStart(2, "0");
+    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  } catch {
+    return String(value);
+  }
+}
+
+function htmlToPlainText(html = "") {
+  return String(html || "")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<li>/gi, "• ")
+    .replace(/<\/li>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
     .trim();
+}
+
+function HtmlText({ html, emptyText = "Chưa cập nhật" }) {
+  const plain = htmlToPlainText(html);
 
   if (!plain) {
-    return <Text style={styles.emptyBlockText}>Chưa cập nhật</Text>;
+    return (
+      <Text style={{ fontSize: 15, color: "#9CA3AF", lineHeight: 22 }}>
+        {emptyText}
+      </Text>
+    );
   }
 
-  return <Text style={styles.blockText}>{plain}</Text>;
+  return (
+    <Text style={{ fontSize: 15, color: "#374151", lineHeight: 23 }}>
+      {plain}
+    </Text>
+  );
+}
+
+function SectionHeader({ title, isOpen, onPress }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        borderWidth: 1,
+        borderColor: "#EEF2F7",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <Text style={{ fontSize: 16, fontWeight: "800", color: "#111827" }}>
+        {title}
+      </Text>
+
+      <Ionicons
+        name={isOpen ? "chevron-up" : "chevron-forward"}
+        size={20}
+        color="#374151"
+      />
+    </Pressable>
+  );
+}
+
+function EmptySection({ text }) {
+  return (
+    <View
+      style={{
+        backgroundColor: "#fff",
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
+        borderWidth: 1,
+        borderTopWidth: 0,
+        borderColor: "#EEF2F7",
+        padding: 16,
+      }}
+    >
+      <Text style={{ color: "#6B7280" }}>{text}</Text>
+    </View>
+  );
+}
+
+function getAchievementLabel(item) {
+  const type = String(item?.achievementType || "").toUpperCase();
+
+  if (type === "FIRST") return "Giải Nhất";
+  if (type === "SECOND") return "Giải Nhì";
+  if (type === "THIRD") return "Giải Ba";
+
+  return item?.achievementLabel || "Thành tích";
+}
+
+function getAchievementIcon(item) {
+  const type = String(item?.achievementType || "").toUpperCase();
+
+  if (type === "FIRST") return "trophy";
+  if (type === "SECOND") return "medal";
+  if (type === "THIRD") return "ribbon";
+
+  return "award";
+}
+
+function getAchievementColor(item) {
+  const type = String(item?.achievementType || "").toUpperCase();
+
+  if (type === "FIRST") return "#F59E0B";
+  if (type === "SECOND") return "#9CA3AF";
+  if (type === "THIRD") return "#D97706";
+
+  return "#2563EB";
 }
 
 export default function CoachDetailScreen({ navigation, route }) {
@@ -39,6 +161,14 @@ export default function CoachDetailScreen({ navigation, route }) {
 
   const [loading, setLoading] = useState(true);
   const [coach, setCoach] = useState(null);
+
+  const [openSections, setOpenSections] = useState({
+    intro: true,
+    teachingArea: true,
+    coachAchievements: true,
+    ratingHistory: false,
+    userAchievements: true,
+  });
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -52,6 +182,7 @@ export default function CoachDetailScreen({ navigation, route }) {
           e?.response?.data ||
           e?.message ||
           "Không tải được thông tin huấn luyện viên.";
+
         Alert.alert("Lỗi", String(msg), [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
@@ -62,88 +193,610 @@ export default function CoachDetailScreen({ navigation, route }) {
 
     if (coachId) {
       fetchDetail();
+    } else {
+      setLoading(false);
     }
   }, [coachId, navigation]);
 
+  const ratingHistory = useMemo(() => {
+    return Array.isArray(coach?.ratingHistory) ? coach.ratingHistory : [];
+  }, [coach]);
+
+  const userAchievements = useMemo(() => {
+    return Array.isArray(coach?.userAchievements) ? coach.userAchievements : [];
+  }, [coach]);
+
+  const toggleSection = (key) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const renderRatingHistory = () => {
+    if (!ratingHistory.length) {
+      return <EmptySection text="Chưa có lịch sử điểm trình" />;
+    }
+
+    return (
+      <View
+        style={{
+          backgroundColor: "#fff",
+          borderBottomLeftRadius: 16,
+          borderBottomRightRadius: 16,
+          borderWidth: 1,
+          borderTopWidth: 0,
+          borderColor: "#EEF2F7",
+          overflow: "hidden",
+        }}
+      >
+        {ratingHistory.map((item, index) => (
+          <View
+            key={item?.ratingHistoryId || `rating-${index}`}
+            style={{
+              padding: 16,
+              borderTopWidth: index === 0 ? 0 : 1,
+              borderTopColor: "#F3F4F6",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: "800",
+                color: "#111827",
+                marginBottom: 12,
+              }}
+            >
+              {formatDateTime(item?.ratedAt)}
+            </Text>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#6B7280", marginBottom: 4 }}>
+                  Điểm đơn
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "800",
+                    color: "#111827",
+                  }}
+                >
+                  {item?.ratingSingle != null
+                    ? Number(item.ratingSingle).toFixed(2)
+                    : "0.00"}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#6B7280", marginBottom: 4 }}>
+                  Điểm đôi
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "800",
+                    color: "#111827",
+                  }}
+                >
+                  {item?.ratingDouble != null
+                    ? Number(item.ratingDouble).toFixed(2)
+                    : "0.00"}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={{ color: "#374151", marginBottom: 6, lineHeight: 20 }}>
+              Người chấm:{" "}
+              <Text style={{ fontWeight: "700" }}>
+                {item?.ratedByName || "Hệ thống"}
+              </Text>
+            </Text>
+
+            <Text style={{ color: "#4B5563", lineHeight: 21 }}>
+              Ghi chú:{" "}
+              <Text style={{ fontWeight: "700", color: "#111827" }}>
+                {item?.note || "—"}
+              </Text>
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderUserAchievements = () => {
+    if (!userAchievements.length) {
+      return <EmptySection text="Chưa có thành tích thi đấu" />;
+    }
+
+    return (
+      <View
+        style={{
+          marginTop: 10,
+        }}
+      >
+        {userAchievements.map((item, index) => {
+          const title =
+            item?.title ||
+            item?.tournamentName ||
+            item?.tournament?.title ||
+            "Thành tích";
+
+          const dateValue =
+            item?.date ||
+            item?.achievedAt ||
+            item?.createdAt ||
+            item?.tournament?.startTime;
+
+          const canOpenTournament = !!item?.tournamentId;
+
+          return (
+            <Pressable
+              key={item?.userAchievementId || `achievement-${index}`}
+              disabled={!canOpenTournament}
+              onPress={() =>
+                navigation.navigate("TournamentDetail", {
+                  tournamentId: item.tournamentId,
+                  preview: item?.tournament || item,
+                })
+              }
+              style={({ pressed }) => ({
+                backgroundColor: "#fff",
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "#EEF2F7",
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+                marginBottom: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 30,
+                  alignItems: "center",
+                  marginRight: 12,
+                }}
+              >
+                <Ionicons
+                  name={getAchievementIcon(item)}
+                  size={22}
+                  color={getAchievementColor(item)}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: "800",
+                    color: "#1F2937",
+                    lineHeight: 22,
+                  }}
+                >
+                  {title}
+                </Text>
+
+                <Text
+                  style={{
+                    marginTop: 4,
+                    color: "#6B7280",
+                    fontSize: 13,
+                    fontWeight: "600",
+                  }}
+                >
+                  {getAchievementLabel(item)}
+                </Text>
+
+                <Text
+                  style={{
+                    marginTop: 6,
+                    color: "#9CA3AF",
+                    fontSize: 14,
+                  }}
+                >
+                  {formatDate(dateValue)}
+                </Text>
+              </View>
+
+              <Ionicons
+                name={canOpenTournament ? "chevron-forward" : "trophy-outline"}
+                size={18}
+                color="#9CA3AF"
+              />
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#fff",
+        }}
+      >
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  if (!coach) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#fff",
+          justifyContent: "center",
+          alignItems: "center",
+          paddingHorizontal: 24,
+        }}
+      >
+        <Ionicons name="alert-circle-outline" size={54} color="#9CA3AF" />
+        <Text
+          style={{
+            marginTop: 12,
+            fontSize: 16,
+            fontWeight: "700",
+            color: "#111827",
+          }}
+        >
+          Không tải được thông tin huấn luyện viên
+        </Text>
+
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={{
+            marginTop: 18,
+            backgroundColor: "#2563EB",
+            paddingHorizontal: 18,
+            paddingVertical: 12,
+            borderRadius: 12,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Quay lại</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.safe}>
+    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
       <SafeAreaView style={{ backgroundColor: "#fff" }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <View style={styles.header}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          backgroundColor: "#fff",
+          borderBottomWidth: 1,
+          borderBottomColor: "#F3F4F6",
+        }}
+      >
         <Pressable
           onPress={() => navigation.goBack()}
-          style={styles.headerIconBtn}
-          hitSlop={10}
+          style={{
+            width: 32,
+            height: 32,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
         >
-          <Ionicons name="arrow-back" size={22} color="#1E2430" />
+          <Ionicons name="arrow-back" size={22} color="#111827" />
         </Pressable>
 
-        <Text style={styles.headerTitle}>Thông tin HLV</Text>
-
-        <View style={{ width: 34 }} />
+        <Text
+          style={{
+            marginLeft: 10,
+            fontWeight: "700",
+            fontSize: 18,
+            color: "#111827",
+          }}
+        >
+          Thông tin HLV
+        </Text>
       </View>
 
-      {loading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator />
-        </View>
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+      <ScrollView
+        contentContainerStyle={{
+          padding: 16,
+          paddingBottom: 32,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: 20,
+            padding: 20,
+            shadowColor: "#000",
+            shadowOpacity: 0.04,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 1,
+          }}
         >
-          <View style={styles.topCard}>
+          <View style={{ alignItems: "center" }}>
             {coach?.avatarUrl ? (
-              <Image source={{ uri: coach.avatarUrl }} style={styles.avatar} />
+              <Image
+                source={{ uri: coach.avatarUrl }}
+                style={{
+                  width: 110,
+                  height: 110,
+                  borderRadius: 55,
+                }}
+              />
             ) : (
-              <View style={styles.avatarFallback}>
-                <Ionicons name="person-outline" size={40} color="#9CA3AF" />
-              </View>
+              <Ionicons
+                name="person-circle-outline"
+                size={110}
+                color="#2563EB"
+              />
             )}
 
-            <Text style={styles.name}>{coach?.fullName || "Chưa có tên"}</Text>
-            <Text style={styles.city}>{coach?.city || "Chưa cập nhật"}</Text>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "800",
+                marginTop: 12,
+                color: "#111827",
+                textAlign: "center",
+              }}
+            >
+              {coach.fullName || "—"}
+            </Text>
 
             <Text
-              style={coach?.verified ? styles.statusGood : styles.statusBad}
+              style={{
+                color: coach.verified ? "#16A34A" : "#DC2626",
+                marginTop: 6,
+                fontWeight: "700",
+              }}
             >
-              {coach?.verified ? "Đã xác thực" : "Chưa xác thực"}
+              {coach.verified
+                ? "Hồ sơ HLV đã xác thực"
+                : "Hồ sơ HLV chưa xác thực"}
+            </Text>
+
+            <Text
+              style={{
+                color: coach.userVerified ? "#16A34A" : "#DC2626",
+                marginTop: 4,
+                fontWeight: "600",
+                fontSize: 13,
+              }}
+            >
+              {coach.userVerified
+                ? "Tài khoản người dùng đã xác thực"
+                : "Tài khoản người dùng chưa xác thực"}
             </Text>
           </View>
 
-          <View style={styles.scoreRow}>
-            <View style={styles.scoreBox}>
-              <Text style={styles.scoreLabel}>Điểm đơn</Text>
-              <Text style={styles.scoreValue}>
-                {formatScore(coach?.levelSingle)}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 20,
+              backgroundColor: "#F8FAFC",
+              borderRadius: 14,
+              paddingVertical: 14,
+              paddingHorizontal: 16,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#6B7280", marginBottom: 4 }}>
+                Điểm đơn
+              </Text>
+              <Text
+                style={{ fontWeight: "800", fontSize: 18, color: "#111827" }}
+              >
+                {formatScore(coach.levelSingle)}
               </Text>
             </View>
 
-            <View style={styles.scoreBox}>
-              <Text style={styles.scoreLabel}>Điểm đôi</Text>
-              <Text style={styles.scoreValue}>
-                {formatScore(coach?.levelDouble)}
+            <View
+              style={{
+                width: 1,
+                backgroundColor: "#E5E7EB",
+                marginHorizontal: 12,
+              }}
+            />
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#6B7280", marginBottom: 4 }}>
+                Điểm đôi
+              </Text>
+              <Text
+                style={{ fontWeight: "800", fontSize: 18, color: "#111827" }}
+              >
+                {formatScore(coach.levelDouble)}
               </Text>
             </View>
           </View>
 
-          <View style={styles.block}>
-            <Text style={styles.blockTitle}>Giới thiệu</Text>
-            <HtmlText html={coach?.introduction} />
+          <View style={{ marginTop: 10 }}>
+            <Text
+              style={{
+                marginTop: 10,
+                color: "#6B7280",
+                fontSize: 13,
+              }}
+            >
+              Cập nhật điểm gần nhất: {formatDateTime(coach.ratingUpdatedAt)}
+            </Text>
           </View>
 
-          <View style={styles.block}>
-            <Text style={styles.blockTitle}>Khu vực giảng dạy</Text>
-            <HtmlText html={coach?.teachingArea} />
-          </View>
+          <View style={{ marginTop: 20 }}>
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+                Giới tính
+              </Text>
+              <Text
+                style={{ fontSize: 15, color: "#111827", fontWeight: "600" }}
+              >
+                {coach.gender || "—"}
+              </Text>
+            </View>
 
-          <View style={styles.block}>
-            <Text style={styles.blockTitle}>Thành tích</Text>
-            <HtmlText html={coach?.achievements} />
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+                Tỉnh/Thành
+              </Text>
+              <Text
+                style={{ fontSize: 15, color: "#111827", fontWeight: "600" }}
+              >
+                {coach.city || "—"}
+              </Text>
+            </View>
+
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+                Email
+              </Text>
+              <Text
+                style={{ fontSize: 15, color: "#111827", fontWeight: "600" }}
+              >
+                {coach.email || "—"}
+              </Text>
+            </View>
+
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+                Số điện thoại
+              </Text>
+              <Text
+                style={{ fontSize: 15, color: "#111827", fontWeight: "600" }}
+              >
+                {coach.phone || "—"}
+              </Text>
+            </View>
+
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+                Ngày sinh
+              </Text>
+              <Text
+                style={{ fontSize: 15, color: "#111827", fontWeight: "600" }}
+              >
+                {formatDate(coach.birthOfDate)}
+              </Text>
+            </View>
+
+            <View>
+              <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>
+                Giới thiệu cá nhân
+              </Text>
+              <Text style={{ fontSize: 15, color: "#4B5563", lineHeight: 22 }}>
+                {coach.bio || "—"}
+              </Text>
+            </View>
           </View>
-        </ScrollView>
-      )}
+        </View>
+
+        <View style={{ marginTop: 16 }}>
+          <SectionHeader
+            title="Giới thiệu giảng dạy"
+            isOpen={openSections.intro}
+            onPress={() => toggleSection("intro")}
+          />
+          {openSections.intro ? (
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderBottomLeftRadius: 16,
+                borderBottomRightRadius: 16,
+                borderWidth: 1,
+                borderTopWidth: 0,
+                borderColor: "#EEF2F7",
+                padding: 16,
+              }}
+            >
+              <HtmlText html={coach.introduction} />
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ marginTop: 14 }}>
+          <SectionHeader
+            title="Khu vực giảng dạy"
+            isOpen={openSections.teachingArea}
+            onPress={() => toggleSection("teachingArea")}
+          />
+          {openSections.teachingArea ? (
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderBottomLeftRadius: 16,
+                borderBottomRightRadius: 16,
+                borderWidth: 1,
+                borderTopWidth: 0,
+                borderColor: "#EEF2F7",
+                padding: 16,
+              }}
+            >
+              <HtmlText html={coach.teachingArea} />
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ marginTop: 14 }}>
+          <SectionHeader
+            title="Thành tích / chứng chỉ huấn luyện"
+            isOpen={openSections.coachAchievements}
+            onPress={() => toggleSection("coachAchievements")}
+          />
+          {openSections.coachAchievements ? (
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderBottomLeftRadius: 16,
+                borderBottomRightRadius: 16,
+                borderWidth: 1,
+                borderTopWidth: 0,
+                borderColor: "#EEF2F7",
+                padding: 16,
+              }}
+            >
+              <HtmlText html={coach.achievements} />
+            </View>
+          ) : null}
+        </View>
+
+        <View style={{ marginTop: 14 }}>
+          <SectionHeader
+            title="Lịch sử điểm trình"
+            isOpen={openSections.ratingHistory}
+            onPress={() => toggleSection("ratingHistory")}
+          />
+          {openSections.ratingHistory ? renderRatingHistory() : null}
+        </View>
+
+        <View style={{ marginTop: 14 }}>
+          <SectionHeader
+            title="Thành tích thi đấu"
+            isOpen={openSections.userAchievements}
+            onPress={() => toggleSection("userAchievements")}
+          />
+          {openSections.userAchievements ? renderUserAchievements() : null}
+        </View>
+      </ScrollView>
     </View>
   );
 }

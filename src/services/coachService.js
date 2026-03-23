@@ -1,55 +1,26 @@
 import { apiClient } from "./apiClient";
 
-/**
- * GET /api/coaches
- * params: { query?: string, page?: number, pageSize?: number }
- */
-export async function getCoaches({ query = "", page = 1, pageSize = 10 } = {}) {
-  const res = await apiClient.get("/coaches", {
-    params: { query, page, pageSize },
-  });
-  return res.data; // { page, pageSize, total, items }
-}
+export const getCoaches = async (params = {}) => {
+  const res = await apiClient.get("/coaches", { params });
+  return res.data;
+};
 
-/**
- * GET /api/coaches/:coachId
- */
-export async function getCoachDetail(coachId) {
+export const getCoachDetail = async (coachId) => {
   const res = await apiClient.get(`/coaches/${coachId}`);
   return res.data;
-}
+};
 
-/**
- * GET /api/coaches/me
- * cần JWT
- */
-export async function getMyCoachProfile() {
+export const getMyCoachProfile = async () => {
   const res = await apiClient.get("/coaches/me");
   return res.data;
-}
+};
 
-/**
- * POST /api/coaches/register-me
- * cần JWT
- */
-export async function registerMeAsCoach(payload = {}) {
+export const registerMeAsCoach = async (payload = {}) => {
   const res = await apiClient.post("/coaches/register-me", payload);
   return res.data;
-}
+};
 
-/**
- * PUT /api/coaches/me/profile
- * cần JWT
- */
-export async function updateMyCoachProfile({
-  introduction,
-  teachingArea,
-  achievements,
-}) {
-  const res = await apiClient.put("/coaches/me/profile", {
-    introduction,
-    teachingArea,
-    achievements,
-  });
+export const updateMyCoachProfile = async (payload = {}) => {
+  const res = await apiClient.put("/coaches/me/profile", payload);
   return res.data;
-}
+};

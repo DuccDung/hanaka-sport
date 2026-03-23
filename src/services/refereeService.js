@@ -12,7 +12,7 @@ export async function getReferees({
   const res = await apiClient.get("/referees", {
     params: { query, page, pageSize },
   });
-  return res.data; // { page, pageSize, total, items }
+  return res.data;
 }
 
 /**

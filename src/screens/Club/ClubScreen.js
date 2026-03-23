@@ -16,9 +16,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./styles";
 import { getClubs, joinClub } from "../../services/clubService";
+import { useAuth } from "../../context/AuthContext";
 
 function Stars({ value }) {
   const full = Math.round(Number(value || 0));
+
   return (
     <View style={styles.starsRow}>
       {[0, 1, 2, 3, 4].map((i) => (
@@ -104,15 +106,19 @@ function RelationButton({ item, navigation, onJoin, joiningClubId }) {
 }
 
 export default function ClubScreen({ navigation }) {
+  const { session } = useAuth();
+
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
 
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
   const [total, setTotal] = useState(0);
 
-  const [loading, setLoading] = useState(false);
+  const pageSize = 10;
+
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [joiningClubId, setJoiningClubId] = useState(null);
 
@@ -121,47 +127,74 @@ export default function ClubScreen({ navigation }) {
     [items.length, total],
   );
 
-  const fetchClubs = useCallback(
-    async ({ reset = false, keyword = submittedQuery } = {}) => {
-      try {
-        if (reset) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
+  const goToLogin = useCallback(() => {
+    navigation.navigate("AuthStack", {
+      screen: "Login",
+    });
+  }, [navigation]);
 
-        const nextPage = reset ? 1 : page;
+  const requireLogin = useCallback(
+    (message) => {
+      Alert.alert("Bạn chưa đăng nhập", message, [
+        {
+          text: "OK",
+          onPress: goToLogin,
+        },
+      ]);
+    },
+    [goToLogin],
+  );
+
+  const fetchClubs = useCallback(
+    async ({
+      nextPage = 1,
+      isRefresh = false,
+      isLoadMore = false,
+      keyword = submittedQuery,
+    } = {}) => {
+      try {
+        if (isRefresh) setRefreshing(true);
+        else if (isLoadMore) setLoadingMore(true);
+        else setLoading(true);
 
         const res = await getClubs({
-          keyword: keyword.trim(),
+          keyword: String(keyword || "").trim(),
           page: nextPage,
           pageSize,
         });
 
-        setTotal(res?.total || 0);
+        const newItems = Array.isArray(res?.items) ? res.items : [];
 
-        if (reset) {
-          setItems(res?.items || []);
-          setPage(2);
+        setTotal(Number(res?.total || 0));
+        setPage(nextPage);
+
+        if (nextPage === 1) {
+          setItems(newItems);
         } else {
-          setItems((prev) => [...prev, ...(res?.items || [])]);
-          setPage((prev) => prev + 1);
+          setItems((prev) => {
+            const merged = [...prev, ...newItems];
+            const map = new Map();
+            merged.forEach((x) => map.set(x.clubId, x));
+            return Array.from(map.values());
+          });
         }
       } catch (error) {
         console.log(
           "fetch clubs error:",
-          error?.response?.data || error?.message,
+          error?.response?.data || error?.message || error,
         );
+        Alert.alert("Lỗi", "Không tải được danh sách câu lạc bộ.");
       } finally {
         setLoading(false);
+        setLoadingMore(false);
         setRefreshing(false);
       }
     },
-    [page, submittedQuery],
+    [pageSize, submittedQuery],
   );
 
   useEffect(() => {
-    fetchClubs({ reset: true, keyword: submittedQuery });
+    fetchClubs({ nextPage: 1 });
   }, [submittedQuery, fetchClubs]);
 
   const onSearch = () => {
@@ -170,10 +203,29 @@ export default function ClubScreen({ navigation }) {
   };
 
   const onRefresh = () => {
-    fetchClubs({ reset: true, keyword: submittedQuery });
+    fetchClubs({ nextPage: 1, isRefresh: true });
+  };
+
+  const onEndReached = () => {
+    if (loading || loadingMore || refreshing || !canLoadMore) return;
+    fetchClubs({ nextPage: page + 1, isLoadMore: true });
+  };
+
+  const handleCreateClub = () => {
+    if (!session?.accessToken) {
+      requireLogin("Vui lòng đăng nhập để tạo câu lạc bộ.");
+      return;
+    }
+
+    navigation.navigate("ClubCreate");
   };
 
   const handleJoinClub = async (item) => {
+    if (!session?.accessToken) {
+      requireLogin("Vui lòng đăng nhập để gửi yêu cầu tham gia câu lạc bộ.");
+      return;
+    }
+
     try {
       setJoiningClubId(item.clubId);
 
@@ -198,7 +250,7 @@ export default function ClubScreen({ navigation }) {
         error?.response?.data?.message ||
         error?.message ||
         "Không thể gửi yêu cầu tham gia.";
-      Alert.alert("Lỗi", message);
+      Alert.alert("Lỗi", String(message));
     } finally {
       setJoiningClubId(null);
     }
@@ -289,7 +341,7 @@ export default function ClubScreen({ navigation }) {
   };
 
   const renderFooter = () => {
-    if (!loading) return <View style={{ height: 10 }} />;
+    if (!loadingMore) return <View style={{ height: 10 }} />;
 
     return (
       <View style={{ paddingVertical: 16 }}>
@@ -332,7 +384,7 @@ export default function ClubScreen({ navigation }) {
             <Pressable
               style={styles.addBtn}
               hitSlop={10}
-              onPress={() => navigation.navigate("ClubCreate")}
+              onPress={handleCreateClub}
             >
               <Ionicons name="add" size={26} color="#1E2430" />
             </Pressable>
@@ -368,25 +420,27 @@ export default function ClubScreen({ navigation }) {
         </View>
       </View>
 
-      <FlatList
-        contentContainerStyle={styles.listPad}
-        data={items}
-        keyExtractor={(it) => String(it.clubId)}
-        renderItem={renderItem}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onEndReachedThreshold={0.25}
-        onEndReached={() => {
-          if (!loading && canLoadMore) {
-            fetchClubs({ reset: false });
+      {loading && items.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <ActivityIndicator />
+        </View>
+      ) : (
+        <FlatList
+          contentContainerStyle={styles.listPad}
+          data={items}
+          keyExtractor={(it) => String(it.clubId)}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onEndReachedThreshold={0.25}
+          onEndReached={onEndReached}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-        }}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+        />
+      )}
     </View>
   );
 }
