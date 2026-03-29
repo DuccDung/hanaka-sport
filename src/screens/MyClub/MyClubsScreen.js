@@ -104,6 +104,7 @@ function ClubCard({ item, onPress }) {
 
         <View style={styles.ratingRow}>
           <Text style={styles.ratingText}>{(item.rating ?? 0).toFixed(1)}</Text>
+
           <View style={styles.starsRow}>
             {Array.from({ length: 5 }).map((_, i) => (
               <Ionicons
@@ -116,6 +117,7 @@ function ClubCard({ item, onPress }) {
               />
             ))}
           </View>
+
           <Text style={styles.ratingLight}>
             ({item.reviewsCount ?? 0} Đánh giá)
           </Text>
@@ -147,16 +149,52 @@ function ClubCard({ item, onPress }) {
   );
 }
 
+function GuestState({ onLoginPress }) {
+  return (
+    <View style={styles.centerBox}>
+      <Ionicons name="lock-closed-outline" size={44} color="#9CA3AF" />
+      <Text style={styles.emptyTitle}>Bạn chưa đăng nhập</Text>
+      <Text style={styles.emptyText}>
+        Vui lòng đăng nhập để xem và tham gia câu lạc bộ của bạn.
+      </Text>
+
+      <Pressable style={styles.primaryActionBtn} onPress={onLoginPress}>
+        <Text style={styles.primaryActionText}>Đăng nhập ngay</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function NoClubState({ onGoClubPress }) {
+  return (
+    <View style={styles.centerBox}>
+      <Ionicons name="people-outline" size={44} color="#9CA3AF" />
+      <Text style={styles.emptyTitle}>Bạn chưa tham gia câu lạc bộ</Text>
+      <Text style={styles.emptyText}>
+        Hãy tham gia một câu lạc bộ để theo dõi thông tin của bạn tại đây.
+      </Text>
+
+      <Pressable style={styles.primaryActionBtn} onPress={onGoClubPress}>
+        <Text style={styles.primaryActionText}>Đi tới trang CLB</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 export default function MyClubsScreen({ navigation }) {
   const { session } = useAuth();
   const user = session?.user || null;
+  const isLoggedIn = !!session?.accessToken;
+
   const avatarUrl = user?.avatarUrl || null;
   const displayName =
     user?.fullName || user?.name || user?.username || user?.email || "Bạn";
+
   const rootNavigation =
     navigation.getParent?.()?.getParent?.() ||
     navigation.getParent?.() ||
     navigation;
+
   const [tab, setTab] = useState("ALL");
   const [query, setQuery] = useState("");
   const [serverData, setServerData] = useState([]);
@@ -166,11 +204,24 @@ export default function MyClubsScreen({ navigation }) {
     totalMember: 0,
     totalPending: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(
     async ({ isRefresh = false } = {}) => {
+      if (!isLoggedIn) {
+        setServerData([]);
+        setSummary({
+          totalAll: 0,
+          totalManager: 0,
+          totalMember: 0,
+          totalPending: 0,
+        });
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       try {
         if (isRefresh) setRefreshing(true);
         else setLoading(true);
@@ -197,12 +248,18 @@ export default function MyClubsScreen({ navigation }) {
           error?.response?.data || error?.message,
         );
         setServerData([]);
+        setSummary({
+          totalAll: 0,
+          totalManager: 0,
+          totalMember: 0,
+          totalPending: 0,
+        });
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [query, tab],
+    [isLoggedIn, query, tab],
   );
 
   useEffect(() => {
@@ -218,6 +275,67 @@ export default function MyClubsScreen({ navigation }) {
       return hay.includes(q);
     });
   }, [serverData, query]);
+
+  const handleGoLogin = () => {
+    rootNavigation.navigate("AuthStack", {
+      screen: "Login",
+    });
+  };
+
+  const handleGoClubPage = () => {
+    rootNavigation.navigate("MainTabs", {
+      screen: "Home",
+      params: {
+        screen: "Club",
+      },
+    });
+  };
+
+  const renderBody = () => {
+    if (!isLoggedIn) {
+      return <GuestState onLoginPress={handleGoLogin} />;
+    }
+
+    if (loading) {
+      return (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={COLORS.BLUE} />
+          <Text style={styles.emptyText}>Đang tải CLB của bạn...</Text>
+        </View>
+      );
+    }
+
+    if (!loading && data.length === 0) {
+      return <NoClubState onGoClubPress={handleGoClubPage} />;
+    }
+
+    return (
+      <FlatList
+        contentContainerStyle={styles.listPad}
+        data={data}
+        keyExtractor={(it) => it.id}
+        renderItem={({ item }) => (
+          <ClubCard
+            item={item}
+            onPress={() => {
+              navigation.navigate("ClubDetail", {
+                clubId: Number(item.id),
+                initialTab: "Chung",
+              });
+            }}
+          />
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => fetchData({ isRefresh: true })}
+            tintColor={COLORS.BLUE}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  };
 
   return (
     <View style={styles.safe}>
@@ -251,7 +369,9 @@ export default function MyClubsScreen({ navigation }) {
               onPress={() =>
                 user
                   ? rootNavigation.navigate("Account")
-                  : rootNavigation.navigate("Login")
+                  : rootNavigation.navigate("AuthStack", {
+                      screen: "Login",
+                    })
               }
               hitSlop={10}
               style={styles.avatarWrap}
@@ -269,86 +389,54 @@ export default function MyClubsScreen({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryText}>Tất cả: {summary.totalAll}</Text>
-          <Text style={styles.summaryText}>
-            Quản lý: {summary.totalManager}
-          </Text>
-          <Text style={styles.summaryText}>
-            Tham gia: {summary.totalMember}
-          </Text>
-          <Text style={styles.summaryText}>
-            Chờ duyệt: {summary.totalPending}
-          </Text>
-        </View>
+        {isLoggedIn ? (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryText}>Tất cả: {summary.totalAll}</Text>
+            <Text style={styles.summaryText}>
+              Quản lý: {summary.totalManager}
+            </Text>
+            <Text style={styles.summaryText}>
+              Tham gia: {summary.totalMember}
+            </Text>
+            <Text style={styles.summaryText}>
+              Chờ duyệt: {summary.totalPending}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryText}>
+              Đăng nhập để xem danh sách câu lạc bộ của bạn
+            </Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#9CA3AF" />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Tìm kiếm CLB..."
-            placeholderTextColor="#9CA3AF"
-            style={styles.searchInput}
-            returnKeyType="search"
-            onSubmitEditing={() => {
-              Keyboard.dismiss();
-              fetchData();
-            }}
-          />
-          {!!query && (
-            <Pressable onPress={() => setQuery("")}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
-            </Pressable>
-          )}
-        </View>
-      </View>
-
-      {loading ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={COLORS.BLUE} />
-          <Text style={styles.emptyText}>Đang tải CLB của bạn...</Text>
-        </View>
-      ) : (
-        <FlatList
-          contentContainerStyle={[
-            styles.listPad,
-            data.length === 0 && { flexGrow: 1 },
-          ]}
-          data={data}
-          keyExtractor={(it) => it.id}
-          renderItem={({ item }) => (
-            <ClubCard
-              item={item}
-              onPress={() => {
-                navigation.navigate("ClubDetail", {
-                  clubId: Number(item.id),
-                  initialTab: "Chung",
-                });
+      {isLoggedIn ? (
+        <View style={styles.searchRow}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={18} color="#9CA3AF" />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Tìm kiếm CLB..."
+              placeholderTextColor="#9CA3AF"
+              style={styles.searchInput}
+              returnKeyType="search"
+              onSubmitEditing={() => {
+                Keyboard.dismiss();
+                fetchData();
               }}
             />
-          )}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchData({ isRefresh: true })}
-              tintColor={COLORS.BLUE}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.centerBox}>
-              <Ionicons name="people-outline" size={42} color="#9CA3AF" />
-              <Text style={styles.emptyTitle}>Chưa có CLB phù hợp</Text>
-              <Text style={styles.emptyText}>
-                Bạn chưa có CLB nào trong danh sách hiện tại.
-              </Text>
-            </View>
-          }
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+            {!!query && (
+              <Pressable onPress={() => setQuery("")}>
+                <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      ) : null}
+
+      {renderBody()}
     </View>
   );
 }

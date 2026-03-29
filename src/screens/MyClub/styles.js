@@ -187,4 +187,19 @@ export const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
   },
+  primaryActionBtn: {
+    marginTop: 16,
+    backgroundColor: COLORS.BLUE,
+    paddingHorizontal: 18,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  primaryActionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });

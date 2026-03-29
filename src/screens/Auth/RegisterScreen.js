@@ -28,16 +28,16 @@ export default function RegisterScreen({ navigation }) {
   const [showPass, setShowPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const [focusedField, setFocusedField] = useState("");
 
   const canSubmit = useMemo(() => {
     return (
       fullName.trim().length >= 2 &&
       isEmail(email) &&
       password.trim().length >= 6 &&
-      (gender === "Nam" || gender === "Nữ") &&
       !submitting
     );
-  }, [fullName, email, password, gender, submitting]);
+  }, [fullName, email, password, submitting]);
 
   const onSubmit = async () => {
     if (!fullName.trim()) {
@@ -60,29 +60,26 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    if (gender !== "Nam" && gender !== "Nữ") {
-      setErrorText("Vui lòng chọn giới tính.");
-      return;
-    }
-
     Keyboard.dismiss();
     setSubmitting(true);
     setErrorText("");
 
     try {
-      const data = await register({
+      const payload = {
         fullName: fullName.trim(),
         email: email.trim(),
         password,
-        gender,
-      });
+        gender: gender || null,
+      };
+
+      const data = await register(payload);
 
       Alert.alert("Thành công", data?.message || "OTP đã được gửi tới email.");
 
       navigation.navigate("RegisterOtp", {
         email: email.trim(),
         fullName: fullName.trim(),
-        gender,
+        gender: gender || null,
       });
     } catch (e) {
       const msg =
@@ -100,8 +97,8 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <SafeAreaView style={styles.safeTop} />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
@@ -113,6 +110,7 @@ export default function RegisterScreen({ navigation }) {
           >
             <Ionicons name="arrow-back" size={20} color="#1E2430" />
           </Pressable>
+
           <Text style={styles.headerTitle}>Đăng ký</Text>
         </View>
       </View>
@@ -123,119 +121,179 @@ export default function RegisterScreen({ navigation }) {
       >
         <View style={styles.centerWrap}>
           <View style={styles.card}>
-            <Text style={styles.label}>Họ và tên</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Nguyễn Văn A"
-                placeholderTextColor="#9CA3AF"
-                style={styles.input}
-                returnKeyType="next"
-                editable={!submitting}
-              />
-            </View>
+            <Text style={styles.sectionTitle}>Tạo tài khoản</Text>
+            <Text style={styles.sectionDesc}>
+              Điền thông tin để đăng ký tài khoản mới.
+            </Text>
 
-            <Text style={[styles.label, { marginTop: 12 }]}>Email</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="a@test.com"
-                placeholderTextColor="#9CA3AF"
-                style={styles.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                returnKeyType="next"
-                editable={!submitting}
-              />
-            </View>
+            <View style={styles.fieldBlock}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Họ và tên</Text>
+              </View>
 
-            <Text style={[styles.label, { marginTop: 12 }]}>Mật khẩu</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="******"
-                placeholderTextColor="#9CA3AF"
-                style={[styles.input, { paddingRight: 44 }]}
-                secureTextEntry={!showPass}
-                returnKeyType="done"
-                onSubmitEditing={onSubmit}
-                editable={!submitting}
-              />
-
-              <Pressable
-                onPress={() => setShowPass((s) => !s)}
-                style={styles.eyeBtn}
-                hitSlop={10}
-                disabled={submitting}
-              >
-                <Ionicons
-                  name={showPass ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color="#6B7280"
-                />
-              </Pressable>
-            </View>
-
-            <Text style={styles.hint}>Mật khẩu tối thiểu 6 ký tự.</Text>
-
-            <Text style={[styles.label, { marginTop: 12 }]}>Giới tính</Text>
-            <View style={styles.genderRow}>
-              <Pressable
-                onPress={() => setGender("Nam")}
-                disabled={submitting}
+              <View
                 style={[
-                  styles.genderOption,
-                  gender === "Nam" && styles.genderOptionActive,
+                  styles.inputWrap,
+                  focusedField === "fullName" && styles.inputWrapFocused,
                 ]}
               >
-                <Ionicons
-                  name={
-                    gender === "Nam" ? "radio-button-on" : "radio-button-off"
-                  }
-                  size={18}
-                  color={gender === "Nam" ? "#FFFFFF" : "#6B7280"}
+                <TextInput
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Nguyễn Văn A"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.input}
+                  returnKeyType="next"
+                  editable={!submitting}
+                  onFocus={() => setFocusedField("fullName")}
+                  onBlur={() => setFocusedField("")}
                 />
-                <Text
-                  style={[
-                    styles.genderText,
-                    gender === "Nam" && styles.genderTextActive,
-                  ]}
-                >
-                  Nam
-                </Text>
-              </Pressable>
+              </View>
+            </View>
 
-              <Pressable
-                onPress={() => setGender("Nữ")}
-                disabled={submitting}
+            <View style={styles.fieldBlock}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Email</Text>
+              </View>
+
+              <View
                 style={[
-                  styles.genderOption,
-                  gender === "Nữ" && styles.genderOptionActive,
+                  styles.inputWrap,
+                  focusedField === "email" && styles.inputWrapFocused,
                 ]}
               >
-                <Ionicons
-                  name={
-                    gender === "Nữ" ? "radio-button-on" : "radio-button-off"
-                  }
-                  size={18}
-                  color={gender === "Nữ" ? "#FFFFFF" : "#6B7280"}
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="a@test.com"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.input}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  editable={!submitting}
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField("")}
                 />
-                <Text
+              </View>
+            </View>
+
+            <View style={styles.fieldBlock}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Mật khẩu</Text>
+              </View>
+
+              <View
+                style={[
+                  styles.inputWrap,
+                  focusedField === "password" && styles.inputWrapFocused,
+                ]}
+              >
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="******"
+                  placeholderTextColor="#9CA3AF"
+                  style={[styles.input, { paddingRight: 44 }]}
+                  secureTextEntry={!showPass}
+                  returnKeyType="done"
+                  onSubmitEditing={onSubmit}
+                  editable={!submitting}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField("")}
+                />
+
+                <Pressable
+                  onPress={() => setShowPass((s) => !s)}
+                  style={styles.eyeBtn}
+                  hitSlop={10}
+                  disabled={submitting}
+                >
+                  <Ionicons
+                    name={showPass ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#6B7280"
+                  />
+                </Pressable>
+              </View>
+
+              <Text style={styles.hint}>Mật khẩu tối thiểu 6 ký tự.</Text>
+            </View>
+
+            <View style={styles.fieldBlock}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Giới tính</Text>
+                <Text style={styles.optionalText}>Không bắt buộc</Text>
+              </View>
+
+              <View style={styles.genderRow}>
+                <Pressable
+                  onPress={() =>
+                    setGender((prev) => (prev === "Nam" ? "" : "Nam"))
+                  }
+                  disabled={submitting}
                   style={[
-                    styles.genderText,
-                    gender === "Nữ" && styles.genderTextActive,
+                    styles.genderOption,
+                    gender === "Nam" && styles.genderOptionActive,
                   ]}
                 >
-                  Nữ
+                  <Ionicons
+                    name={
+                      gender === "Nam" ? "radio-button-on" : "radio-button-off"
+                    }
+                    size={18}
+                    color={gender === "Nam" ? "#FFFFFF" : "#6B7280"}
+                  />
+                  <Text
+                    style={[
+                      styles.genderText,
+                      gender === "Nam" && styles.genderTextActive,
+                    ]}
+                  >
+                    Nam
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() =>
+                    setGender((prev) => (prev === "Nữ" ? "" : "Nữ"))
+                  }
+                  disabled={submitting}
+                  style={[
+                    styles.genderOption,
+                    gender === "Nữ" && styles.genderOptionActive,
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      gender === "Nữ" ? "radio-button-on" : "radio-button-off"
+                    }
+                    size={18}
+                    color={gender === "Nữ" ? "#FFFFFF" : "#6B7280"}
+                  />
+                  <Text
+                    style={[
+                      styles.genderText,
+                      gender === "Nữ" && styles.genderTextActive,
+                    ]}
+                  >
+                    Nữ
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.helperBox}>
+                <Text style={styles.helperText}>
+                  Bạn có thể bỏ qua mục này và tiếp tục đăng ký.
                 </Text>
-              </Pressable>
+              </View>
             </View>
 
             {errorText ? (
-              <Text style={styles.errorText}>{errorText}</Text>
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{errorText}</Text>
+              </View>
             ) : null}
 
             <Pressable
@@ -244,7 +302,7 @@ export default function RegisterScreen({ navigation }) {
               style={[styles.submitBtn, canSubmit && styles.submitBtnActive]}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text
                   style={[

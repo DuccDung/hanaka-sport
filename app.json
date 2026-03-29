@@ -15,7 +15,7 @@
     "ios": {
       "bundleIdentifier": "com.hanakasport.app",
       "buildNumber": "1",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
