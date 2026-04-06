@@ -1,5 +1,5 @@
 // src/screens/Club/styles.js
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 const { width } = Dimensions.get("window");
@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
   header: {
     backgroundColor: COLORS.BLUE,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: Platform.OS === "android" ? 0 : 8,
     paddingBottom: 12,
   },
 

@@ -16,7 +16,7 @@ export const styles = StyleSheet.create({
   header: {
     backgroundColor: COLORS.PRIMARY,
     paddingHorizontal: 16,
-    paddingTop: 6,
+    paddingTop: Platform.OS === "android" ? 0 : 6,
     paddingBottom: 12,
     flexDirection: "row",
     alignItems: "center",

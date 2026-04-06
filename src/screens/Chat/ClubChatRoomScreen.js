@@ -8,8 +8,6 @@ import React, {
 import {
   View,
   Text,
-  SafeAreaView,
-  StatusBar,
   FlatList,
   Pressable,
   TextInput,
@@ -19,6 +17,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AppStatusBar from "../../components/AppStatusBar";
 import { COLORS } from "../../constants/colors";
 import { styles } from "./styles";
 import { useAuth } from "../../context/AuthContext";
@@ -329,8 +328,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: COLORS.BLUE }} />
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.BLUE} />
+      <AppStatusBar backgroundColor={COLORS.BLUE} />
 
       {header}
 

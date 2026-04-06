@@ -1,15 +1,9 @@
 import React from "react";
-import {
-  View,
-  Text,
-  SafeAreaView,
-  Pressable,
-  StatusBar,
-  Image,
-} from "react-native";
+import { View, Text, Pressable, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
+import AppStatusBar from "../../../components/AppStatusBar";
 import { COLORS } from "../../../constants/colors";
 import { styles } from "../styles";
 import { useAuth } from "../../../context/AuthContext";
@@ -34,8 +28,7 @@ export default function Header({ sport, onToggleSport, onPressAvatar }) {
 
   return (
     <>
-      <SafeAreaView style={{ backgroundColor: COLORS.BLUE }} />
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.BLUE} />
+      <AppStatusBar backgroundColor={COLORS.BLUE} />
 
       <View style={styles.header}>
         <Pressable style={styles.sportPicker} onPress={onToggleSport}>

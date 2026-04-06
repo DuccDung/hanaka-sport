@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
-  StatusBar,
   Pressable,
   TextInput,
   FlatList,
@@ -14,6 +12,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AppStatusBar from "../../components/AppStatusBar";
 import { COLORS } from "../../constants/colors";
 import { styles } from "./styles";
 import { getMyClubs } from "../../services/clubService";
@@ -339,8 +338,7 @@ export default function MyClubsScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: COLORS.BLUE }} />
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.BLUE} />
+      <AppStatusBar backgroundColor={COLORS.BLUE} />
 
       <View style={styles.header}>
         <View style={styles.headerTopRow}>

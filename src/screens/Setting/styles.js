@@ -2,9 +2,6 @@ import { StyleSheet } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 export const styles = StyleSheet.create({
-  // =========================
-  // SETTINGS SCREEN
-  // =========================
   settingsSafe: {
     flex: 1,
     backgroundColor: COLORS.WHITE,
@@ -60,45 +57,6 @@ export const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#EAEAEA",
     marginVertical: 8,
-  },
-
-  languageRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-
-  languageButton: {
-    minWidth: 130,
-    height: 46,
-    borderWidth: 1,
-    borderColor: "#D9DDE6",
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    backgroundColor: "#FAFAFA",
-  },
-
-  languageButtonActive: {
-    borderColor: COLORS.PRIMARY,
-    backgroundColor: "#F6F9FF",
-  },
-
-  languageButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6B7280",
-    marginRight: 8,
-  },
-
-  languageButtonTextActive: {
-    color: COLORS.PRIMARY,
-    fontWeight: "700",
-  },
-
-  flagText: {
-    fontSize: 18,
   },
 
   settingRow: {

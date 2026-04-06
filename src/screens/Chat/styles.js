@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 export const styles = StyleSheet.create({
@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
   header: {
     backgroundColor: COLORS.BLUE,
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: Platform.OS === "android" ? 0 : 8,
     paddingBottom: 14,
   },
   headerTitle: {
@@ -101,7 +101,7 @@ export const styles = StyleSheet.create({
   roomHeader: {
     backgroundColor: COLORS.BLUE,
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: Platform.OS === "android" ? 0 : 10,
     paddingBottom: 12,
     flexDirection: "row",
     alignItems: "center",

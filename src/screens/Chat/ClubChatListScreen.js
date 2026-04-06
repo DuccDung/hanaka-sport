@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
-  StatusBar,
   FlatList,
   Pressable,
   Image,
@@ -11,6 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AppStatusBar from "../../components/AppStatusBar";
 import { COLORS } from "../../constants/colors";
 import { getMyClubChatRooms } from "../../services/chatService";
 import { styles } from "./styles";
@@ -105,8 +104,7 @@ export default function ClubChatListScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: COLORS.BLUE }} />
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.BLUE} />
+      <AppStatusBar backgroundColor={COLORS.BLUE} />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tin nhắn CLB</Text>
