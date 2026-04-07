@@ -275,11 +275,7 @@ export default function TournamentScreen({ navigation }) {
 
           <Text style={styles.headerTitle}>Giải đấu</Text>
 
-          <View style={styles.headerRight}>
-            <Pressable style={styles.addBtn} hitSlop={10}>
-              <Ionicons name="add" size={26} color="#1E2430" />
-            </Pressable>
-          </View>
+          <View style={styles.headerRight} />
         </View>
 
         <View style={styles.searchRow}>
@@ -297,11 +293,10 @@ export default function TournamentScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Filter UI (chưa wire API filter theo area - để nguyên) */}
         <View style={styles.filterRow}>
-          <Pressable style={styles.filterBtn}>
+          <View style={styles.filterBtn}>
             <Text style={styles.filterText}>Tất cả giải đấu</Text>
-          </Pressable>
+          </View>
         </View>
 
         <View style={styles.tabsRow}>

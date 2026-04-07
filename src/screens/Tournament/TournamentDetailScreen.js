@@ -1,4 +1,3 @@
-// src/screens/Tournament/TournamentDetailScreen.js
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
@@ -7,30 +6,43 @@ import {
   Pressable,
   ScrollView,
   Image,
-  TextInput,
   Share,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
+import RenderHtml from "react-native-render-html";
 import { styles } from "./detailStyles";
 import { publicGetTournamentDetail } from "../../services/tournamentService";
 
-// helpers format giống screen list
 function pad2(n) {
   return String(n).padStart(2, "0");
 }
+
 function formatDateTime(value) {
   if (!value) return "-";
+
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
+
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ${pad2(
     d.getHours(),
   )}:${pad2(d.getMinutes())}`;
 }
 
-// map server dto -> UI model mà màn hình đang dùng
+function normalizeHtml(html) {
+  if (!html) return "";
+
+  const cleaned = String(html).trim();
+  if (!cleaned || cleaned === "<p><br></p>") {
+    return "";
+  }
+
+  return cleaned;
+}
+
 function mapDtoToUi(dto) {
   const bannerFallback =
     "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80";
@@ -50,28 +62,20 @@ function mapDtoToUi(dto) {
     banner: dto?.bannerUrl || bannerFallback,
     dateTime: formatDateTime(dto?.startTime),
     registerDeadline: formatDateTime(dto?.registerDeadline),
-
-    // UI đang dùng playoffType / formatText hơi lẫn — ưu tiên formatText
     playoffType: dto?.playoffType ?? "-",
     formatText: dto?.formatText ?? "-",
     gameType: gameTypeLabel,
-
     singleLimit: dto?.singleLimit ?? 0,
     doubleLimit: dto?.doubleLimit ?? 0,
-
     location: dto?.locationText ?? "-",
     expectedTeams: dto?.expectedTeams ?? 0,
     matches: dto?.matchesCount ?? 0,
-
     statusText: dto?.statusText ?? dto?.status ?? "-",
     stateText: dto?.stateText ?? "-",
-
     organizer: dto?.organizer ?? "-",
     creator: dto?.creatorName ?? "-",
-
     registeredCount: dto?.registeredCount ?? null,
     pairedCount: dto?.pairedCount ?? null,
-
     content: dto?.content ?? "",
   };
 }
@@ -87,13 +91,14 @@ function InfoLine({ label, value, boldValue }) {
 
 export default function TournamentDetailScreen({ navigation, route }) {
   const tournamentId = route?.params?.tournamentId;
-  const preview = route?.params?.preview; // optional
+  const preview = route?.params?.preview;
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [dto, setDto] = useState(null);
 
-  // fetch detail
+  const { width } = useWindowDimensions();
+
   const fetchDetail = useCallback(async () => {
     try {
       setErrorMsg("");
@@ -115,13 +120,10 @@ export default function TournamentDetailScreen({ navigation, route }) {
     fetchDetail();
   }, [fetchDetail]);
 
-  // t = model dùng để render UI
   const t = useMemo(() => {
-    // nếu đang loading mà có preview thì show preview trước
     if (!dto && preview) return mapDtoToUi(preview);
     if (dto) return mapDtoToUi(dto);
 
-    // fallback
     return {
       title: "Chi tiết giải đấu",
       banner:
@@ -146,12 +148,8 @@ export default function TournamentDetailScreen({ navigation, route }) {
     };
   }, [dto, preview]);
 
-  const [content, setContent] = useState(t.content ?? "");
-
-  // khi dto về, sync content vào state (vì bạn cho edit trong TextInput)
-  useEffect(() => {
-    setContent(t.content ?? "");
-  }, [t.content]);
+  const contentHtml = normalizeHtml(t.content);
+  const hasContent = !!contentHtml;
 
   const onShare = async () => {
     try {
@@ -166,7 +164,6 @@ export default function TournamentDetailScreen({ navigation, route }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -191,7 +188,6 @@ export default function TournamentDetailScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* trạng thái load/error */}
       {loading ? (
         <View style={{ paddingTop: 12 }}>
           <ActivityIndicator />
@@ -208,7 +204,6 @@ export default function TournamentDetailScreen({ navigation, route }) {
       ) : null}
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Banner */}
         <Image source={{ uri: t.banner }} style={styles.banner} />
 
         <View style={styles.body}>
@@ -285,20 +280,96 @@ export default function TournamentDetailScreen({ navigation, route }) {
             />
           ) : null}
 
-          {/* Content */}
           <View style={{ height: 14 }} />
           <Text style={styles.sectionTitle}>Nội dung</Text>
           <View style={styles.contentBox}>
-            <TextInput
-              value={content}
-              onChangeText={setContent}
-              placeholder=""
-              placeholderTextColor="#9CA3AF"
-              style={styles.contentInput}
-            />
+            {hasContent ? (
+              <RenderHtml
+                contentWidth={width - 52}
+                source={{ html: contentHtml }}
+                tagsStyles={{
+                  body: {
+                    color: "#1E2430",
+                    fontSize: 14,
+                    lineHeight: 22,
+                  },
+                  p: {
+                    color: "#1E2430",
+                    fontSize: 14,
+                    lineHeight: 22,
+                    marginTop: 0,
+                    marginBottom: 10,
+                  },
+                  h1: {
+                    fontSize: 24,
+                    lineHeight: 30,
+                    fontWeight: "700",
+                    color: "#111827",
+                    marginTop: 0,
+                    marginBottom: 12,
+                  },
+                  h2: {
+                    fontSize: 20,
+                    lineHeight: 26,
+                    fontWeight: "700",
+                    color: "#111827",
+                    marginTop: 8,
+                    marginBottom: 10,
+                  },
+                  h3: {
+                    fontSize: 17,
+                    lineHeight: 24,
+                    fontWeight: "700",
+                    color: "#111827",
+                    marginTop: 8,
+                    marginBottom: 8,
+                  },
+                  strong: {
+                    fontWeight: "700",
+                    color: "#111827",
+                  },
+                  em: {
+                    fontStyle: "italic",
+                  },
+                  ul: {
+                    marginTop: 0,
+                    marginBottom: 10,
+                    paddingLeft: 8,
+                  },
+                  ol: {
+                    marginTop: 0,
+                    marginBottom: 10,
+                    paddingLeft: 8,
+                  },
+                  li: {
+                    color: "#1E2430",
+                    fontSize: 14,
+                    lineHeight: 22,
+                    marginBottom: 6,
+                  },
+                  blockquote: {
+                    borderLeftWidth: 4,
+                    borderLeftColor: "#D1D5DB",
+                    paddingLeft: 12,
+                    color: "#4B5563",
+                    marginLeft: 0,
+                    marginRight: 0,
+                    marginTop: 8,
+                    marginBottom: 8,
+                  },
+                  a: {
+                    color: "#2563EB",
+                    textDecorationLine: "underline",
+                  },
+                }}
+              />
+            ) : (
+              <Text style={styles.contentEmptyText}>
+                Chưa có nội dung giải đấu.
+              </Text>
+            )}
           </View>
 
-          {/* Manager */}
           <View style={{ height: 16 }} />
           <Text style={styles.sectionCaps}>QUẢN LÝ GIẢI ĐẤU</Text>
 

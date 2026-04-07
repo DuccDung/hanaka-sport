@@ -410,14 +410,14 @@ export default function ClubScreen({ navigation }) {
         </View>
 
         <View style={styles.filterRow}>
-          <Pressable style={styles.filterBtn}>
+          <View style={styles.filterBtn}>
             <Ionicons name="location-outline" size={14} color="#6B7280" />
             <Text style={styles.filterText}>
               {submittedQuery
                 ? `Từ khóa: ${submittedQuery}`
                 : "Tất cả câu lạc bộ"}
             </Text>
-          </Pressable>
+          </View>
         </View>
       </View>
 

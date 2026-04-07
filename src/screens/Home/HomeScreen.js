@@ -17,7 +17,7 @@ import { getHomeBanners } from "../../services/bannerService";
 import { getYoutubeGuideLink } from "../../services/publicLinkService";
 
 export default function HomeScreen({ navigation }) {
-  const [sport, setSport] = useState("Pickleball");
+  const sport = "Pickleball";
   const [bannerIndex, setBannerIndex] = useState(0);
   const [banners, setBanners] = useState([]);
   const [loadingBanners, setLoadingBanners] = useState(true);
@@ -88,10 +88,6 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(true);
     await loadAll();
     setRefreshing(false);
-  };
-
-  const toggleSport = () => {
-    setSport((prev) => (prev === "Pickleball" ? "Tennis" : "Pickleball"));
   };
 
   const openUrl = async (url) => {
@@ -169,7 +165,6 @@ export default function HomeScreen({ navigation }) {
     <View style={styles.safe}>
       <Header
         sport={sport}
-        onToggleSport={toggleSport}
         onPressAvatar={() =>
           navigation.navigate("AuthStack", {
             screen: "Login",

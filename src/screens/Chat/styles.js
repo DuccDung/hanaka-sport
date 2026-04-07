@@ -97,6 +97,20 @@ export const styles = StyleSheet.create({
     color: "#4B5563",
     textAlign: "center",
   },
+  demoActionBtn: {
+    marginTop: 12,
+    backgroundColor: COLORS.BLUE,
+    paddingHorizontal: 16,
+    height: 42,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  demoActionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 
   roomHeader: {
     backgroundColor: COLORS.BLUE,

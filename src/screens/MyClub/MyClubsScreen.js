@@ -17,6 +17,7 @@ import { COLORS } from "../../constants/colors";
 import { styles } from "./styles";
 import { getMyClubs } from "../../services/clubService";
 import { useAuth } from "../../context/AuthContext";
+import { getReviewDemoClubBundle } from "../../mocks/reviewDemoData";
 
 function normalize(str = "") {
   return str
@@ -148,7 +149,7 @@ function ClubCard({ item, onPress }) {
   );
 }
 
-function GuestState({ onLoginPress }) {
+function GuestState({ onLoginPress, onDemoPress }) {
   return (
     <View style={styles.centerBox}>
       <Ionicons name="lock-closed-outline" size={44} color="#9CA3AF" />
@@ -160,11 +161,15 @@ function GuestState({ onLoginPress }) {
       <Pressable style={styles.primaryActionBtn} onPress={onLoginPress}>
         <Text style={styles.primaryActionText}>Đăng nhập ngay</Text>
       </Pressable>
+
+      <Pressable style={styles.secondaryActionBtn} onPress={onDemoPress}>
+        <Text style={styles.secondaryActionText}>Xem CLB mẫu</Text>
+      </Pressable>
     </View>
   );
 }
 
-function NoClubState({ onGoClubPress }) {
+function NoClubState({ onGoClubPress, onDemoPress }) {
   return (
     <View style={styles.centerBox}>
       <Ionicons name="people-outline" size={44} color="#9CA3AF" />
@@ -175,6 +180,10 @@ function NoClubState({ onGoClubPress }) {
 
       <Pressable style={styles.primaryActionBtn} onPress={onGoClubPress}>
         <Text style={styles.primaryActionText}>Đi tới trang CLB</Text>
+      </Pressable>
+
+      <Pressable style={styles.secondaryActionBtn} onPress={onDemoPress}>
+        <Text style={styles.secondaryActionText}>Xem CLB mẫu</Text>
       </Pressable>
     </View>
   );
@@ -265,6 +274,14 @@ export default function MyClubsScreen({ navigation }) {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchData({ isRefresh: false });
+    });
+
+    return unsubscribe;
+  }, [navigation, fetchData]);
+
   const data = useMemo(() => {
     const q = normalize(query.trim());
 
@@ -290,9 +307,26 @@ export default function MyClubsScreen({ navigation }) {
     });
   };
 
+  const handleOpenDemoClub = () => {
+    const demo = getReviewDemoClubBundle();
+
+    navigation.navigate("ClubDetail", {
+      clubId: demo.club.clubId,
+      initialTab: "Chung",
+      demoClub: demo.club,
+      demoMembers: demo.members,
+      demoPendingMembers: demo.pendingMembers,
+    });
+  };
+
   const renderBody = () => {
     if (!isLoggedIn) {
-      return <GuestState onLoginPress={handleGoLogin} />;
+      return (
+        <GuestState
+          onLoginPress={handleGoLogin}
+          onDemoPress={handleOpenDemoClub}
+        />
+      );
     }
 
     if (loading) {
@@ -305,7 +339,12 @@ export default function MyClubsScreen({ navigation }) {
     }
 
     if (!loading && data.length === 0) {
-      return <NoClubState onGoClubPress={handleGoClubPage} />;
+      return (
+        <NoClubState
+          onGoClubPress={handleGoClubPage}
+          onDemoPress={handleOpenDemoClub}
+        />
+      );
     }
 
     return (

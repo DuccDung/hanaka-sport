@@ -243,11 +243,7 @@ export default function ExchangeScreen({ navigation }) {
 
           <Text style={styles.headerTitle}>Giao lưu</Text>
 
-          <View style={styles.headerRight}>
-            <Pressable style={styles.addBtn} hitSlop={10}>
-              <Ionicons name="flash-outline" size={22} color="#1E2430" />
-            </Pressable>
-          </View>
+          <View style={styles.headerRight} />
         </View>
 
         <View style={styles.searchRow}>
@@ -268,14 +264,14 @@ export default function ExchangeScreen({ navigation }) {
         </View>
 
         <View style={styles.filterRow}>
-          <Pressable style={styles.filterBtn}>
+          <View style={styles.filterBtn}>
             <Ionicons name="flash-outline" size={14} color="#16A34A" />
             <Text style={styles.filterText}>
               {submittedQuery
                 ? `Từ khóa: ${submittedQuery}`
                 : "Đang hiển thị CLB bật khiêu chiến"}
             </Text>
-          </Pressable>
+          </View>
         </View>
       </View>
 

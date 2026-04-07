@@ -32,6 +32,10 @@ import {
   unsubscribeClubRoom,
   sendTyping,
 } from "../../services/realtimeService";
+import {
+  getReviewDemoCurrentUser,
+  getReviewDemoMessages,
+} from "../../mocks/reviewDemoData";
 
 function formatMessageTime(value) {
   if (!value) return "";
@@ -93,15 +97,18 @@ function MessageItem({ item, isMine, onDelete }) {
 
 export default function ClubChatRoomScreen({ navigation, route }) {
   const { session } = useAuth();
-  const me = session?.user || null;
-  const myUserId = me?.userId;
-
   const clubId = route?.params?.clubId;
   const clubName = route?.params?.clubName || "Chat CLB";
+  const isDemoRoom = !!route?.params?.demoRoom;
+  const me =
+    session?.user || (isDemoRoom ? getReviewDemoCurrentUser() : null);
+  const myUserId = me?.userId;
 
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(() =>
+    isDemoRoom ? getReviewDemoMessages() : [],
+  );
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isDemoRoom);
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
 
@@ -109,6 +116,12 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   const typingTimeoutRef = useRef(null);
 
   const fetchMessages = useCallback(async () => {
+    if (isDemoRoom) {
+      setItems(getReviewDemoMessages());
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -127,13 +140,15 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     } finally {
       setLoading(false);
     }
-  }, [clubId]);
+  }, [clubId, isDemoRoom]);
 
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
 
   useEffect(() => {
+    if (isDemoRoom) return;
+
     subscribeClubRoom(clubId);
 
     const unsubscribe = addRealtimeListener((event) => {
@@ -202,7 +217,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       unsubscribe();
       sendTyping(clubId, false);
     };
-  }, [clubId, myUserId]);
+  }, [clubId, isDemoRoom, myUserId]);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -216,6 +231,10 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     (value) => {
       setText(value);
 
+      if (isDemoRoom) {
+        return;
+      }
+
       sendTyping(clubId, value.trim().length > 0);
 
       if (typingTimeoutRef.current) {
@@ -226,12 +245,30 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         sendTyping(clubId, false);
       }, 1200);
     },
-    [clubId],
+    [clubId, isDemoRoom],
   );
 
   const onSend = useCallback(async () => {
     const content = text.trim();
     if (!content || sending) return;
+
+    if (isDemoRoom) {
+      setItems((prev) => [
+        ...prev,
+        {
+          messageId: `demo-${Date.now()}`,
+          senderUserId: myUserId,
+          content,
+          sentAt: new Date().toISOString(),
+          sender: {
+            fullName: me?.fullName || "Bạn",
+            avatarUrl: me?.avatarUrl || null,
+          },
+        },
+      ]);
+      setText("");
+      return;
+    }
 
     try {
       setSending(true);
@@ -283,10 +320,15 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     } finally {
       setSending(false);
     }
-  }, [text, sending, clubId, myUserId, me, fetchMessages]);
+  }, [text, sending, clubId, isDemoRoom, myUserId, me, fetchMessages]);
 
   const onDelete = useCallback(
     async (item) => {
+      if (isDemoRoom) {
+        setItems((prev) => prev.filter((x) => x.messageId !== item.messageId));
+        return;
+      }
+
       try {
         await deleteClubMessage(clubId, item.messageId);
         setItems((prev) => prev.filter((x) => x.messageId !== item.messageId));
@@ -297,7 +339,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         );
       }
     },
-    [clubId],
+    [clubId, isDemoRoom],
   );
 
   const typingText = useMemo(() => {
@@ -319,12 +361,15 @@ export default function ClubChatRoomScreen({ navigation, route }) {
             {clubName}
           </Text>
           <Text style={styles.roomHeaderSub}>
-            {typingText || "Chat thành viên CLB"}
+            {typingText ||
+              (isDemoRoom
+                ? "Hội thoại mẫu để App Review kiểm tra"
+                : "Chat thành viên CLB")}
           </Text>
         </View>
       </View>
     );
-  }, [navigation, clubName, typingText]);
+  }, [navigation, clubName, isDemoRoom, typingText]);
 
   return (
     <View style={styles.safe}>

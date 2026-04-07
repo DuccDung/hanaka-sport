@@ -9,6 +9,7 @@ import {
   Image,
   Keyboard,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,6 +24,7 @@ export default function MembersScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -36,22 +38,40 @@ export default function MembersScreen({ navigation }) {
   const fetchMembers = async ({ reset = false } = {}) => {
     try {
       setLoading(true);
-      const nextPage = reset ? 1 : page;
 
+      if (reset) {
+        setErrorMessage("");
+      }
+
+      const nextPage = reset ? 1 : page;
       const res = await getMembers({
         query: submittedQuery.trim(),
         page: nextPage,
         pageSize,
       });
 
-      setTotal(res.total || 0);
+      setTotal(res?.total || 0);
 
       if (reset) {
-        setItems(res.items || []);
+        setItems(res?.items || []);
         setPage(2);
       } else {
-        setItems((prev) => [...prev, ...(res.items || [])]);
-        setPage((p) => p + 1);
+        setItems((prev) => [...prev, ...(res?.items || [])]);
+        setPage((prevPage) => prevPage + 1);
+      }
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không tải được danh sách thành viên.";
+
+      if (reset) {
+        setItems([]);
+        setPage(1);
+        setTotal(0);
+        setErrorMessage(message);
+      } else {
+        Alert.alert("Lỗi", message);
       }
     } finally {
       setLoading(false);
@@ -65,7 +85,7 @@ export default function MembersScreen({ navigation }) {
 
   const onSearch = () => {
     Keyboard.dismiss();
-    setSubmittedQuery(query);
+    setSubmittedQuery(query.trim());
   };
 
   const renderItem = ({ item }) => {
@@ -79,7 +99,6 @@ export default function MembersScreen({ navigation }) {
           navigation.navigate("MemberDetail", { userId: item.userId })
         }
       >
-        {/* Avatar: có ảnh thì Image, không có thì icon */}
         {hasAvatar ? (
           <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
         ) : (
@@ -106,13 +125,11 @@ export default function MembersScreen({ navigation }) {
 
           <View style={styles.metaRow}>
             <Text style={styles.meta}>ID: {item.userId}</Text>
-            <Text style={styles.meta}>{item.city || "—"}</Text>
+            <Text style={styles.meta}>{item.city || "-"}</Text>
           </View>
 
           <View style={styles.subRow}>
-            <Text style={styles.gender}>{item.gender || "—"}</Text>
-
-            {/* Verified: true xanh, false đỏ */}
+            <Text style={styles.gender}>{item.gender || "-"}</Text>
             <Text
               style={[
                 styles.verified,
@@ -145,7 +162,6 @@ export default function MembersScreen({ navigation }) {
       <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Header */}
       <View style={styles.headerWrap}>
         <View style={styles.headerTop}>
           <Pressable
@@ -159,10 +175,6 @@ export default function MembersScreen({ navigation }) {
           <Text style={styles.headerTitle}>Thành viên</Text>
 
           <View style={styles.headerRight}>
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
-              <Ionicons name="people-outline" size={20} color="#1E2430" />
-            </Pressable>
-
             <Pressable
               hitSlop={10}
               onPress={() => navigation.navigate("HanakaRatingInfo")}
@@ -172,7 +184,6 @@ export default function MembersScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Search */}
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
             <Ionicons name="search" size={18} color="#9CA3AF" />
@@ -192,9 +203,8 @@ export default function MembersScreen({ navigation }) {
           </Pressable>
         </View>
 
-        {/* Section header */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Thành Viên</Text>
+          <Text style={styles.sectionTitle}>Thành viên</Text>
           <View style={styles.sectionRightCols}>
             <Ionicons name="people" size={18} color="#1E2430" />
             <Ionicons name="person" size={18} color="#1E2430" />
@@ -202,7 +212,18 @@ export default function MembersScreen({ navigation }) {
         </View>
       </View>
 
-      {/* List */}
+      {errorMessage ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+          <Pressable
+            style={styles.retryBtn}
+            onPress={() => fetchMembers({ reset: true })}
+          >
+            <Text style={styles.retryBtnText}>Thử lại</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <FlatList
         data={items}
         keyExtractor={(it) => String(it.userId)}
@@ -212,6 +233,13 @@ export default function MembersScreen({ navigation }) {
         onEndReached={() => {
           if (!loading && canLoadMore) fetchMembers({ reset: false });
         }}
+        ListEmptyComponent={
+          !loading && !errorMessage ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>Chưa có thành viên phù hợp.</Text>
+            </View>
+          ) : null
+        }
         ListFooterComponent={
           loading ? (
             <View style={{ paddingVertical: 12 }}>

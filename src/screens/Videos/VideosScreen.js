@@ -193,7 +193,10 @@ export default function VideosScreen({ navigation, route }) {
   const [errorText, setErrorText] = useState("");
 
   const mountedRef = useRef(true);
-  const rootNavigation = navigation.getParent?.() || navigation;
+  const rootNavigation =
+    navigation.getParent?.()?.getParent?.() ||
+    navigation.getParent?.() ||
+    navigation;
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -323,7 +326,9 @@ export default function VideosScreen({ navigation, route }) {
               onPress={() =>
                 user
                   ? rootNavigation.navigate("Account")
-                  : rootNavigation.navigate("Login")
+                  : rootNavigation.navigate("AuthStack", {
+                      screen: "Login",
+                    })
               }
               hitSlop={10}
               style={styles.avatarWrap}

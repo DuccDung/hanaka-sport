@@ -202,4 +202,20 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  secondaryActionBtn: {
+    marginTop: 12,
+    backgroundColor: "#fff",
+    paddingHorizontal: 18,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.BLUE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryActionText: {
+    color: COLORS.BLUE,
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });

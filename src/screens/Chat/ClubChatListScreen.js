@@ -14,6 +14,7 @@ import { COLORS } from "../../constants/colors";
 import { getMyClubChatRooms } from "../../services/chatService";
 import { styles } from "./styles";
 import { addRealtimeListener } from "../../services/realtimeService";
+import { getReviewDemoChatRoom } from "../../mocks/reviewDemoData";
 
 function formatTime(value) {
   if (!value) return "";
@@ -62,23 +63,7 @@ export default function ClubChatListScreen({ navigation }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  useEffect(() => {
-    fetchRooms();
 
-    const unsubscribe = addRealtimeListener((event) => {
-      if (
-        event?.type === "club.notification" ||
-        event?.type === "club.message.created" ||
-        event?.type === "club.message.deleted"
-      ) {
-        fetchRooms({ isRefresh: false });
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [fetchRooms]);
   const fetchRooms = useCallback(async ({ isRefresh = false } = {}) => {
     try {
       if (isRefresh) setRefreshing(true);
@@ -100,7 +85,32 @@ export default function ClubChatListScreen({ navigation }) {
 
   useEffect(() => {
     fetchRooms();
+
+    const unsubscribe = addRealtimeListener((event) => {
+      if (
+        event?.type === "club.notification" ||
+        event?.type === "club.message.created" ||
+        event?.type === "club.message.deleted"
+      ) {
+        fetchRooms({ isRefresh: false });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [fetchRooms]);
+
+  const openDemoChat = () => {
+    const demoRoom = getReviewDemoChatRoom();
+
+    navigation.navigate("ClubChatRoom", {
+      clubId: demoRoom.clubId,
+      clubName: demoRoom.clubName,
+      clubCoverUrl: demoRoom.clubCoverUrl,
+      demoRoom: true,
+    });
+  };
 
   return (
     <View style={styles.safe}>
@@ -151,6 +161,10 @@ export default function ClubChatListScreen({ navigation }) {
               <Text style={styles.stateText}>
                 Bạn chưa tham gia CLB nào có thể nhắn tin.
               </Text>
+
+              <Pressable style={styles.demoActionBtn} onPress={openDemoChat}>
+                <Text style={styles.demoActionText}>Mở chat mẫu</Text>
+              </Pressable>
             </View>
           }
           showsVerticalScrollIndicator={false}

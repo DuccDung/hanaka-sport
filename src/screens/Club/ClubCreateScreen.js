@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -26,6 +27,19 @@ function stripHtml(html = "") {
     .replace(/&nbsp;/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function formatDateDDMMYYYY(date) {
+  if (!date) return "";
+
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function Label({ text, required = false }) {
@@ -70,11 +84,12 @@ function InputBox({
 
 export default function ClubCreateScreen({ navigation }) {
   const [coverUri, setCoverUri] = useState("");
-  const [avatarUri, setAvatarUri] = useState("");
 
   const [name, setName] = useState("");
   const [descHtml, setDescHtml] = useState("");
   const [foundedDate, setFoundedDate] = useState("");
+  const [foundedDateValue, setFoundedDateValue] = useState(null);
+  const [showFoundedDatePicker, setShowFoundedDatePicker] = useState(false);
   const [playTime, setPlayTime] = useState("");
   const [province, setProvince] = useState("");
   const [district, setDistrict] = useState("");
@@ -95,17 +110,23 @@ export default function ClubCreateScreen({ navigation }) {
   }, [name, descHtml, foundedDate, playTime, province, district, address]);
 
   const pickImageFromLibrary = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (Platform.OS !== "ios") {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-    if (!permission.granted) {
-      Alert.alert("Thông báo", "Bạn cần cấp quyền truy cập thư viện ảnh.");
-      return null;
+      if (!permission.granted) {
+        Alert.alert(
+          "Thông báo",
+          "Bạn cần cấp quyền truy cập thư viện ảnh.",
+        );
+        return null;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       quality: 0.8,
+      selectionLimit: 1,
     });
 
     if (result.canceled) return null;
@@ -122,18 +143,23 @@ export default function ClubCreateScreen({ navigation }) {
     }
   };
 
-  const pickAvatar = async () => {
-    try {
-      const uri = await pickImageFromLibrary();
-      if (uri) setAvatarUri(uri);
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể chọn ảnh đại diện.");
-    }
+  const openCalendar = () => {
+    setShowFoundedDatePicker(true);
   };
 
-  const openCalendar = () => {
-    // Tạm set demo, sau này có thể thay bằng date picker thật
-    setFoundedDate("01/03/2026");
+  const onChangeFoundedDate = (event, selectedDate) => {
+    if (Platform.OS !== "ios") {
+      setShowFoundedDatePicker(false);
+    }
+
+    if (event?.type === "set" && selectedDate) {
+      setFoundedDateValue(selectedDate);
+      setFoundedDate(formatDateDDMMYYYY(selectedDate));
+    }
+
+    if (event?.type === "dismissed") {
+      setShowFoundedDatePicker(false);
+    }
   };
 
   const onSubmit = async () => {
@@ -158,7 +184,6 @@ export default function ClubCreateScreen({ navigation }) {
         district: district.trim(),
         address: address.trim(),
         coverUrl: uploadedCoverUrl || null,
-        avatarUrl: avatarUri || null,
       };
 
       const res = await createClub(payload);
@@ -218,17 +243,6 @@ export default function ClubCreateScreen({ navigation }) {
             )}
           </Pressable>
 
-          <View style={styles.avatarBlock}>
-            <Pressable onPress={pickAvatar} style={styles.avatarCircle}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-              ) : (
-                <Ionicons name="add" size={30} color="#fff" />
-              )}
-            </Pressable>
-            <Text style={styles.avatarLabel}>Ảnh đại diện</Text>
-          </View>
-
           <Label text="Tên" required />
           <View style={styles.inputBox}>
             <TextInput
@@ -248,13 +262,37 @@ export default function ClubCreateScreen({ navigation }) {
           />
 
           <Label text="Ngày thành lập" required />
-          <InputBox
-            value={foundedDate}
-            onChangeText={setFoundedDate}
-            placeholder="DD/MM/YYYY"
-            rightIcon="calendar-outline"
-            onPressRight={openCalendar}
-          />
+          <Pressable style={styles.inputBox} onPress={openCalendar}>
+            <Text
+              style={[
+                styles.fakeInputText,
+                !foundedDate && styles.fakePlaceholder,
+              ]}
+            >
+              {foundedDate || "DD/MM/YYYY"}
+            </Text>
+            <Ionicons name="calendar-outline" size={18} color="#6B7280" />
+          </Pressable>
+
+          {showFoundedDatePicker ? (
+            <View style={styles.datePickerWrap}>
+              <DateTimePicker
+                value={foundedDateValue ?? new Date()}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                maximumDate={new Date()}
+                onChange={onChangeFoundedDate}
+              />
+              {Platform.OS === "ios" ? (
+                <Pressable
+                  style={styles.datePickerCloseBtn}
+                  onPress={() => setShowFoundedDatePicker(false)}
+                >
+                  <Text style={styles.datePickerCloseText}>Đóng</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
 
           <Label text="Thời gian chơi" required />
           <InputBox

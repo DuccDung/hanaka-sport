@@ -550,4 +550,80 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     color: "#6B7280",
   },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15,23,42,0.35)",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+  },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  modalSubtitle: {
+    marginTop: 6,
+    marginBottom: 16,
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#6B7280",
+  },
+
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+  },
+
+  modalOptionActive: {
+    borderColor: "#16A34A",
+    backgroundColor: "#F0FDF4",
+  },
+
+  modalOptionTextWrap: {
+    flex: 1,
+  },
+
+  modalOptionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+  },
+
+  modalOptionDesc: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6B7280",
+  },
+
+  modalCloseBtn: {
+    marginTop: 4,
+    minHeight: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2563EB",
+  },
+
+  modalCloseText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
 });

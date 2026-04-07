@@ -25,17 +25,23 @@ export default function Header({ sport, onToggleSport, onPressAvatar }) {
 
   const navigation = useNavigation();
   const avatarUrl = normalizeAvatarUrl(user?.avatarUrl);
+  const SportWrapper = onToggleSport ? Pressable : View;
 
   return (
     <>
       <AppStatusBar backgroundColor={COLORS.BLUE} />
 
       <View style={styles.header}>
-        <Pressable style={styles.sportPicker} onPress={onToggleSport}>
+        <SportWrapper
+          style={styles.sportPicker}
+          {...(onToggleSport ? { onPress: onToggleSport } : {})}
+        >
           <Ionicons name="tennisball-outline" size={18} color="#fff" />
           <Text style={styles.sportText}>{sport}</Text>
-          <Ionicons name="chevron-down" size={18} color="#fff" />
-        </Pressable>
+          {onToggleSport ? (
+            <Ionicons name="chevron-down" size={18} color="#fff" />
+          ) : null}
+        </SportWrapper>
 
         <View style={styles.headerRight}>
           <Pressable

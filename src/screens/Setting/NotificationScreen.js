@@ -60,7 +60,7 @@ export default function NotificationScreen() {
     const opponentText = buildOpponentText(item);
 
     return (
-      <Pressable style={styles.notificationCard}>
+      <View style={styles.notificationCard}>
         <Text style={styles.notificationTitle} numberOfLines={1}>
           {item.title}
         </Text>
@@ -84,7 +84,7 @@ export default function NotificationScreen() {
         <Text style={styles.notificationTime}>
           {item?.match?.startAtText || ""}
         </Text>
-      </Pressable>
+      </View>
     );
   };
 

@@ -88,6 +88,28 @@ export const styles = StyleSheet.create({
   // Fake dropdown text
   fakeInputText: { fontSize: 15, fontWeight: "400", color: "#1E2430" },
   fakePlaceholder: { color: "#9CA3AF" },
+  datePickerWrap: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+  },
+  datePickerCloseBtn: {
+    alignSelf: "flex-end",
+    marginRight: 12,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.BLUE,
+  },
+  datePickerCloseText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
 
   twoColRow: { flexDirection: "row", gap: 10 },
   twoCol: { flex: 1 },

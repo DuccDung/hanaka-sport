@@ -36,6 +36,7 @@
       [
         "expo-image-picker",
         {
+          "photosPermission": "Hanaka Sport accesses your photo library so you can choose a profile photo or club cover image to upload. For example, you can select an image from your library to update your avatar or create a club cover.",
           "cameraPermission": false,
           "microphonePermission": false
         }

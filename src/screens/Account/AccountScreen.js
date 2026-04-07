@@ -103,7 +103,15 @@ export default function AccountScreen({ navigation }) {
     Alert.alert(
       "Bạn chưa đăng nhập",
       "Vui lòng đăng nhập để xem và cập nhật thông tin tài khoản.",
-      [{ text: "OK", onPress: () => navigation.navigate("Login") }],
+      [
+        {
+          text: "OK",
+          onPress: () =>
+            navigation.navigate("AuthStack", {
+              screen: "Login",
+            }),
+        },
+      ],
     );
 
     return true;
@@ -153,19 +161,25 @@ export default function AccountScreen({ navigation }) {
     if (requireLogin()) return;
 
     try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (Platform.OS !== "ios") {
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (!permission.granted) {
-        Alert.alert("Thiếu quyền", "Bạn cần cấp quyền truy cập thư viện ảnh.");
-        return;
+        if (!permission.granted) {
+          Alert.alert(
+            "Thiếu quyền",
+            "Bạn cần cấp quyền truy cập thư viện ảnh.",
+          );
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
+        selectionLimit: 1,
       });
 
       if (result.canceled) return;

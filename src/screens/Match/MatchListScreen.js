@@ -371,11 +371,7 @@ export default function MatchListScreen({ navigation }) {
 
           <Text style={styles.headerTitle}>Danh sách giải đấu</Text>
 
-          <View style={styles.headerRight}>
-            <Pressable style={styles.headerIconBtn} hitSlop={10}>
-              <Ionicons name="trophy-outline" size={20} color="#1E2430" />
-            </Pressable>
-          </View>
+          <View style={styles.headerRight} />
         </View>
 
         <View style={styles.filterWrap}>
@@ -433,14 +429,6 @@ export default function MatchListScreen({ navigation }) {
             />
           ) : null}
 
-          {showToPicker ? (
-            <DateTimePicker
-              value={toDate || new Date()}
-              mode="date"
-              display="default"
-              onChange={onChangeToDate}
-            />
-          ) : null}
           {showToPicker ? (
             <DateTimePicker
               value={toDate || new Date()}

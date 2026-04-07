@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -79,7 +80,6 @@ function MatchSummary({ win, draw, loss }) {
         <Text style={styles.matchSummaryText}>Hoà {draw}</Text>
         <Text style={styles.matchSummaryText}>Thua {loss}</Text>
       </View>
-
       <View style={styles.matchBarTrack}>
         <View style={[styles.matchBarWin, { flex: Math.max(win, 0.2) }]} />
         <View style={[styles.matchBarDraw, { flex: Math.max(draw, 0.2) }]} />
@@ -93,19 +93,17 @@ function CommonTab({
   club,
   canManage,
   challengeLoading,
-  onToggleChallengeMode,
+  onOpenChallengeSettings,
 }) {
   const foundedDate = club?.overview?.foundedAt
     ? new Date(club.overview.foundedAt).toLocaleDateString("vi-VN")
     : "01/10/2021";
-
   const address =
     club?.overview?.addressText || club?.areaText || "Chưa có địa chỉ";
   const membersCount = club?.membersCount ?? 0;
   const description =
     club?.overview?.introduction ||
     `CLB ${club?.clubName || ""} đang hoạt động tại ${address}.`;
-
   const level = Number(club?.overview?.level ?? club?.ratingAvg ?? 1.5);
   const reviewsCount = Number(club?.reviewsCount ?? 0);
   const allowChallenge = !!club?.allowChallenge;
@@ -120,49 +118,39 @@ function CommonTab({
           align="right"
         />
       </View>
-
       <MatchSummary
         win={Number(club?.matchesWin ?? 0)}
         draw={Number(club?.matchesDraw ?? 0)}
         loss={Number(club?.matchesLoss ?? 0)}
       />
-
       <View style={styles.levelRow}>
         <Text style={styles.levelText}>Điểm trình: {level.toFixed(1)}</Text>
       </View>
-
       <View style={styles.reviewRow}>
         <Text style={styles.reviewLabel}>Đánh giá: {level.toFixed(1)}</Text>
         <Stars value={Math.min(level, 5)} />
         <Text style={styles.reviewLabel}>({reviewsCount} Đánh giá)</Text>
       </View>
-
       <Text style={styles.sectionTitle}>Thông Tin Chung</Text>
-
       <View style={styles.descCard}>
         <Text style={styles.descText}>{description}</Text>
       </View>
-
       <View style={styles.infoBlock}>
         <Text style={styles.infoLine}>
           Ngày thành lập: <Text style={styles.infoBold}>{foundedDate}</Text>
         </Text>
-
         <Text style={styles.infoLine}>
           Địa chỉ: <Text style={styles.infoBold}>{address}</Text>
         </Text>
-
         <Text style={styles.infoLine}>
           Tổng số thành viên:{" "}
           <Text style={styles.infoBold}>{membersCount}</Text>
         </Text>
-
         <Text style={styles.infoLine}>
           Thành viên chờ duyệt:{" "}
           <Text style={styles.infoBold}>{club?.pendingMembersCount ?? 0}</Text>
         </Text>
       </View>
-
       {canManage ? (
         <View style={styles.challengeCard}>
           <View style={styles.challengeHeaderRow}>
@@ -172,7 +160,6 @@ function CommonTab({
                 Bật để CLB sẵn sàng nhận khiêu chiến từ CLB khác.
               </Text>
             </View>
-
             <View
               style={[
                 styles.challengeBadge,
@@ -186,7 +173,6 @@ function CommonTab({
               </Text>
             </View>
           </View>
-
           <Pressable
             style={[
               styles.challengeBtn,
@@ -194,22 +180,16 @@ function CommonTab({
                 ? styles.challengeBtnDisable
                 : styles.challengeBtnEnable,
             ]}
-            onPress={onToggleChallengeMode}
+            onPress={onOpenChallengeSettings}
             disabled={challengeLoading}
           >
             {challengeLoading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
-                <Ionicons
-                  name={
-                    allowChallenge ? "close-circle-outline" : "flash-outline"
-                  }
-                  size={16}
-                  color="#fff"
-                />
+                <Ionicons name="settings-outline" size={16} color="#fff" />
                 <Text style={styles.challengeBtnText}>
-                  {allowChallenge ? "Tắt khiêu chiến" : "Bật khiêu chiến"}
+                  Chọn chế độ khiêu chiến
                 </Text>
               </>
             )}
@@ -230,7 +210,6 @@ function MemberTable({
   onApprove,
   onReject,
   onRemove,
-  onToggleRole,
   actionLoadingKey,
   onPressMember,
 }) {
@@ -257,7 +236,6 @@ function MemberTable({
           style={styles.searchMemberInput}
         />
       </View>
-
       <View style={styles.memberHeaderRow}>
         <Text style={[styles.memberHeaderText, styles.colIndex]}>STT</Text>
         <Text style={[styles.memberHeaderText, styles.colMember]}>
@@ -266,19 +244,16 @@ function MemberTable({
         <Text style={[styles.memberHeaderText, styles.colScore]}>Điểm đơn</Text>
         <Text style={[styles.memberHeaderText, styles.colScore]}>Điểm đôi</Text>
       </View>
-
       {filteredItems.length === 0 ? (
         <View style={styles.memberEmptyWrap}>
           <Text style={styles.memberEmptyText}>{emptyText}</Text>
         </View>
       ) : null}
-
       {filteredItems.map((item, index) => {
         const avatarUrl = item.avatarUrl || "";
         const loadingApprove = actionLoadingKey === `approve-${item.userId}`;
         const loadingReject = actionLoadingKey === `reject-${item.userId}`;
         const loadingRemove = actionLoadingKey === `remove-${item.userId}`;
-        const loadingRole = actionLoadingKey === `role-${item.userId}`;
 
         return (
           <View key={`${item.userId}-${index}`} style={styles.memberCard}>
@@ -288,7 +263,6 @@ function MemberTable({
             >
               <View style={styles.memberLeft}>
                 <Text style={styles.memberIndexBadge}>{index + 1}</Text>
-
                 {avatarUrl ? (
                   <Image
                     source={{ uri: avatarUrl }}
@@ -299,7 +273,6 @@ function MemberTable({
                     <Ionicons name="person-outline" size={16} color="#9CA3AF" />
                   </View>
                 )}
-
                 <View style={styles.memberNameBlock}>
                   <Text style={styles.memberName} numberOfLines={2}>
                     {item.fullName || "Chưa có tên"}
@@ -308,7 +281,6 @@ function MemberTable({
                     {formatMemberRole(item.memberRole)}
                   </Text>
                 </View>
-
                 <Ionicons
                   name="chevron-forward"
                   size={18}
@@ -317,7 +289,6 @@ function MemberTable({
                 />
               </View>
             </Pressable>
-
             <View style={styles.memberStatsRow}>
               <View style={styles.memberStatBox}>
                 <Text style={styles.memberStatLabel}>Điểm đơn</Text>
@@ -325,7 +296,6 @@ function MemberTable({
                   {formatScore(item.ratingSingle)}
                 </Text>
               </View>
-
               <View style={styles.memberStatBox}>
                 <Text style={styles.memberStatLabel}>Điểm đôi</Text>
                 <Text style={styles.memberStatValue}>
@@ -333,7 +303,6 @@ function MemberTable({
                 </Text>
               </View>
             </View>
-
             {canManage ? (
               <View style={styles.memberActionRow}>
                 {mode === "pending" ? (
@@ -349,7 +318,6 @@ function MemberTable({
                         <Text style={styles.actionBtnText}>Duyệt</Text>
                       )}
                     </Pressable>
-
                     <Pressable
                       style={[styles.actionBtn, styles.actionBtnReject]}
                       onPress={() => onReject?.(item)}
@@ -391,27 +359,33 @@ function MemberTable({
 export default function ClubDetailScreen({ navigation, route }) {
   const clubId = route?.params?.clubId;
   const initialTab = route?.params?.initialTab || "Chung";
+  const demoClub = route?.params?.demoClub || null;
+  const demoMembers = route?.params?.demoMembers || [];
+  const demoPendingMembers = route?.params?.demoPendingMembers || [];
+  const isDemoClub = !!demoClub;
 
   const [activeTab, setActiveTab] = useState(initialTab);
-
-  const [club, setClub] = useState(null);
-  const [loadingOverview, setLoadingOverview] = useState(true);
-
-  const [members, setMembers] = useState([]);
+  const [club, setClub] = useState(demoClub);
+  const [loadingOverview, setLoadingOverview] = useState(!isDemoClub);
+  const [members, setMembers] = useState(demoMembers);
   const [loadingMembers, setLoadingMembers] = useState(false);
-
-  const [pendingMembers, setPendingMembers] = useState([]);
+  const [pendingMembers, setPendingMembers] = useState(demoPendingMembers);
   const [loadingPending, setLoadingPending] = useState(false);
-
   const [memberQuery, setMemberQuery] = useState("");
   const [pendingQuery, setPendingQuery] = useState("");
   const [actionLoadingKey, setActionLoadingKey] = useState("");
   const [challengeLoading, setChallengeLoading] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   useEffect(() => {
+    if (isDemoClub) {
+      setClub(demoClub);
+      setLoadingOverview(false);
+      return;
+    }
+
     const fetchOverview = async () => {
       if (!clubId) return;
-
       try {
         setLoadingOverview(true);
         const res = await getClubOverview(clubId);
@@ -428,19 +402,16 @@ export default function ClubDetailScreen({ navigation, route }) {
     };
 
     fetchOverview();
-  }, [clubId]);
+  }, [clubId, demoClub, isDemoClub]);
 
   useEffect(() => {
+    if (isDemoClub) return;
+
     const fetchMembers = async () => {
       if (!clubId || activeTab !== "Thành viên" || members.length > 0) return;
-
       try {
         setLoadingMembers(true);
-        const res = await getClubMembers({
-          clubId,
-          page: 1,
-          pageSize: 100,
-        });
+        const res = await getClubMembers({ clubId, page: 1, pageSize: 100 });
         setMembers(res?.items || []);
       } catch (error) {
         const msg =
@@ -454,14 +425,15 @@ export default function ClubDetailScreen({ navigation, route }) {
     };
 
     fetchMembers();
-  }, [clubId, activeTab, members.length]);
+  }, [clubId, activeTab, isDemoClub, members.length]);
 
   useEffect(() => {
+    if (isDemoClub) return;
+
     const fetchPendingMembers = async () => {
       if (!clubId || activeTab !== "Chờ duyệt" || pendingMembers.length > 0) {
         return;
       }
-
       try {
         setLoadingPending(true);
         const res = await getPendingClubMembers({
@@ -471,8 +443,7 @@ export default function ClubDetailScreen({ navigation, route }) {
         });
         setPendingMembers(res?.items || []);
       } catch (error) {
-        const code = error?.response?.status;
-        if (code === 403) {
+        if (error?.response?.status === 403) {
           setPendingMembers([]);
         } else {
           const msg =
@@ -487,10 +458,19 @@ export default function ClubDetailScreen({ navigation, route }) {
     };
 
     fetchPendingMembers();
-  }, [clubId, activeTab, pendingMembers.length]);
+  }, [clubId, activeTab, isDemoClub, pendingMembers.length]);
+
+  const canManage = !!club?.canManage;
 
   const handlePressMember = (item) => {
     if (!item?.userId) return;
+    if (isDemoClub) {
+      Alert.alert(
+        "Dữ liệu mẫu",
+        "Màn hình này đang dùng dữ liệu demo để App Review có thể kiểm tra giao diện CLB khi tài khoản chưa có nội dung thật.",
+      );
+      return;
+    }
 
     navigation.navigate("MemberDetail", {
       userId: item.userId,
@@ -498,20 +478,12 @@ export default function ClubDetailScreen({ navigation, route }) {
   };
 
   const handleApprovePending = async (item) => {
-    try {
-      setActionLoadingKey(`approve-${item.userId}`);
-      const res = await approvePendingClubMember(clubId, item.userId);
-
+    if (isDemoClub) {
       setPendingMembers((prev) => prev.filter((x) => x.userId !== item.userId));
-
       setMembers((prev) => [
         ...prev,
-        {
-          ...item,
-          memberRole: item.memberRole || "MEMBER",
-        },
+        { ...item, memberRole: item.memberRole || "MEMBER" },
       ]);
-
       setClub((prev) => ({
         ...prev,
         membersCount: Number(prev?.membersCount || 0) + 1,
@@ -520,7 +492,26 @@ export default function ClubDetailScreen({ navigation, route }) {
           0,
         ),
       }));
+      Alert.alert("Thành công", "Đã duyệt thành viên trong dữ liệu mẫu.");
+      return;
+    }
 
+    try {
+      setActionLoadingKey(`approve-${item.userId}`);
+      const res = await approvePendingClubMember(clubId, item.userId);
+      setPendingMembers((prev) => prev.filter((x) => x.userId !== item.userId));
+      setMembers((prev) => [
+        ...prev,
+        { ...item, memberRole: item.memberRole || "MEMBER" },
+      ]);
+      setClub((prev) => ({
+        ...prev,
+        membersCount: Number(prev?.membersCount || 0) + 1,
+        pendingMembersCount: Math.max(
+          Number(prev?.pendingMembersCount || 0) - 1,
+          0,
+        ),
+      }));
       Alert.alert("Thành công", res?.message || "Duyệt thành viên thành công.");
     } catch (error) {
       const msg =
@@ -534,12 +525,8 @@ export default function ClubDetailScreen({ navigation, route }) {
   };
 
   const handleRejectPending = async (item) => {
-    try {
-      setActionLoadingKey(`reject-${item.userId}`);
-      const res = await rejectPendingClubMember(clubId, item.userId);
-
+    if (isDemoClub) {
       setPendingMembers((prev) => prev.filter((x) => x.userId !== item.userId));
-
       setClub((prev) => ({
         ...prev,
         pendingMembersCount: Math.max(
@@ -547,7 +534,21 @@ export default function ClubDetailScreen({ navigation, route }) {
           0,
         ),
       }));
+      Alert.alert("Thành công", "Đã từ chối yêu cầu trong dữ liệu mẫu.");
+      return;
+    }
 
+    try {
+      setActionLoadingKey(`reject-${item.userId}`);
+      const res = await rejectPendingClubMember(clubId, item.userId);
+      setPendingMembers((prev) => prev.filter((x) => x.userId !== item.userId));
+      setClub((prev) => ({
+        ...prev,
+        pendingMembersCount: Math.max(
+          Number(prev?.pendingMembersCount || 0) - 1,
+          0,
+        ),
+      }));
       Alert.alert("Thành công", res?.message || "Đã từ chối yêu cầu.");
     } catch (error) {
       const msg =
@@ -561,17 +562,24 @@ export default function ClubDetailScreen({ navigation, route }) {
   };
 
   const handleRemoveMember = async (item) => {
-    try {
-      setActionLoadingKey(`remove-${item.userId}`);
-      const res = await removeClubMember(clubId, item.userId);
-
+    if (isDemoClub) {
       setMembers((prev) => prev.filter((x) => x.userId !== item.userId));
-
       setClub((prev) => ({
         ...prev,
         membersCount: Math.max(Number(prev?.membersCount || 0) - 1, 0),
       }));
+      Alert.alert("Thành công", "Đã xóa thành viên trong dữ liệu mẫu.");
+      return;
+    }
 
+    try {
+      setActionLoadingKey(`remove-${item.userId}`);
+      const res = await removeClubMember(clubId, item.userId);
+      setMembers((prev) => prev.filter((x) => x.userId !== item.userId));
+      setClub((prev) => ({
+        ...prev,
+        membersCount: Math.max(Number(prev?.membersCount || 0) - 1, 0),
+      }));
       Alert.alert("Thành công", res?.message || "Đã xóa thành viên.");
     } catch (error) {
       const msg =
@@ -585,25 +593,28 @@ export default function ClubDetailScreen({ navigation, route }) {
   };
 
   const handleToggleRole = async (item) => {
-    try {
-      setActionLoadingKey(`role-${item.userId}`);
-
+    if (isDemoClub) {
       const currentRole = String(item.memberRole || "MEMBER").toUpperCase();
       const nextRole = currentRole === "VICE_OWNER" ? "MEMBER" : "VICE_OWNER";
-
-      const res = await updateClubMemberRole(clubId, item.userId, nextRole);
-
       setMembers((prev) =>
         prev.map((x) =>
-          x.userId === item.userId
-            ? {
-                ...x,
-                memberRole: nextRole,
-              }
-            : x,
+          x.userId === item.userId ? { ...x, memberRole: nextRole } : x,
         ),
       );
+      Alert.alert("Thành công", "Đã cập nhật vai trò trong dữ liệu mẫu.");
+      return;
+    }
 
+    try {
+      setActionLoadingKey(`role-${item.userId}`);
+      const currentRole = String(item.memberRole || "MEMBER").toUpperCase();
+      const nextRole = currentRole === "VICE_OWNER" ? "MEMBER" : "VICE_OWNER";
+      const res = await updateClubMemberRole(clubId, item.userId, nextRole);
+      setMembers((prev) =>
+        prev.map((x) =>
+          x.userId === item.userId ? { ...x, memberRole: nextRole } : x,
+        ),
+      );
       Alert.alert("Thành công", res?.message || "Đã cập nhật vai trò.");
     } catch (error) {
       const msg =
@@ -616,15 +627,27 @@ export default function ClubDetailScreen({ navigation, route }) {
     }
   };
 
-  const handleToggleChallengeMode = async () => {
+  const handleOpenChallengeSettings = () => {
+    if (!canManage || challengeLoading) return;
+    setSettingsVisible(true);
+  };
+
+  const handleSetChallengeMode = async (nextValue) => {
+    setSettingsVisible(false);
+    if (typeof nextValue !== "boolean") return;
+
+    if (isDemoClub) {
+      setClub((prev) => ({ ...prev, allowChallenge: nextValue }));
+      Alert.alert(
+        "Thành công",
+        "Đã cập nhật chế độ khiêu chiến trong dữ liệu mẫu.",
+      );
+      return;
+    }
+
     try {
-      const currentValue = !!club?.allowChallenge;
-      const nextValue = !currentValue;
-
       setChallengeLoading(true);
-
       const res = await updateClubChallengeMode(clubId, nextValue);
-
       setClub((prev) => ({
         ...prev,
         allowChallenge:
@@ -632,7 +655,6 @@ export default function ClubDetailScreen({ navigation, route }) {
             ? res.allowChallenge
             : nextValue,
       }));
-
       Alert.alert(
         "Thành công",
         res?.message || "Đã cập nhật chế độ khiêu chiến.",
@@ -651,7 +673,6 @@ export default function ClubDetailScreen({ navigation, route }) {
   const title = useMemo(() => club?.clubName || "Chi tiết CLB", [club]);
   const coverUrl = club?.coverUrl || "";
   const avatarUrl = club?.owner?.avatarUrl || "";
-  const canManage = !!club?.canManage;
 
   return (
     <View style={styles.safe}>
@@ -666,19 +687,19 @@ export default function ClubDetailScreen({ navigation, route }) {
         >
           <Ionicons name="arrow-back" size={22} color="#1E2430" />
         </Pressable>
-
         <Text style={styles.headerTitle} numberOfLines={1}>
           {title}
         </Text>
-
         <View style={styles.headerActions}>
-          <Pressable style={styles.headerIconBtn} hitSlop={10}>
-            <Ionicons name="share-social-outline" size={20} color="#1E2430" />
-          </Pressable>
-
-          <Pressable style={styles.headerIconBtn} hitSlop={10}>
-            <Ionicons name="settings-outline" size={20} color="#1E2430" />
-          </Pressable>
+          {canManage ? (
+            <Pressable
+              style={styles.headerIconBtn}
+              hitSlop={10}
+              onPress={handleOpenChallengeSettings}
+            >
+              <Ionicons name="settings-outline" size={20} color="#1E2430" />
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -692,14 +713,15 @@ export default function ClubDetailScreen({ navigation, route }) {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.heroWrap}>
-            {coverUrl ? (
-              <Image source={{ uri: coverUrl }} style={styles.heroImage} />
-            ) : (
-              <View style={[styles.heroImage, styles.heroFallback]}>
-                <Ionicons name="image-outline" size={34} color="#9CA3AF" />
-              </View>
-            )}
-
+            <View>
+              {coverUrl ? (
+                <Image source={{ uri: coverUrl }} style={styles.heroImage} />
+              ) : (
+                <View style={[styles.heroImage, styles.heroFallback]}>
+                  <Ionicons name="image-outline" size={34} color="#9CA3AF" />
+                </View>
+              )}
+            </View>
             <View style={styles.avatarFloating}>
               {avatarUrl ? (
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
@@ -736,7 +758,7 @@ export default function ClubDetailScreen({ navigation, route }) {
               club={club}
               canManage={canManage}
               challengeLoading={challengeLoading}
-              onToggleChallengeMode={handleToggleChallengeMode}
+              onOpenChallengeSettings={handleOpenChallengeSettings}
             />
           )}
 
@@ -755,7 +777,6 @@ export default function ClubDetailScreen({ navigation, route }) {
                   canManage={canManage}
                   mode="members"
                   onRemove={handleRemoveMember}
-                  onToggleRole={handleToggleRole}
                   actionLoadingKey={actionLoadingKey}
                   onPressMember={handlePressMember}
                 />
@@ -798,6 +819,67 @@ export default function ClubDetailScreen({ navigation, route }) {
           )}
         </ScrollView>
       )}
+
+      <Modal
+        visible={settingsVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSettingsVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setSettingsVisible(false)}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Cài đặt CLB</Text>
+            <Text style={styles.modalSubtitle}>
+              Chọn chế độ khiêu chiến cho câu lạc bộ của bạn.
+            </Text>
+            <Pressable
+              style={[
+                styles.modalOption,
+                club?.allowChallenge && styles.modalOptionActive,
+              ]}
+              onPress={() => handleSetChallengeMode(true)}
+              disabled={challengeLoading}
+            >
+              <View style={styles.modalOptionTextWrap}>
+                <Text style={styles.modalOptionTitle}>Bật khiêu chiến</Text>
+                <Text style={styles.modalOptionDesc}>
+                  Cho phép các CLB khác nhìn thấy và gửi lời mời khiêu chiến.
+                </Text>
+              </View>
+              {club?.allowChallenge ? (
+                <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+              ) : null}
+            </Pressable>
+            <Pressable
+              style={[
+                styles.modalOption,
+                club?.allowChallenge === false && styles.modalOptionActive,
+              ]}
+              onPress={() => handleSetChallengeMode(false)}
+              disabled={challengeLoading}
+            >
+              <View style={styles.modalOptionTextWrap}>
+                <Text style={styles.modalOptionTitle}>Tắt khiêu chiến</Text>
+                <Text style={styles.modalOptionDesc}>
+                  Ẩn chế độ khiêu chiến để CLB không nhận lời mời mới.
+                </Text>
+              </View>
+              {club?.allowChallenge === false ? (
+                <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+              ) : null}
+            </Pressable>
+            <Pressable
+              style={styles.modalCloseBtn}
+              onPress={() => setSettingsVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>Đóng</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

@@ -1,11 +1,9 @@
-// src/screens/Members/styles.js
 import { StyleSheet } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 export const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#EEF2F8" },
 
-  // Header (giống ảnh)
   headerWrap: { backgroundColor: "#fff" },
   headerTop: {
     height: 56,
@@ -14,19 +12,15 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   backBtn: { padding: 6, marginRight: 6 },
-
   headerTitle: { fontSize: 15, fontWeight: "600", color: "#1E2430" },
-
   headerRight: {
     marginLeft: "auto",
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
-  headerIconBtn: { padding: 6 },
   headerLink: { fontSize: 15, fontWeight: "700", color: "#1E2430" },
 
-  // Search row
   searchRow: {
     flexDirection: "row",
     gap: 10,
@@ -55,7 +49,6 @@ export const styles = StyleSheet.create({
   },
   searchBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 
-  // Section header (Thành Viên + icon cột điểm)
   sectionHeader: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,
@@ -70,15 +63,50 @@ export const styles = StyleSheet.create({
     marginLeft: "auto",
     flexDirection: "row",
     alignItems: "center",
-    width: 60, // ✅ Tổng độ rộng cột phải (2 cột)
+    width: 60,
     justifyContent: "space-between",
   },
-  col: {
-    width: 50,
-    alignItems: "flex-end",
+
+  errorBox: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  errorText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#991B1B",
+  },
+  retryBtn: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.BLUE,
+  },
+  retryBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  emptyWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    color: "#6B7280",
   },
 
-  // List item
   item: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,

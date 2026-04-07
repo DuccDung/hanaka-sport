@@ -54,12 +54,16 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 44,
-    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minHeight: 64,
     backgroundColor: "#fff",
   },
-  contentInput: { fontSize: 14, color: "#1E2430" },
+  contentEmptyText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#6B7280",
+  },
 
   sectionCaps: {
     fontSize: 12,
