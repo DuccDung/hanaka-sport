@@ -2,13 +2,14 @@ import React, { memo, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   ScrollView,
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./selfRatingStyles";
 import { SELF_RATING_SECTIONS, SCORE_OPTIONS } from "./data/selfRatingData";
@@ -205,7 +206,7 @@ export default function SelfRatingScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={styles.safeTop} />
+      <SafeAreaView style={styles.safeTop} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>

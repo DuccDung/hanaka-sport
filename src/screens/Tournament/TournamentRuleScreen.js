@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   ScrollView,
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import RenderHtml from "react-native-render-html";
 import { styles } from "./detailStyles";
@@ -63,7 +64,7 @@ export default function TournamentRuleScreen({ navigation, route }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+      <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.headerWrap}>

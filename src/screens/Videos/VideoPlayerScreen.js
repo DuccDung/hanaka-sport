@@ -5,10 +5,11 @@ import {
   Pressable,
   ActivityIndicator,
   Linking,
-  SafeAreaView,
   ImageBackground,
   StyleSheet,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -109,7 +110,7 @@ export default function VideoPlayerScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <SafeAreaView style={{ backgroundColor: "#000" }} />
+      <SafeAreaView style={{ backgroundColor: "#000" }} edges={["top"]} />
 
       <View
         style={{

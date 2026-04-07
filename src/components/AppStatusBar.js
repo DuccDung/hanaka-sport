@@ -1,22 +1,14 @@
 import React from "react";
-import { Platform, SafeAreaView, StatusBar, View } from "react-native";
+import { StatusBar } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function AppStatusBar({
   backgroundColor,
   barStyle = "light-content",
 }) {
-  const androidInset =
-    Platform.OS === "android"
-      ? Math.min(StatusBar.currentHeight || 0, 24)
-      : 0;
-
   return (
     <>
-      {Platform.OS === "android" ? (
-        <View style={{ height: androidInset, backgroundColor }} />
-      ) : (
-        <SafeAreaView style={{ backgroundColor }} />
-      )}
+      <SafeAreaView style={{ backgroundColor }} edges={["top"]} />
       <StatusBar
         animated
         barStyle={barStyle}

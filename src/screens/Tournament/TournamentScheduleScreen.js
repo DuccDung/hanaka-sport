@@ -2,7 +2,6 @@ import React, { useMemo, useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   FlatList,
@@ -15,6 +14,8 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./scheduleStyles";
 import { getTournamentRoundsWithMatches } from "../../services/tournamentService";
@@ -482,7 +483,7 @@ export default function TournamentScheduleScreen({ navigation, route }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+      <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.headerWrap}>

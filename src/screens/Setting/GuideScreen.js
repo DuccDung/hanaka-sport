@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   ScrollView,
   Linking,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import {
   Ionicons,
   FontAwesome,

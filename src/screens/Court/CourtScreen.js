@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   TextInput,
@@ -14,6 +13,8 @@ import {
   RefreshControl,
   Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./styles";
 import { getPublicCourts } from "../../services/courtService";
@@ -223,7 +224,7 @@ export default function CourtScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+      <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.headerWrap}>

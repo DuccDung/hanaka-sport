@@ -2,11 +2,12 @@ import React from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./hanakaRatingInfoStyles";
 
@@ -17,7 +18,7 @@ export default function HanakaRatingInfoScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeTop} />
+      <SafeAreaView style={styles.safeTop} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.header}>

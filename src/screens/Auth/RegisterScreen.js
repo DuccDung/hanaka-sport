@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   TextInput,
@@ -12,6 +11,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registerStyles";
 import { register } from "../../services/authApi";
@@ -97,7 +98,7 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={styles.safeTop} />
+      <SafeAreaView style={styles.safeTop} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <View style={styles.headerWrap}>

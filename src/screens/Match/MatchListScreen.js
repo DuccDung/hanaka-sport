@@ -8,7 +8,6 @@ import React, {
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   TextInput,
@@ -20,6 +19,8 @@ import {
   Image,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { publicListTournaments } from "../../services/tournamentService";
@@ -355,7 +356,7 @@ export default function MatchListScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+      <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.headerWrap}>

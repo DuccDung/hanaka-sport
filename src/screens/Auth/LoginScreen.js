@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Pressable,
   TextInput,
@@ -11,6 +10,8 @@ import {
   Keyboard,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./loginStyles";
 import { login } from "../../services/authApi";
@@ -89,7 +90,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+      <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <KeyboardAvoidingView

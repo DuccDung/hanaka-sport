@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   StatusBar,
   Image,
   Pressable,
@@ -10,6 +9,8 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../constants/colors";
 import {
@@ -915,7 +916,7 @@ export default function MemberDetailScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
-      <SafeAreaView style={{ backgroundColor: "#fff" }} />
+      <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
       <StatusBar barStyle="dark-content" />
 
       <View

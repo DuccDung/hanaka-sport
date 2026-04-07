@@ -1,6 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../constants/colors";
 
 import VideosScreen from "../screens/Videos/VideosScreen";
@@ -11,17 +12,31 @@ import ChatStack from "./ChatStack";
 const Tab = createBottomTabNavigator();
 
 export default function MainTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 10);
+  const tabBarHeight = 56 + bottomInset;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#000000",
-        tabBarInactiveTintColor: "#E5ECFF",
+        tabBarActiveTintColor: "#FFFFFF",
+        tabBarInactiveTintColor: "rgba(229,236,255,0.78)",
+        tabBarHideOnKeyboard: true,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: "700",
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
         tabBarStyle: {
           backgroundColor: COLORS.BLUE,
-          height: 80,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: tabBarHeight,
+          paddingBottom: bottomInset,
+          paddingTop: 8,
+          borderTopWidth: 0,
+          elevation: 0,
         },
         tabBarIcon: ({ color, size, focused }) => {
           const map = {
