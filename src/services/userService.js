@@ -1,11 +1,33 @@
 import { apiClient } from "./apiClient";
+import { getSafeCommunityText } from "./communitySafetyService";
+
+export function sanitizeUserPayload(user) {
+  if (!user || typeof user !== "object") return user;
+
+  return {
+    ...user,
+    fullName: getSafeCommunityText(user?.fullName, ""),
+    bio: getSafeCommunityText(user?.bio, ""),
+  };
+}
+
+function sanitizeUserListResponse(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  return {
+    ...payload,
+    items: Array.isArray(payload?.items)
+      ? payload.items.map(sanitizeUserPayload)
+      : payload?.items,
+  };
+}
 
 /**
  * GET: /api/users/me
  */
 export async function getMe() {
   const res = await apiClient.get("/users/me");
-  return res.data;
+  return sanitizeUserPayload(res.data);
 }
 
 /**
@@ -14,7 +36,7 @@ export async function getMe() {
  */
 export async function updateMe(req) {
   const res = await apiClient.put("/users/me", req);
-  return res.data;
+  return sanitizeUserPayload(res.data);
 }
 
 /**
@@ -61,7 +83,7 @@ export async function getMembers({ query = "", page = 1, pageSize = 20 } = {}) {
   const res = await apiClient.get("/users/members", {
     params: { query, page, pageSize },
   });
-  return res.data;
+  return sanitizeUserListResponse(res.data);
 }
 
 /**
@@ -69,7 +91,7 @@ export async function getMembers({ query = "", page = 1, pageSize = 20 } = {}) {
  */
 export async function getUserDetail(userId) {
   const res = await apiClient.get(`/users/${userId}`);
-  return res.data;
+  return sanitizeUserPayload(res.data);
 }
 
 /**

@@ -2,8 +2,8 @@ const REVIEW_DEMO_CLUB_ID = 90001;
 
 const REVIEW_DEMO_USER = {
   userId: 9001,
-  fullName: "Hanaka Review",
-  email: "review@hanaka.local",
+  fullName: "Hanaka Sample",
+  email: "sample@hanaka.local",
   avatarUrl:
     "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80",
   city: "Bac Ninh",
@@ -14,7 +14,7 @@ const REVIEW_DEMO_USER = {
 
 const REVIEW_DEMO_CLUB = {
   clubId: REVIEW_DEMO_CLUB_ID,
-  clubName: "Hanaka Review Club",
+  clubName: "Hanaka Sample Club",
   coverUrl:
     "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=1200&q=80",
   areaText: "Tu Son - Bac Ninh",
@@ -41,7 +41,7 @@ const REVIEW_DEMO_CLUB = {
     foundedAt: "2024-06-10T00:00:00.000Z",
     addressText: "San Hanaka Pickleball, Tu Son, Bac Ninh",
     introduction:
-      "Du lieu mau giup App Review xem duoc giao dien CLB, thanh vien va cho duyet ngay ca khi tai khoan chua co noi dung that.",
+      "CLB mau de ban xem giao dien CLB, thanh vien va khu vuc chat khi moi tham gia.",
     level: 4.8,
   },
 };
@@ -102,9 +102,10 @@ const REVIEW_DEMO_CHAT_ROOM = {
   clubCoverUrl: REVIEW_DEMO_CLUB.coverUrl,
   areaText: REVIEW_DEMO_CLUB.areaText,
   lastMessageAt: "2026-04-07T09:05:00.000Z",
-  lastSenderName: "Nguyen Anh",
+  lastSenderUserId: 9003,
+  lastSenderName: "Tran Minh",
   lastMessagePreview:
-    "Da tao hoi thoai mau de App Review kiem tra tab Tin nhan.",
+    "Hoi thoai mau san sang de ban thu gui tin nhan.",
 };
 
 const REVIEW_DEMO_MESSAGES = [
@@ -124,7 +125,7 @@ const REVIEW_DEMO_MESSAGES = [
     messageId: "demo-2",
     senderUserId: REVIEW_DEMO_USER.userId,
     content:
-      "Reviewer co the thu gui them tin nhan va xoa tin nhan trong ban demo nay.",
+      "Ban co the thu gui them tin nhan va xoa tin nhan trong hoi thoai nay.",
     sentAt: "2026-04-07T09:03:00.000Z",
     sender: {
       userId: REVIEW_DEMO_USER.userId,
@@ -136,7 +137,7 @@ const REVIEW_DEMO_MESSAGES = [
     messageId: "demo-3",
     senderUserId: 9003,
     content:
-      "Tab Tin nhan se hien du lieu mau khi tai khoan chua tham gia CLB nao.",
+      "Khi tham gia CLB, cac cuoc tro chuyen se hien o day.",
     sentAt: "2026-04-07T09:05:00.000Z",
     sender: {
       userId: 9003,

@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   COMMUNITY_MODERATION_COMMITMENTS,
   COMMUNITY_SUPPORT_EMAIL,
-  COMMUNITY_TERMS_LAST_UPDATED,
   COMMUNITY_ZERO_TOLERANCE_ITEMS,
 } from "../constants/communitySafety";
 import { COLORS } from "../constants/colors";
@@ -38,7 +37,7 @@ export default function CommunityTermsCard({
       <View style={styles.header}>
         <View style={styles.badge}>
           <Ionicons name="shield-checkmark" size={16} color={COLORS.BLUE} />
-          <Text style={styles.badgeText}>UGC Safety</Text>
+          <Text style={styles.badgeText}>An toàn chat</Text>
         </View>
 
         <View style={[styles.statusBadge, accepted && styles.statusBadgeOk]}>
@@ -51,8 +50,7 @@ export default function CommunityTermsCard({
       <Text style={styles.title}>Điều khoản sử dụng & tiêu chuẩn cộng đồng</Text>
 
       <Text style={styles.subtitle}>
-        Người dùng phải đồng ý trước khi truy cập chat CLB. Cập nhật lần cuối:{" "}
-        {COMMUNITY_TERMS_LAST_UPDATED}.
+        Người dùng phải đồng ý trước khi truy cập chat CLB.
       </Text>
 
       {acceptedAt ? (
@@ -65,9 +63,7 @@ export default function CommunityTermsCard({
       <BulletList items={COMMUNITY_ZERO_TOLERANCE_ITEMS} />
 
       <Text style={styles.sectionTitle}>Cam kết moderation:</Text>
-      <BulletList
-        items={compact ? COMMUNITY_MODERATION_COMMITMENTS.slice(0, 3) : COMMUNITY_MODERATION_COMMITMENTS}
-      />
+      <BulletList items={COMMUNITY_MODERATION_COMMITMENTS} />
 
       <View style={styles.contactBox}>
         <Ionicons name="mail-outline" size={16} color="#065F46" />

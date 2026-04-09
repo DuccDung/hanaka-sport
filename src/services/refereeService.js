@@ -1,4 +1,21 @@
 import { apiClient } from "./apiClient";
+import {
+  getSafeCommunityHtml,
+  getSafeCommunityText,
+} from "./communitySafetyService";
+
+function sanitizeRefereePayload(referee) {
+  if (!referee || typeof referee !== "object") return referee;
+
+  return {
+    ...referee,
+    fullName: getSafeCommunityText(referee?.fullName, ""),
+    bio: getSafeCommunityText(referee?.bio, ""),
+    introduction: getSafeCommunityHtml(referee?.introduction, ""),
+    workingArea: getSafeCommunityHtml(referee?.workingArea, ""),
+    achievements: getSafeCommunityHtml(referee?.achievements, ""),
+  };
+}
 
 /**
  * GET /api/referees
@@ -12,7 +29,12 @@ export async function getReferees({
   const res = await apiClient.get("/referees", {
     params: { query, page, pageSize },
   });
-  return res.data;
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeRefereePayload)
+      : res?.data?.items,
+  };
 }
 
 /**
@@ -20,7 +42,7 @@ export async function getReferees({
  */
 export async function getRefereeDetail(refereeId) {
   const res = await apiClient.get(`/referees/${refereeId}`);
-  return res.data;
+  return sanitizeRefereePayload(res.data);
 }
 
 /**
@@ -29,7 +51,7 @@ export async function getRefereeDetail(refereeId) {
  */
 export async function getMyRefereeProfile() {
   const res = await apiClient.get("/referees/me");
-  return res.data;
+  return sanitizeRefereePayload(res.data);
 }
 
 /**
@@ -55,5 +77,5 @@ export async function updateMyRefereeProfile({
     workingArea,
     achievements,
   });
-  return res.data;
+  return sanitizeRefereePayload(res.data);
 }

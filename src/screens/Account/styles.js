@@ -125,6 +125,19 @@ export const styles = StyleSheet.create({
     color: "#111827",
     fontSize: 14,
   },
+  inputShell: {
+    height: 46,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+  },
+  inputText: {
+    flex: 1,
+    color: "#111827",
+    fontSize: 14,
+    paddingVertical: 0,
+  },
   inputDisabled: {
     opacity: 0.7,
   },
@@ -158,6 +171,20 @@ export const styles = StyleSheet.create({
     backgroundColor: "#F3F4F6",
     color: "#111827",
     fontSize: 14,
+    textAlignVertical: "top",
+  },
+  textareaShell: {
+    minHeight: 120,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#F3F4F6",
+  },
+  textareaInput: {
+    minHeight: 96,
+    color: "#111827",
+    fontSize: 14,
+    paddingVertical: 0,
     textAlignVertical: "top",
   },
 

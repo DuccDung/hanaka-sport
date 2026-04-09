@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   getAuthSession,
   saveAuthSession,
@@ -8,8 +15,17 @@ import {
   connectRealtime,
   disconnectRealtime,
 } from "../services/realtimeService";
+import { sanitizeUserPayload } from "../services/userService";
 
 const AuthContext = createContext(null);
+
+function sanitizeSession(session) {
+  return {
+    accessToken: session?.accessToken || null,
+    expiresAtUtc: session?.expiresAtUtc || null,
+    user: sanitizeUserPayload(session?.user),
+  };
+}
 
 function AppRealtimeBootstrap() {
   const { session } = useAuth();
@@ -46,7 +62,13 @@ export function AuthProvider({ children }) {
         const s = await getAuthSession();
 
         setSession(
-          s || {
+          sanitizeSession(
+            s || {
+              accessToken: null,
+              expiresAtUtc: null,
+              user: null,
+            },
+          ) || {
             accessToken: null,
             expiresAtUtc: null,
             user: null,
@@ -58,18 +80,18 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
-  const setAuthSession = async ({ accessToken, expiresAtUtc, user }) => {
-    const nextSession = {
+  const setAuthSession = useCallback(async ({ accessToken, expiresAtUtc, user }) => {
+    const nextSession = sanitizeSession({
       accessToken,
       expiresAtUtc,
       user,
-    };
+    });
 
     await saveAuthSession(nextSession);
     setSession(nextSession);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await clearAuthSession();
     disconnectRealtime();
 
@@ -78,10 +100,15 @@ export function AuthProvider({ children }) {
       expiresAtUtc: null,
       user: null,
     });
-  };
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ session, booting, setAuthSession, logout }),
+    [session, booting, setAuthSession, logout],
+  );
 
   return (
-    <AuthContext.Provider value={{ session, booting, setAuthSession, logout }}>
+    <AuthContext.Provider value={contextValue}>
       <AppRealtimeBootstrap />
       {children}
     </AuthContext.Provider>

@@ -99,6 +99,10 @@ export const styles = StyleSheet.create({
     color: "#374151",
     fontWeight: "500",
   },
+  roomLastMsgHidden: {
+    color: "#9A3412",
+    fontStyle: "italic",
+  },
 
   centerState: {
     flex: 1,
@@ -166,12 +170,6 @@ export const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: "800",
     color: "#111827",
-  },
-  reviewHelperText: {
-    marginTop: 8,
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#475569",
   },
   reviewHelperActions: {
     marginTop: 12,

@@ -1,10 +1,47 @@
 import { apiClient } from "./apiClient";
+import { getSafeCommunityText } from "./communitySafetyService";
+
+function sanitizeChatUser(user) {
+  if (!user || typeof user !== "object") return user;
+
+  return {
+    ...user,
+    fullName: getSafeCommunityText(user?.fullName, ""),
+  };
+}
+
+function sanitizeChatMessage(message) {
+  if (!message || typeof message !== "object") return message;
+
+  return {
+    ...message,
+    content: getSafeCommunityText(message?.content, ""),
+    sender: sanitizeChatUser(message?.sender),
+  };
+}
+
+function sanitizeChatRoom(room) {
+  if (!room || typeof room !== "object") return room;
+
+  return {
+    ...room,
+    clubName: getSafeCommunityText(room?.clubName, room?.clubName || ""),
+    lastSenderName: getSafeCommunityText(room?.lastSenderName, ""),
+    lastMessagePreview: getSafeCommunityText(room?.lastMessagePreview, ""),
+    lastMessage: sanitizeChatMessage(room?.lastMessage),
+  };
+}
 
 export async function getMyClubChatRooms({ page = 1, pageSize = 20 } = {}) {
   const res = await apiClient.get("/clubs/chat-rooms", {
     params: { page, pageSize },
   });
-  return res.data;
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeChatRoom)
+      : res?.data?.items,
+  };
 }
 
 export async function getClubMessages({
@@ -15,12 +52,20 @@ export async function getClubMessages({
   const res = await apiClient.get(`/clubs/${clubId}/messages`, {
     params: { page, pageSize },
   });
-  return res.data;
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeChatMessage)
+      : res?.data?.items,
+  };
 }
 
 export async function sendClubMessage(clubId, payload) {
   const res = await apiClient.post(`/clubs/${clubId}/messages`, payload);
-  return res.data;
+  return {
+    ...res.data,
+    item: sanitizeChatMessage(res?.data?.item),
+  };
 }
 
 export async function deleteClubMessage(clubId, messageId) {

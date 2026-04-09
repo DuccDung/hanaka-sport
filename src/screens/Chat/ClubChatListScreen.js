@@ -18,8 +18,10 @@ import { COMMUNITY_PRIVACY_URL } from "../../constants/communitySafety";
 import { getMyClubChatRooms } from "../../services/chatService";
 import {
   acceptCommunityTerms,
+  getBlockedUsers,
   getCommunityReports,
   getCommunityTermsState,
+  getSafeCommunityText,
 } from "../../services/communitySafetyService";
 import { styles } from "./styles";
 import { addRealtimeListener } from "../../services/realtimeService";
@@ -36,7 +38,28 @@ function formatTime(value) {
   return `${hh}:${mm} ${dd}/${MM}`;
 }
 
+function normalizeId(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function normalizeName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getRoomLastSenderId(item) {
+  return normalizeId(
+    item?.lastSenderUserId ??
+      item?.lastMessageSenderUserId ??
+      item?.lastMessage?.senderUserId ??
+      item?.lastMessage?.sender?.userId ??
+      item?.senderUserId,
+  );
+}
+
 function ChatRoomItem({ item, onPress }) {
+  const previewText = item.lastMessagePreview || "Chưa có tin nhắn";
+
   return (
     <Pressable style={styles.roomCard} onPress={onPress}>
       {item.clubCoverUrl ? (
@@ -59,10 +82,16 @@ function ChatRoomItem({ item, onPress }) {
           {item.areaText || "Chưa cập nhật khu vực"}
         </Text>
 
-        <Text style={styles.roomLastMsg} numberOfLines={1}>
-          {item.lastSenderName
-            ? `${item.lastSenderName}: ${item.lastMessagePreview || "Chưa có tin nhắn"}`
-            : item.lastMessagePreview || "Chưa có tin nhắn"}
+        <Text
+          style={[
+            styles.roomLastMsg,
+            item.isLastMessageHidden && styles.roomLastMsgHidden,
+          ]}
+          numberOfLines={1}
+        >
+          {item.lastSenderName && !item.isLastMessageHidden
+            ? `${item.lastSenderName}: ${previewText}`
+            : previewText}
         </Text>
       </View>
     </Pressable>
@@ -75,7 +104,7 @@ function ReviewHelperCard({ reportCount, onOpenDemoChat, onManageBlocks }) {
       <View style={styles.reviewHelperTop}>
         <View style={styles.reviewHelperBadge}>
           <Ionicons name="shield-checkmark" size={15} color={COLORS.BLUE} />
-          <Text style={styles.reviewHelperBadgeText}>Safety tools</Text>
+          <Text style={styles.reviewHelperBadgeText}>Công cụ an toàn</Text>
         </View>
 
         <Text style={styles.reviewHelperCount}>
@@ -84,12 +113,7 @@ function ReviewHelperCard({ reportCount, onOpenDemoChat, onManageBlocks }) {
       </View>
 
       <Text style={styles.reviewHelperTitle}>
-        Chat CLB đã bật bộ lọc, báo cáo vi phạm và chặn người dùng.
-      </Text>
-      <Text style={styles.reviewHelperText}>
-        Để App Review kiểm tra: mở chat mẫu, chạm biểu tượng lá chắn cạnh tin
-        nhắn để báo cáo. Nếu đã chặn ai đó, bạn có thể vào mục quản lý chặn để
-        bỏ chặn ngay trong ứng dụng.
+        Báo cáo vi phạm và quản lý chặn ngay trong chat CLB.
       </Text>
 
       <View style={styles.reviewHelperActions}>
@@ -115,6 +139,7 @@ export default function ClubChatListScreen({ navigation }) {
     accepted: false,
     acceptedAt: null,
   });
+  const [blockedUsers, setBlockedUsers] = useState([]);
   const [reportCount, setReportCount] = useState(0);
   const safetyScopeKey = `${session?.accessToken || "guest"}:${session?.user?.userId || "guest"}`;
 
@@ -122,12 +147,14 @@ export default function ClubChatListScreen({ navigation }) {
     setTermsLoading(true);
 
     try {
-      const [nextTermsState, reports] = await Promise.all([
+      const [nextTermsState, nextBlockedUsers, reports] = await Promise.all([
         getCommunityTermsState(),
+        getBlockedUsers(),
         getCommunityReports({ limit: 20 }),
       ]);
 
       setTermsState(nextTermsState);
+      setBlockedUsers(Array.isArray(nextBlockedUsers) ? nextBlockedUsers : []);
       setReportCount(reports.length);
     } finally {
       setTermsLoading(false);
@@ -143,6 +170,7 @@ export default function ClubChatListScreen({ navigation }) {
       accepted: false,
       acceptedAt: null,
     });
+    setBlockedUsers([]);
     setReportCount(0);
   }, [safetyScopeKey]);
 
@@ -216,6 +244,41 @@ export default function ClubChatListScreen({ navigation }) {
     navigation.navigate("CommunitySafety");
   }, [navigation]);
 
+  const displayItems = useMemo(() => {
+    return items.map((item) => {
+      const rawPreview = String(item?.lastMessagePreview || "").trim();
+      const safePreview = getSafeCommunityText(rawPreview, "Chưa có tin nhắn");
+      const lastSenderId = getRoomLastSenderId(item);
+      const lastSenderName = normalizeName(item?.lastSenderName);
+
+      const blockedItem = blockedUsers.find((blockedUser) => {
+        const blockedUserId = normalizeId(blockedUser?.userId);
+        const blockedUserName = normalizeName(blockedUser?.fullName);
+
+        if (lastSenderId && blockedUserId && blockedUserId === lastSenderId) {
+          return true;
+        }
+
+        return lastSenderName && blockedUserName && blockedUserName === lastSenderName;
+      });
+
+      if (blockedItem) {
+        return {
+          ...item,
+          lastSenderName: null,
+          lastMessagePreview: "Tin nhắn từ người dùng bị chặn đã được ẩn.",
+          isLastMessageHidden: true,
+        };
+      }
+
+      return {
+        ...item,
+        lastMessagePreview: safePreview,
+        isLastMessageHidden: !!rawPreview && safePreview !== rawPreview,
+      };
+    });
+  }, [blockedUsers, items]);
+
   const listHeader = useMemo(() => {
     if (!termsState.accepted) return null;
 
@@ -256,7 +319,7 @@ export default function ClubChatListScreen({ navigation }) {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Tin nhắn CLB</Text>
           <Text style={styles.headerSub}>
-            Đồng ý điều khoản trước khi truy cập nội dung do người dùng tạo.
+            Đồng ý điều khoản trước khi vào khu vực chat.
           </Text>
         </View>
 
@@ -292,7 +355,7 @@ export default function ClubChatListScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tin nhắn CLB</Text>
         <Text style={styles.headerSub}>
-          Chat cộng đồng đã bật lọc nội dung, báo cáo và chặn người dùng.
+          Trao đổi cùng thành viên CLB và quản lý an toàn ngay trong chat.
         </Text>
       </View>
 
@@ -303,7 +366,7 @@ export default function ClubChatListScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={displayItems}
           keyExtractor={(item) => String(item.clubId)}
           renderItem={({ item }) => (
             <ChatRoomItem
@@ -319,7 +382,7 @@ export default function ClubChatListScreen({ navigation }) {
           )}
           contentContainerStyle={[
             styles.listPad,
-            items.length === 0 && { flexGrow: 1 },
+            displayItems.length === 0 && { flexGrow: 1 },
           ]}
           refreshControl={
             <RefreshControl

@@ -1,4 +1,47 @@
 import { apiClient } from "./apiClient";
+import {
+  getSafeCommunityHtml,
+  getSafeCommunityText,
+} from "./communitySafetyService";
+
+function sanitizeClubPayload(club) {
+  if (!club || typeof club !== "object") return club;
+
+  const overview = club?.overview && typeof club.overview === "object"
+    ? {
+        ...club.overview,
+        introduction: getSafeCommunityText(club.overview?.introduction, ""),
+      }
+    : club?.overview;
+
+  return {
+    ...club,
+    clubName: getSafeCommunityText(club?.clubName, club?.clubName || ""),
+    description: getSafeCommunityHtml(club?.description, club?.description || ""),
+    overview,
+  };
+}
+
+function sanitizeClubMemberPayload(member) {
+  if (!member || typeof member !== "object") return member;
+
+  return {
+    ...member,
+    fullName: getSafeCommunityText(member?.fullName, ""),
+    bio: getSafeCommunityText(member?.bio, ""),
+  };
+}
+
+function sanitizeClubMemberListResponse(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  return {
+    ...payload,
+    items: Array.isArray(payload?.items)
+      ? payload.items.map(sanitizeClubMemberPayload)
+      : payload?.items,
+  };
+}
 
 export async function uploadClubCover(fileUri) {
   const formData = new FormData();
@@ -22,24 +65,34 @@ export async function uploadClubCover(fileUri) {
 
 export async function createClub(payload) {
   const res = await apiClient.post("/clubs", payload);
-  return res.data;
+  return sanitizeClubPayload(res.data);
 }
 
 export async function getMyClubs() {
   const res = await apiClient.get("/clubs/my");
-  return res.data;
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeClubPayload)
+      : res?.data?.items,
+  };
 }
 
 export async function getClubDetail(clubId) {
   const res = await apiClient.get(`/clubs/${clubId}`);
-  return res.data;
+  return sanitizeClubPayload(res.data);
 }
 
 export async function getClubs({ keyword = "", page = 1, pageSize = 10 } = {}) {
   const res = await apiClient.get("/clubs", {
     params: { keyword, page, pageSize },
   });
-  return res.data;
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeClubPayload)
+      : res?.data?.items,
+  };
 }
 
 export async function joinClub(clubId) {
@@ -49,14 +102,14 @@ export async function joinClub(clubId) {
 
 export async function getClubOverview(clubId) {
   const res = await apiClient.get(`/clubs/${clubId}/overview`);
-  return res.data;
+  return sanitizeClubPayload(res.data);
 }
 
 export async function getClubMembers({ clubId, page = 1, pageSize = 50 } = {}) {
   const res = await apiClient.get(`/clubs/${clubId}/members`, {
     params: { page, pageSize },
   });
-  return res.data;
+  return sanitizeClubMemberListResponse(res.data);
 }
 
 export async function getPendingClubMembers({
@@ -67,7 +120,7 @@ export async function getPendingClubMembers({
   const res = await apiClient.get(`/clubs/${clubId}/pending-members`, {
     params: { page, pageSize },
   });
-  return res.data;
+  return sanitizeClubMemberListResponse(res.data);
 }
 
 export async function approvePendingClubMember(clubId, userId) {
@@ -109,5 +162,10 @@ export async function getChallengingClubs({
   const res = await apiClient.get("/clubs/challenging", {
     params: { keyword, page, pageSize },
   });
-  return res.data;
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeClubPayload)
+      : res?.data?.items,
+  };
 }

@@ -34,6 +34,7 @@ import {
   blockCommunityUser,
   evaluateCommunityContent,
   getBlockedUserIds,
+  getSafeCommunityText,
   reportChatMessage,
 } from "../../services/communitySafetyService";
 import {
@@ -61,6 +62,21 @@ function getSenderId(item) {
 
 function getSenderName(item) {
   return item?.sender?.fullName || "Thành viên";
+}
+
+function sanitizeIncomingMessage(item) {
+  if (!item || typeof item !== "object") return item;
+
+  return {
+    ...item,
+    content: getSafeCommunityText(item?.content, ""),
+    sender: item?.sender
+      ? {
+          ...item.sender,
+          fullName: getSafeCommunityText(item?.sender?.fullName, ""),
+        }
+      : item?.sender,
+  };
 }
 
 function MessageItem({ item, isMine, moderation, onDelete, onOpenActions }) {
@@ -206,7 +222,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         event.type === "club.message.created" &&
         String(event.clubId) === String(clubId)
       ) {
-        const newItem = event.item;
+        const newItem = sanitizeIncomingMessage(event.item);
         if (!newItem) return;
 
         setItems((prev) => {
@@ -254,7 +270,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
             ...others,
             {
               userId: event.userId,
-              fullName: event.fullName || "Thành viên",
+              fullName: getSafeCommunityText(event.fullName, "Thành viên"),
             },
           ];
         });
@@ -548,8 +564,8 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           <Text style={styles.roomHeaderSub}>
             {typingText ||
               (isDemoRoom
-                ? "Chat mẫu cho App Review kiểm tra report, block và filter"
-                : "Chat thành viên CLB đã bật moderation")}
+                ? "Chat mẫu để thử nhắn tin, báo cáo và chặn người dùng"
+                : "Chat thành viên CLB đã bật kiểm duyệt an toàn")}
           </Text>
         </View>
 

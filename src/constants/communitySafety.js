@@ -1,5 +1,4 @@
 export const COMMUNITY_TERMS_VERSION = "2026-04-09";
-export const COMMUNITY_TERMS_LAST_UPDATED = "09/04/2026";
 
 export const COMMUNITY_SUPPORT_EMAIL = "duccdung999@gmail.com";
 export const COMMUNITY_SUPPORT_URL = "https://hanakasport.click";
@@ -44,10 +43,4 @@ export const COMMUNITY_MODERATION_COMMITMENTS = [
   "Người dùng có thể báo cáo nội dung xấu hoặc chặn người dùng lạm dụng trực tiếp trong chat.",
   "Khi chặn người dùng, nội dung của họ bị gỡ khỏi phiên chat của bạn ngay lập tức.",
   "Đội ngũ Hanaka Sport cam kết xử lý báo cáo vi phạm trong vòng 24 giờ.",
-];
-
-export const COMMUNITY_REVIEW_STEPS = [
-  "Mở tab Tin nhắn để xem màn hình Điều khoản sử dụng trước khi vào chat.",
-  "Mở chat mẫu, chạm biểu tượng lá chắn cạnh tin nhắn để báo cáo nội dung vi phạm.",
-  "Chọn Chặn người dùng để gỡ tin nhắn của tài khoản đó khỏi màn hình ngay lập tức.",
 ];

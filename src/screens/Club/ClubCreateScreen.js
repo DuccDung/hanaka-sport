@@ -20,6 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import { styles } from "./createStyles";
 import RichTextBlock from "../../components/RichTextBlock";
 import { createClub, uploadClubCover } from "../../services/clubService";
+import { evaluateCommunityContent } from "../../services/communitySafetyService";
 
 function stripHtml(html = "") {
   return html
@@ -164,6 +165,36 @@ export default function ClubCreateScreen({ navigation }) {
 
   const onSubmit = async () => {
     if (!canSubmit || submitting) return;
+
+    const moderationFields = [
+      {
+        label: "Tên CLB",
+        value: name,
+      },
+      {
+        label: "Mô tả CLB",
+        value: stripHtml(descHtml),
+      },
+      {
+        label: "Địa chỉ CLB",
+        value: address,
+      },
+    ];
+
+    const blockedField = moderationFields
+      .map((item) => ({
+        ...item,
+        moderation: evaluateCommunityContent(item.value),
+      }))
+      .find((item) => item.moderation.blocked);
+
+    if (blockedField) {
+      Alert.alert(
+        "Nội dung bị chặn",
+        `${blockedField.label} có dấu hiệu ${blockedField.moderation.category?.toLowerCase() || "vi phạm tiêu chuẩn cộng đồng"}. Vui lòng chỉnh sửa trước khi tạo CLB.`,
+      );
+      return;
+    }
 
     try {
       setSubmitting(true);

@@ -22,6 +22,7 @@ import {
   registerMeAsCoach,
   updateMyCoachProfile,
 } from "../../services/coachService";
+import { evaluateCommunityContent } from "../../services/communitySafetyService";
 
 function FieldLabel({ label, required }) {
   return (
@@ -115,6 +116,21 @@ export default function CoachEditScreen({ navigation }) {
 
   const onSubmit = async () => {
     if (!canSubmit) return;
+
+    const blockedField = [
+      { label: "Giới thiệu giảng dạy", value: introHtml },
+      { label: "Khu vực giảng dạy", value: areaHtml },
+      { label: "Thành tích", value: achievementsHtml },
+    ].find(({ value }) => evaluateCommunityContent(value).blocked);
+
+    if (blockedField) {
+      const moderation = evaluateCommunityContent(blockedField.value);
+      Alert.alert(
+        "Nội dung bị chặn",
+        `${blockedField.label} có dấu hiệu ${moderation.category?.toLowerCase() || "vi phạm tiêu chuẩn cộng đồng"}. Vui lòng chỉnh sửa trước khi lưu.`,
+      );
+      return;
+    }
 
     try {
       setSaving(true);

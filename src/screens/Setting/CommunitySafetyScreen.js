@@ -15,7 +15,6 @@ import CommunityTermsCard from "../../components/CommunityTermsCard";
 import {
   COMMUNITY_MODERATION_COMMITMENTS,
   COMMUNITY_PRIVACY_URL,
-  COMMUNITY_REVIEW_STEPS,
   COMMUNITY_SUPPORT_EMAIL,
   COMMUNITY_SUPPORT_URL,
 } from "../../constants/communitySafety";
@@ -104,17 +103,16 @@ export default function CommunitySafetyScreen({ navigation }) {
       >
         <View style={styles.heroCard}>
           <View style={styles.heroBadge}>
-            <Text style={styles.heroBadgeText}>Apple Guideline 1.2</Text>
+            <Text style={styles.heroBadgeText}>An toàn chat</Text>
           </View>
 
           <Text style={styles.heroTitle}>
-            Chat CLB đã được bổ sung đầy đủ luồng đồng ý điều khoản, báo cáo và
-            chặn người dùng.
+            Quản lý điều khoản, báo cáo và chặn người dùng trong chat CLB.
           </Text>
 
           <Text style={styles.heroText}>
-            Màn hình này tập trung toàn bộ thông tin moderation, liên hệ hỗ trợ,
-            cam kết xử lý trong 24 giờ và danh sách người dùng bạn đã chặn.
+            Bạn có thể xem cam kết an toàn cộng đồng, liên hệ hỗ trợ và quản lý
+            danh sách chặn tại đây.
           </Text>
         </View>
 
@@ -128,23 +126,6 @@ export default function CommunitySafetyScreen({ navigation }) {
           showSafetyCenterButton={false}
           acceptButtonLabel="Tôi đồng ý điều khoản cộng đồng"
         />
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Các bước để App Review kiểm tra</Text>
-          <Text style={styles.sectionSubtitle}>
-            Bạn có thể dùng các bước này để quay video và đính kèm vào App Store
-            Connect ở mục App Review Notes.
-          </Text>
-
-          <View style={styles.list}>
-            {COMMUNITY_REVIEW_STEPS.map((item) => (
-              <View key={item} style={styles.listRow}>
-                <View style={styles.listDot} />
-                <Text style={styles.listText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Cam kết moderation</Text>
@@ -242,8 +223,7 @@ export default function CommunitySafetyScreen({ navigation }) {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Lịch sử báo cáo gần đây</Text>
           <Text style={styles.sectionSubtitle}>
-            Mỗi báo cáo sẽ được lưu lại trên thiết bị và ưu tiên đồng bộ lên hệ
-            thống moderation khi endpoint khả dụng.
+            Các báo cáo gần đây của bạn sẽ hiển thị tại đây để tiện theo dõi.
           </Text>
 
           {reports.length ? (
@@ -264,9 +244,7 @@ export default function CommunitySafetyScreen({ navigation }) {
 
                 {item.pendingSync ? (
                   <View style={styles.pendingTag}>
-                    <Text style={styles.pendingTagText}>
-                      Đã ghi nhận trên app, chờ đồng bộ server
-                    </Text>
+                    <Text style={styles.pendingTagText}>Đã ghi nhận</Text>
                   </View>
                 ) : null}
               </View>

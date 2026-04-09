@@ -1,4 +1,5 @@
 import { apiClient } from "./apiClient";
+import { sanitizeUserPayload } from "./userService";
 
 /**
  * REGISTER
@@ -49,7 +50,10 @@ export async function confirmOtp({ email, otp }) {
     throw new Error("API trả về dữ liệu không hợp lệ (thiếu accessToken/user)");
   }
 
-  return data;
+  return {
+    ...data,
+    user: sanitizeUserPayload(data.user),
+  };
 }
 
 /**
@@ -78,5 +82,8 @@ export async function login({ identifier, password }) {
     throw new Error("API trả về dữ liệu không hợp lệ (thiếu accessToken/user)");
   }
 
-  return data;
+  return {
+    ...data,
+    user: sanitizeUserPayload(data.user),
+  };
 }

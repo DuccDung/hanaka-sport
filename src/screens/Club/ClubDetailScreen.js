@@ -25,6 +25,7 @@ import {
   updateClubMemberRole,
   updateClubChallengeMode,
 } from "../../services/clubService";
+import { getSafeCommunityText } from "../../services/communitySafetyService";
 
 const TABS = ["Chung", "Thành viên", "Chờ duyệt"];
 
@@ -101,9 +102,13 @@ function CommonTab({
   const address =
     club?.overview?.addressText || club?.areaText || "Chưa có địa chỉ";
   const membersCount = club?.membersCount ?? 0;
-  const description =
+  const rawDescription =
     club?.overview?.introduction ||
     `CLB ${club?.clubName || ""} đang hoạt động tại ${address}.`;
+  const description = getSafeCommunityText(
+    rawDescription,
+    "Nội dung đang được kiểm duyệt.",
+  );
   const level = Number(club?.overview?.level ?? club?.ratingAvg ?? 1.5);
   const reviewsCount = Number(club?.reviewsCount ?? 0);
   const allowChallenge = !!club?.allowChallenge;
@@ -467,7 +472,7 @@ export default function ClubDetailScreen({ navigation, route }) {
     if (isDemoClub) {
       Alert.alert(
         "Dữ liệu mẫu",
-        "Màn hình này đang dùng dữ liệu demo để App Review có thể kiểm tra giao diện CLB khi tài khoản chưa có nội dung thật.",
+        "Màn hình này đang hiển thị dữ liệu mẫu vì CLB hiện chưa có nội dung thật.",
       );
       return;
     }

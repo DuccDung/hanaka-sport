@@ -40,10 +40,14 @@ export const styles = StyleSheet.create({
   },
 
   centerWrap: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom: 24,
+  },
+
+  scroll: {
+    flex: 1,
   },
 
   card: {

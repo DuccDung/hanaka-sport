@@ -205,8 +205,16 @@ function createReportId(prefix = "report") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function normalizeCommunityContent(content = "") {
+  return String(content || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function evaluateCommunityContent(content = "") {
-  const normalized = String(content || "").trim();
+  const normalized = normalizeCommunityContent(content);
 
   if (!normalized) {
     return {
@@ -498,6 +506,40 @@ export async function unblockCommunityUser(userId) {
 
 export function getMaskedCommunityContent(content = "") {
   return evaluateCommunityContent(content).maskedText;
+}
+
+export function isCommunityContentBlocked(content = "") {
+  return evaluateCommunityContent(content).blocked;
+}
+
+export function getSafeCommunityText(content = "", fallbackText = "") {
+  const normalized = String(content || "").trim();
+
+  if (!normalized) {
+    return fallbackText;
+  }
+
+  return evaluateCommunityContent(normalized).maskedText || fallbackText;
+}
+
+export function getSafeCommunityHtml(html = "", fallbackHtml = "") {
+  const normalized = String(html || "").trim();
+
+  if (!normalized) {
+    return fallbackHtml;
+  }
+
+  const plainText = normalizeCommunityContent(normalized);
+
+  if (!plainText) {
+    return fallbackHtml;
+  }
+
+  if (evaluateCommunityContent(plainText).blocked) {
+    return `<p>${COMMUNITY_MASKED_MESSAGE_TEXT}</p>`;
+  }
+
+  return normalized;
 }
 
 export function getCommunityReasonLabel(reason) {

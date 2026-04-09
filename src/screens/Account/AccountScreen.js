@@ -12,6 +12,7 @@ import {
   FlatList,
   Platform,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,7 +29,10 @@ import {
   uploadAvatar,
   deleteMe,
 } from "../../services/userService";
-import { getCommunityTermsState } from "../../services/communitySafetyService";
+import {
+  evaluateCommunityContent,
+  getCommunityTermsState,
+} from "../../services/communitySafetyService";
 import { getAuthSession } from "../../services/authStorage";
 
 const GENDERS = ["Nam", "Nữ", "Khác"];
@@ -65,15 +69,13 @@ function normalizeAvatarUrl(value) {
 }
 
 export default function AccountScreen({ navigation }) {
-  const { session, logout, setAuthSession } = useAuth();
+  const { session, logout, setAuthSession, booting } = useAuth();
 
   const accessToken = session?.accessToken || null;
   const userInSession = session?.user || null;
   const isLoggedIn = !!accessToken;
-  const disabled = !isLoggedIn;
 
   const [loading, setLoading] = useState(false);
-  const [refreshingProfile, setRefreshingProfile] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
@@ -100,11 +102,42 @@ export default function AccountScreen({ navigation }) {
   const accessTokenRef = useRef(accessToken);
   const profileRequestIdRef = useRef(0);
   const isMountedRef = useRef(true);
+  const fullNameInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
+  const bioInputRef = useRef(null);
+
+  const clearUserState = useCallback(() => {
+    setUserId(null);
+    setAvatarUrl(null);
+    setFullName("");
+    setPhone("");
+    setEmail("");
+    setGender("");
+    setProvince("");
+    setBio("");
+    setDobDate(null);
+  }, []);
+
+  const hasLocalProfile = useMemo(() => {
+    return Boolean(
+      userInSession?.userId ||
+        userId ||
+        email ||
+        fullName ||
+        phone ||
+        bio ||
+        avatarUrl,
+    );
+  }, [avatarUrl, bio, email, fullName, phone, userId, userInSession?.userId]);
+
+  const canInteractWithProfile = !booting && (isLoggedIn || hasLocalProfile);
+  const formEditable = !deletingAccount && !loading;
 
   const verifiedText = useMemo(() => {
-    if (!isLoggedIn) return "Chưa đăng nhập";
+    if (booting) return "Đang tải";
+    if (!canInteractWithProfile) return "Chưa đăng nhập";
     return userInSession?.verified ? "Đã xác thực" : "Chờ xác thực";
-  }, [isLoggedIn, userInSession?.verified]);
+  }, [booting, canInteractWithProfile, userInSession?.verified]);
 
   const communityText = useMemo(() => {
     if (!communityTermsAccepted) {
@@ -121,7 +154,7 @@ export default function AccountScreen({ navigation }) {
   }, [communityTermsAccepted, communityTermsAcceptedAt]);
 
   const requireLogin = useCallback(() => {
-    if (isLoggedIn) return false;
+    if (canInteractWithProfile) return false;
 
     Alert.alert(
       "Bạn chưa đăng nhập",
@@ -138,7 +171,7 @@ export default function AccountScreen({ navigation }) {
     );
 
     return true;
-  }, [isLoggedIn, navigation]);
+  }, [canInteractWithProfile, navigation]);
 
   const syncUserToState = useCallback((user) => {
     if (!user) return;
@@ -155,11 +188,21 @@ export default function AccountScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
+    if (userInSession) {
+      syncUserToState(userInSession);
+      return;
+    }
+
+    if (!accessToken && !booting) {
+      clearUserState();
+    }
+  }, [accessToken, booting, clearUserState, syncUserToState, userInSession]);
+
+  useEffect(() => {
     accessTokenRef.current = accessToken;
 
     if (!accessToken) {
       profileRequestIdRef.current += 1;
-      setRefreshingProfile(false);
     }
   }, [accessToken]);
 
@@ -189,7 +232,6 @@ export default function AccountScreen({ navigation }) {
     const tokenSnapshot = accessToken;
 
     try {
-      setRefreshingProfile(true);
       const me = await getMe();
 
       if (!isCurrentProfileRequest(requestId, tokenSnapshot)) {
@@ -214,13 +256,6 @@ export default function AccountScreen({ navigation }) {
         return;
       }
       Alert.alert("Lỗi", "Không lấy được thông tin tài khoản.");
-    } finally {
-      if (
-        isMountedRef.current &&
-        profileRequestIdRef.current === requestId
-      ) {
-        setRefreshingProfile(false);
-      }
     }
   }, [
     accessToken,
@@ -235,6 +270,48 @@ export default function AccountScreen({ navigation }) {
     setCommunityTermsAccepted(!!state?.accepted);
     setCommunityTermsAcceptedAt(state?.acceptedAt || null);
   }, []);
+
+  const ensureActiveSession = useCallback(async () => {
+    if (accessToken) {
+      return {
+        accessToken,
+        expiresAtUtc: session?.expiresAtUtc || null,
+        user: session?.user || null,
+      };
+    }
+
+    const latestSession = await getAuthSession();
+    if (latestSession?.accessToken) {
+      await setAuthSession({
+        accessToken: latestSession.accessToken,
+        expiresAtUtc: latestSession.expiresAtUtc,
+        user: latestSession.user || session?.user || null,
+      });
+      return latestSession;
+    }
+
+    Alert.alert(
+      "Bạn chưa đăng nhập",
+      "Vui lòng đăng nhập lại để cập nhật thông tin tài khoản.",
+      [
+        {
+          text: "OK",
+          onPress: () =>
+            navigation.navigate("AuthStack", {
+              screen: "Login",
+            }),
+        },
+      ],
+    );
+
+    return null;
+  }, [
+    accessToken,
+    navigation,
+    session?.expiresAtUtc,
+    session?.user,
+    setAuthSession,
+  ]);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -251,6 +328,9 @@ export default function AccountScreen({ navigation }) {
     if (requireLogin()) return;
 
     try {
+      const activeSession = await ensureActiveSession();
+      if (!activeSession?.accessToken) return;
+
       if (Platform.OS !== "ios") {
         const permission =
           await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -294,8 +374,8 @@ export default function AccountScreen({ navigation }) {
       };
 
       await setAuthSession({
-        accessToken: session.accessToken,
-        expiresAtUtc: session.expiresAtUtc,
+        accessToken: activeSession.accessToken,
+        expiresAtUtc: activeSession.expiresAtUtc,
         user: nextUser,
       });
 
@@ -315,7 +395,28 @@ export default function AccountScreen({ navigation }) {
   const onUpdate = async () => {
     if (requireLogin()) return;
 
+    const fullNameModeration = evaluateCommunityContent(fullName);
+    if (fullName?.trim() && fullNameModeration.blocked) {
+      Alert.alert(
+        "Nội dung bị chặn",
+        `Họ tên có dấu hiệu ${fullNameModeration.category?.toLowerCase() || "vi phạm tiêu chuẩn cộng đồng"}. Vui lòng chỉnh sửa trước khi lưu.`,
+      );
+      return;
+    }
+
+    const bioModeration = evaluateCommunityContent(bio);
+    if (bio?.trim() && bioModeration.blocked) {
+      Alert.alert(
+        "Nội dung bị chặn",
+        `Phần giới thiệu có dấu hiệu ${bioModeration.category?.toLowerCase() || "vi phạm tiêu chuẩn cộng đồng"}. Vui lòng chỉnh sửa trước khi lưu.`,
+      );
+      return;
+    }
+
     try {
+      const activeSession = await ensureActiveSession();
+      if (!activeSession?.accessToken) return;
+
       setLoading(true);
 
       const payload = {
@@ -333,8 +434,8 @@ export default function AccountScreen({ navigation }) {
       syncUserToState(updated);
 
       await setAuthSession({
-        accessToken: session.accessToken,
-        expiresAtUtc: session.expiresAtUtc,
+        accessToken: activeSession.accessToken,
+        expiresAtUtc: activeSession.expiresAtUtc,
         user: updated,
       });
 
@@ -364,6 +465,9 @@ export default function AccountScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             try {
+              const activeSession = await ensureActiveSession();
+              if (!activeSession?.accessToken) return;
+
               setDeletingAccount(true);
 
               await deleteMe();
@@ -465,24 +569,26 @@ export default function AccountScreen({ navigation }) {
 
         <Text style={styles.headerTitle}>Thông tin tài khoản</Text>
 
-        <View style={styles.headerRight}>
-          {refreshingProfile ? (
-            <ActivityIndicator size="small" color={COLORS.BLUE} />
-          ) : null}
-        </View>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        >
         <View style={styles.avatarSection}>
           <Pressable
             onPress={onPickAvatar}
-            disabled={disabled || avatarUploading}
+            disabled={!formEditable || avatarUploading}
             style={({ pressed }) => [
               styles.avatarPressable,
-              pressed && !disabled ? styles.pressed : null,
+              pressed && formEditable ? styles.pressed : null,
             ]}
           >
             {avatarUrl ? (
@@ -507,7 +613,7 @@ export default function AccountScreen({ navigation }) {
           </Pressable>
 
           <Text style={styles.avatarHint}>
-            {disabled
+            {!canInteractWithProfile
               ? "Đăng nhập để cập nhật ảnh"
               : "Chạm để đổi ảnh đại diện"}
           </Text>
@@ -531,25 +637,42 @@ export default function AccountScreen({ navigation }) {
           />
 
           <Label text="Họ tên" required style={styles.labelSpacing} />
-          <TextInput
-            value={fullName}
-            onChangeText={setFullName}
-            style={styles.input}
-            editable={!disabled}
-            placeholder="Nhập họ tên"
-            placeholderTextColor="#9CA3AF"
-          />
+          <Pressable
+            onPress={() => fullNameInputRef.current?.focus?.()}
+            style={styles.inputShell}
+          >
+            <TextInput
+              ref={fullNameInputRef}
+              value={fullName}
+              onChangeText={setFullName}
+              style={styles.inputText}
+              editable={formEditable}
+              placeholder="Nhập họ tên"
+              placeholderTextColor="#9CA3AF"
+              autoCapitalize="words"
+              autoCorrect={false}
+              showSoftInputOnFocus
+            />
+          </Pressable>
 
           <Label text="Số điện thoại" required style={styles.labelSpacing} />
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            style={styles.input}
-            editable={!disabled}
-            keyboardType="phone-pad"
-            placeholder="Ví dụ: 096..."
-            placeholderTextColor="#9CA3AF"
-          />
+          <Pressable
+            onPress={() => phoneInputRef.current?.focus?.()}
+            style={styles.inputShell}
+          >
+            <TextInput
+              ref={phoneInputRef}
+              value={phone}
+              onChangeText={setPhone}
+              style={styles.inputText}
+              editable={formEditable}
+              keyboardType="phone-pad"
+              placeholder="Ví dụ: 096..."
+              placeholderTextColor="#9CA3AF"
+              autoCorrect={false}
+              showSoftInputOnFocus
+            />
+          </Pressable>
 
           <Label text="Email" style={styles.labelSpacing} />
           <TextInput
@@ -566,7 +689,7 @@ export default function AccountScreen({ navigation }) {
               if (requireLogin()) return;
               setShowDatePicker(true);
             }}
-            style={[styles.select, disabled && styles.selectDisabled]}
+            style={[styles.select, !formEditable && styles.selectDisabled]}
           >
             <Text style={dobDate ? styles.selectText : styles.placeholderText}>
               {dobDate ? formatDateDDMMYYYY(dobDate) : "Chọn ngày sinh"}
@@ -590,7 +713,7 @@ export default function AccountScreen({ navigation }) {
               if (requireLogin()) return;
               setGenderModal(true);
             }}
-            style={[styles.select, disabled && styles.selectDisabled]}
+            style={[styles.select, !formEditable && styles.selectDisabled]}
           >
             <Text style={gender ? styles.selectText : styles.placeholderText}>
               {gender || "Chọn giới tính"}
@@ -604,7 +727,7 @@ export default function AccountScreen({ navigation }) {
               if (requireLogin()) return;
               setProvinceModal(true);
             }}
-            style={[styles.select, disabled && styles.selectDisabled]}
+            style={[styles.select, !formEditable && styles.selectDisabled]}
           >
             <Text style={province ? styles.selectText : styles.placeholderText}>
               {province || "Chọn tỉnh/thành"}
@@ -613,24 +736,33 @@ export default function AccountScreen({ navigation }) {
           </Pressable>
 
           <Label text="Giới thiệu" style={styles.labelSpacing} />
-          <TextInput
-            value={bio}
-            onChangeText={setBio}
-            style={styles.textarea}
-            editable={!disabled}
-            multiline
-            placeholder="Viết vài dòng giới thiệu..."
-            placeholderTextColor="#9CA3AF"
-          />
+          <Pressable
+            onPress={() => bioInputRef.current?.focus?.()}
+            style={styles.textareaShell}
+          >
+            <TextInput
+              ref={bioInputRef}
+              value={bio}
+              onChangeText={setBio}
+              style={styles.textareaInput}
+              editable={formEditable}
+              multiline
+              placeholder="Viết vài dòng giới thiệu..."
+              placeholderTextColor="#9CA3AF"
+              autoCorrect={false}
+              textAlignVertical="top"
+              showSoftInputOnFocus
+            />
+          </Pressable>
 
           <Pressable
             onPress={onUpdate}
             style={[
               styles.btn,
               styles.btnPrimary,
-              (disabled || loading) && styles.btnDisabled,
+              (!canInteractWithProfile || loading) && styles.btnDisabled,
             ]}
-            disabled={disabled || loading}
+            disabled={!canInteractWithProfile || loading}
           >
             <Text style={styles.btnPrimaryText}>
               {loading ? "Đang lưu..." : "Cập nhật thông tin"}
@@ -645,9 +777,9 @@ export default function AccountScreen({ navigation }) {
             style={[
               styles.btn,
               styles.btnOutline,
-              disabled && styles.btnDisabled,
+              !canInteractWithProfile && styles.btnDisabled,
             ]}
-            disabled={disabled}
+            disabled={!canInteractWithProfile}
           >
             <Text style={styles.btnOutlineText}>Đổi mật khẩu</Text>
           </Pressable>
@@ -678,9 +810,9 @@ export default function AccountScreen({ navigation }) {
             style={[
               styles.btn,
               styles.btnDanger,
-              (disabled || deletingAccount) && styles.btnDisabled,
+              (!canInteractWithProfile || deletingAccount) && styles.btnDisabled,
             ]}
-            disabled={disabled || deletingAccount}
+            disabled={!canInteractWithProfile || deletingAccount}
           >
             <Text style={styles.btnDangerText}>
               {deletingAccount ? "Đang xóa tài khoản..." : "Xóa tài khoản"}
@@ -691,7 +823,8 @@ export default function AccountScreen({ navigation }) {
             <Text style={styles.btnDangerText}>Đăng xuất</Text>
           </Pressable>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <SelectModal
         visible={genderModal}

@@ -6,6 +6,7 @@ import {
   Pressable,
   TextInput,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   Keyboard,
   ActivityIndicator,
@@ -16,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registerStyles";
 import { register } from "../../services/authApi";
 import { COMMUNITY_PRIVACY_URL } from "../../constants/communitySafety";
+import { evaluateCommunityContent } from "../../services/communitySafetyService";
 
 function isEmail(email = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -50,6 +52,14 @@ export default function RegisterScreen({ navigation }) {
 
     if (fullName.trim().length < 2) {
       setErrorText("Họ và tên phải có ít nhất 2 ký tự.");
+      return;
+    }
+
+    const fullNameModeration = evaluateCommunityContent(fullName);
+    if (fullNameModeration.blocked) {
+      setErrorText(
+        `Họ và tên có dấu hiệu ${fullNameModeration.category?.toLowerCase() || "vi phạm tiêu chuẩn cộng đồng"}. Vui lòng chỉnh sửa trước khi đăng ký.`,
+      );
       return;
     }
 
@@ -130,7 +140,12 @@ export default function RegisterScreen({ navigation }) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
-        <View style={styles.centerWrap}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.centerWrap}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Tạo tài khoản</Text>
             <Text style={styles.sectionDesc}>
@@ -392,7 +407,7 @@ export default function RegisterScreen({ navigation }) {
               </Pressable>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
