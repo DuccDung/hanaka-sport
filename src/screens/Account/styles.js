@@ -84,6 +84,12 @@ export const styles = StyleSheet.create({
     color: "#374151",
     fontSize: 14,
   },
+  statusSubText: {
+    marginTop: 4,
+    textAlign: "center",
+    color: "#475569",
+    fontSize: 13,
+  },
   statusBold: {
     fontWeight: "800",
     color: "#111827",
@@ -192,6 +198,17 @@ export const styles = StyleSheet.create({
   },
   btnGreenText: {
     color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 14,
+  },
+
+  btnBlueSoft: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  btnBlueSoftText: {
+    color: "#1D4ED8",
     fontWeight: "800",
     fontSize: 14,
   },

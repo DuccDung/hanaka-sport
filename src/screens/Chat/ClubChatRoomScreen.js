@@ -15,10 +15,14 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import AppStatusBar from "../../components/AppStatusBar";
+import OptionPickerModal from "../../components/OptionPickerModal";
 import { COLORS } from "../../constants/colors";
+import { COMMUNITY_REPORT_REASONS } from "../../constants/communitySafety";
 import { styles } from "./styles";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -26,6 +30,12 @@ import {
   getClubMessages,
   sendClubMessage,
 } from "../../services/chatService";
+import {
+  blockCommunityUser,
+  evaluateCommunityContent,
+  getBlockedUserIds,
+  reportChatMessage,
+} from "../../services/communitySafetyService";
 import {
   addRealtimeListener,
   subscribeClubRoom,
@@ -45,7 +55,17 @@ function formatMessageTime(value) {
   return `${hh}:${mm}`;
 }
 
-function MessageItem({ item, isMine, onDelete }) {
+function getSenderId(item) {
+  return String(item?.senderUserId ?? item?.sender?.userId ?? "");
+}
+
+function getSenderName(item) {
+  return item?.sender?.fullName || "Thành viên";
+}
+
+function MessageItem({ item, isMine, moderation, onDelete, onOpenActions }) {
+  const isMasked = moderation?.blocked;
+
   return (
     <View
       style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}
@@ -66,27 +86,41 @@ function MessageItem({ item, isMine, onDelete }) {
         style={[styles.msgBubbleWrap, isMine && { alignItems: "flex-end" }]}
       >
         {!isMine && (
-          <Text style={styles.msgSenderName}>
-            {item.sender?.fullName || "Thành viên"}
-          </Text>
+          <Text style={styles.msgSenderName}>{getSenderName(item)}</Text>
         )}
 
         <View
           style={[
             styles.msgBubble,
             isMine ? styles.msgBubbleMine : styles.msgBubbleOther,
+            isMasked && styles.msgMaskedBubble,
           ]}
         >
-          <Text style={[styles.msgText, isMine && styles.msgTextMine]}>
-            {item.content || "[Tin nhắn]"}
+          <Text
+            style={[
+              styles.msgText,
+              isMine && styles.msgTextMine,
+              isMasked && styles.msgMaskedText,
+            ]}
+          >
+            {moderation?.maskedText || item.content || "[Tin nhắn]"}
           </Text>
         </View>
 
         <View style={styles.msgMetaRow}>
           <Text style={styles.msgTime}>{formatMessageTime(item.sentAt)}</Text>
-          {isMine && (
+
+          {isMine ? (
             <Pressable onPress={() => onDelete?.(item)} hitSlop={8}>
-              <Text style={styles.msgDelete}>Xoá</Text>
+              <Text style={styles.msgDelete}>Xóa</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => onOpenActions?.(item)}
+              hitSlop={8}
+              style={styles.msgActionBtn}
+            >
+              <Ionicons name="shield-outline" size={13} color={COLORS.BLUE} />
             </Pressable>
           )}
         </View>
@@ -102,7 +136,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   const isDemoRoom = !!route?.params?.demoRoom;
   const me =
     session?.user || (isDemoRoom ? getReviewDemoCurrentUser() : null);
-  const myUserId = me?.userId;
+  const myUserId = String(me?.userId ?? "");
 
   const [items, setItems] = useState(() =>
     isDemoRoom ? getReviewDemoMessages() : [],
@@ -111,9 +145,17 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   const [loading, setLoading] = useState(!isDemoRoom);
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [blockedUserIds, setBlockedUserIds] = useState([]);
+  const [reportPickerVisible, setReportPickerVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
 
   const flatListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  const loadBlockedUsers = useCallback(async () => {
+    const blockedIds = await getBlockedUserIds();
+    setBlockedUserIds(blockedIds);
+  }, []);
 
   const fetchMessages = useCallback(async () => {
     if (isDemoRoom) {
@@ -142,12 +184,18 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     }
   }, [clubId, isDemoRoom]);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadBlockedUsers();
+    }, [loadBlockedUsers]),
+  );
+
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
 
   useEffect(() => {
-    if (isDemoRoom) return;
+    if (isDemoRoom) return undefined;
 
     subscribeClubRoom(clubId);
 
@@ -194,6 +242,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         String(event.clubId) === String(clubId)
       ) {
         if (String(event.userId) === String(myUserId)) return;
+        if (blockedUserIds.includes(String(event.userId))) return;
 
         setTypingUsers((prev) => {
           const others = prev.filter(
@@ -217,15 +266,21 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       unsubscribe();
       sendTyping(clubId, false);
     };
-  }, [clubId, isDemoRoom, myUserId]);
+  }, [blockedUserIds, clubId, isDemoRoom, myUserId]);
+
+  const visibleItems = useMemo(() => {
+    return items.filter(
+      (item) => !blockedUserIds.includes(String(getSenderId(item))),
+    );
+  }, [blockedUserIds, items]);
 
   useEffect(() => {
-    if (items.length > 0) {
+    if (visibleItems.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd?.({ animated: true });
       }, 100);
     }
-  }, [items.length]);
+  }, [visibleItems.length]);
 
   const onChangeText = useCallback(
     (value) => {
@@ -251,6 +306,15 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   const onSend = useCallback(async () => {
     const content = text.trim();
     if (!content || sending) return;
+
+    const moderation = evaluateCommunityContent(content);
+    if (moderation.blocked) {
+      Alert.alert(
+        "Tin nhắn bị chặn",
+        `Nội dung bạn nhập có dấu hiệu ${moderation.category?.toLowerCase()}. Vui lòng chỉnh lại trước khi gửi.`,
+      );
+      return;
+    }
 
     if (isDemoRoom) {
       setItems((prev) => [
@@ -320,7 +384,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     } finally {
       setSending(false);
     }
-  }, [text, sending, clubId, isDemoRoom, myUserId, me, fetchMessages]);
+  }, [text, sending, isDemoRoom, myUserId, me, clubId, fetchMessages]);
 
   const onDelete = useCallback(
     async (item) => {
@@ -340,6 +404,114 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       }
     },
     [clubId, isDemoRoom],
+  );
+
+  const handleBlockUser = useCallback(
+    (item) => {
+      const senderId = String(getSenderId(item));
+      if (!senderId) return;
+
+      Alert.alert(
+        "Chặn người dùng",
+        `Tin nhắn của ${getSenderName(item)} sẽ bị gỡ khỏi màn hình ngay và một báo cáo moderation sẽ được tạo cho đội ngũ Hanaka Sport.`,
+        [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Chặn",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await blockCommunityUser({
+                  clubId,
+                  userId: senderId,
+                  fullName: getSenderName(item),
+                  reason: "hate_or_harassment",
+                  messageId: item.messageId,
+                  source: isDemoRoom ? "demo_chat_block" : "chat_block",
+                });
+
+                setBlockedUserIds((prev) =>
+                  prev.includes(senderId) ? prev : [...prev, senderId],
+                );
+
+                Alert.alert(
+                  "Đã chặn người dùng",
+                  "Người dùng đã bị chặn, nội dung của họ đã bị gỡ khỏi cuộc trò chuyện của bạn.",
+                );
+              } catch (error) {
+                Alert.alert(
+                  "Không thể chặn",
+                  error?.message || "Đã xảy ra lỗi khi chặn người dùng.",
+                );
+              }
+            },
+          },
+        ],
+      );
+    },
+    [clubId, isDemoRoom],
+  );
+
+  const onOpenMessageActions = useCallback(
+    (item) => {
+      setSelectedMessage(item);
+
+      Alert.alert(
+        getSenderName(item),
+        "Chọn hành động moderation cho nội dung này.",
+        [
+          {
+            text: "Báo cáo tin nhắn",
+            onPress: () => setReportPickerVisible(true),
+          },
+          {
+            text: "Chặn người dùng",
+            style: "destructive",
+            onPress: () => {
+              setSelectedMessage(null);
+              handleBlockUser(item);
+            },
+          },
+          {
+            text: "Hủy",
+            style: "cancel",
+            onPress: () => setSelectedMessage(null),
+          },
+        ],
+      );
+    },
+    [handleBlockUser],
+  );
+
+  const onSelectReportReason = useCallback(
+    async (option) => {
+      if (!selectedMessage) return;
+
+      try {
+        await reportChatMessage({
+          clubId,
+          messageId: selectedMessage.messageId,
+          messageContent: selectedMessage.content || "",
+          targetUserId: getSenderId(selectedMessage),
+          targetUserName: getSenderName(selectedMessage),
+          reason: option?.value || "other",
+          source: isDemoRoom ? "demo_chat_report" : "chat_report",
+        });
+
+        Alert.alert(
+          "Đã gửi báo cáo",
+          "Báo cáo của bạn đã được ghi nhận. Đội ngũ Hanaka Sport sẽ xử lý trong vòng 24 giờ.",
+        );
+      } catch (error) {
+        Alert.alert(
+          "Không thể báo cáo",
+          error?.message || "Đã xảy ra lỗi khi gửi báo cáo.",
+        );
+      } finally {
+        setSelectedMessage(null);
+      }
+    },
+    [clubId, isDemoRoom, selectedMessage],
   );
 
   const typingText = useMemo(() => {
@@ -363,19 +535,30 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           <Text style={styles.roomHeaderSub}>
             {typingText ||
               (isDemoRoom
-                ? "Hội thoại mẫu để App Review kiểm tra"
-                : "Chat thành viên CLB")}
+                ? "Chat mẫu cho App Review kiểm tra report/block/filter"
+                : "Chat thành viên CLB đã bật moderation")}
           </Text>
         </View>
       </View>
     );
-  }, [navigation, clubName, isDemoRoom, typingText]);
+  }, [navigation, clubName, typingText, isDemoRoom]);
 
   return (
     <View style={styles.safe}>
       <AppStatusBar backgroundColor={COLORS.BLUE} />
 
       {header}
+
+      <View style={styles.safetyBanner}>
+        <Ionicons name="shield-checkmark" size={18} color={COLORS.BLUE} />
+        <View style={styles.safetyBannerBody}>
+          <Text style={styles.safetyBannerTitle}>Bộ lọc an toàn đang hoạt động</Text>
+          <Text style={styles.safetyBannerText}>
+            Tin nhắn phản cảm có thể bị chặn hoặc ẩn. Chạm biểu tượng lá chắn
+            cạnh tin nhắn của người khác để báo cáo hoặc chặn người dùng.
+          </Text>
+        </View>
+      </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -390,31 +573,49 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           <>
             <FlatList
               ref={flatListRef}
-              data={items}
+              data={visibleItems}
               keyExtractor={(item) => String(item.messageId)}
               renderItem={({ item }) => {
-                const isMine = String(item.senderUserId) === String(myUserId);
+                const isMine = String(getSenderId(item)) === String(myUserId);
+                const moderation = evaluateCommunityContent(item.content);
+
                 return (
                   <MessageItem
                     item={item}
                     isMine={isMine}
+                    moderation={moderation}
                     onDelete={onDelete}
+                    onOpenActions={onOpenMessageActions}
                   />
                 );
               }}
               contentContainerStyle={styles.msgListPad}
               showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centerState}>
+                  <Ionicons name="shield-outline" size={30} color="#94A3B8" />
+                  <Text style={styles.stateText}>
+                    Không còn tin nhắn hiển thị. Có thể bạn đã chặn các tài khoản
+                    còn lại trong cuộc trò chuyện này.
+                  </Text>
+                </View>
+              }
             />
 
             <View style={styles.inputBar}>
-              <TextInput
-                value={text}
-                onChangeText={onChangeText}
-                placeholder="Nhập tin nhắn..."
-                placeholderTextColor="#9CA3AF"
-                style={styles.input}
-                multiline
-              />
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={text}
+                  onChangeText={onChangeText}
+                  placeholder="Nhập tin nhắn..."
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.input}
+                  multiline
+                />
+                <Text style={styles.inputNotice}>
+                  Nội dung xúc phạm, đe dọa hoặc phản cảm sẽ bị bộ lọc chặn.
+                </Text>
+              </View>
 
               <Pressable
                 style={[
@@ -430,6 +631,23 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           </>
         )}
       </KeyboardAvoidingView>
+
+      <OptionPickerModal
+        visible={reportPickerVisible}
+        title="Chọn lý do báo cáo"
+        options={COMMUNITY_REPORT_REASONS}
+        selectedValue={null}
+        getLabel={(item) => item.label}
+        getValue={(item) => item.value}
+        onClose={() => {
+          setReportPickerVisible(false);
+          setSelectedMessage(null);
+        }}
+        onSelect={(item) => {
+          setReportPickerVisible(false);
+          onSelectReportReason(item);
+        }}
+      />
     </View>
   );
 }

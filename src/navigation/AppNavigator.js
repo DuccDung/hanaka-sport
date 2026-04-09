@@ -13,6 +13,7 @@ import NotificationScreen from "../screens/Setting/NotificationScreen";
 import GuideScreen from "../screens/Setting/GuideScreen";
 import WebViewScreen from "../screens/Setting/WebViewScreen";
 import PolicyWebViewScreen from "../screens/Setting/PolicyWebViewScreen";
+import CommunitySafetyScreen from "../screens/Setting/CommunitySafetyScreen";
 
 const Root = createNativeStackNavigator();
 
@@ -35,6 +36,7 @@ export default function AppNavigator() {
         <Root.Screen name="Guide" component={GuideScreen} />
         <Root.Screen name="AppWebView" component={WebViewScreen} />
         <Root.Screen name="PolicyWebView" component={PolicyWebViewScreen} />
+        <Root.Screen name="CommunitySafety" component={CommunitySafetyScreen} />
       </Root.Navigator>
     </NavigationContainer>
   );

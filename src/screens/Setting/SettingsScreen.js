@@ -10,9 +10,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-
 import { COLORS } from "../../constants/colors";
+import { COMMUNITY_PRIVACY_URL } from "../../constants/communitySafety";
 import { styles } from "./styles";
+
+function NavRow({ label, icon, onPress }) {
+  return (
+    <Pressable style={styles.navRow} onPress={onPress}>
+      <View style={styles.navRowLeft}>
+        <Ionicons name={icon} size={18} color={COLORS.BLUE} />
+        <Text style={styles.navRowLabel}>{label}</Text>
+      </View>
+
+      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+    </Pressable>
+  );
+}
 
 export default function SettingsScreen() {
   const navigation = useNavigation();
@@ -23,7 +36,7 @@ export default function SettingsScreen() {
   const [showBirthday, setShowBirthday] = useState(false);
   const [birthdayNotify, setBirthdayNotify] = useState(false);
 
-  const appVersion = "1.8.7 (384)";
+  const appVersion = "1.0.0";
 
   return (
     <SafeAreaView style={styles.settingsSafe}>
@@ -38,7 +51,7 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-back" size={24} color="#1E2430" />
         </Pressable>
 
-        <Text style={styles.settingsHeaderTitle}>Cài Đặt</Text>
+        <Text style={styles.settingsHeaderTitle}>Cài đặt</Text>
 
         <View style={styles.settingsHeaderRight} />
       </View>
@@ -93,6 +106,34 @@ export default function SettingsScreen() {
               ios_backgroundColor="#D9D7E2"
             />
           </View>
+        </View>
+
+        <View style={styles.settingsDivider} />
+
+        <View style={styles.settingsSection}>
+          <Text style={styles.settingsSectionTitle}>An toàn cộng đồng</Text>
+
+          <NavRow
+            label="Điều khoản, moderation và block list"
+            icon="shield-checkmark-outline"
+            onPress={() => navigation.navigate("CommunitySafety")}
+          />
+
+          <NavRow
+            label="Chính sách quyền riêng tư"
+            icon="document-text-outline"
+            onPress={() =>
+              navigation.navigate("PolicyWebView", {
+                title: "Chính sách quyền riêng tư",
+                url: COMMUNITY_PRIVACY_URL,
+              })
+            }
+          />
+
+          <Text style={styles.sectionNote}>
+            Chat CLB đã bật bộ lọc nội dung, cơ chế báo cáo vi phạm, chặn người
+            dùng và cam kết xử lý moderation trong vòng 24 giờ.
+          </Text>
         </View>
 
         <View style={styles.settingsDivider} />

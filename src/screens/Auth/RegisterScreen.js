@@ -12,10 +12,10 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registerStyles";
 import { register } from "../../services/authApi";
+import { COMMUNITY_PRIVACY_URL } from "../../constants/communitySafety";
 
 function isEmail(email = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -30,15 +30,17 @@ export default function RegisterScreen({ navigation }) {
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
   const [focusedField, setFocusedField] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const canSubmit = useMemo(() => {
     return (
       fullName.trim().length >= 2 &&
       isEmail(email) &&
       password.trim().length >= 6 &&
+      agreedToTerms &&
       !submitting
     );
-  }, [fullName, email, password, submitting]);
+  }, [fullName, email, password, agreedToTerms, submitting]);
 
   const onSubmit = async () => {
     if (!fullName.trim()) {
@@ -58,6 +60,13 @@ export default function RegisterScreen({ navigation }) {
 
     if (password.trim().length < 6) {
       setErrorText("Mật khẩu tối thiểu 6 ký tự.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setErrorText(
+        "Bạn cần đồng ý Điều khoản sử dụng và Tiêu chuẩn cộng đồng trước khi tạo tài khoản.",
+      );
       return;
     }
 
@@ -81,6 +90,7 @@ export default function RegisterScreen({ navigation }) {
         email: email.trim(),
         fullName: fullName.trim(),
         gender: gender || null,
+        agreedToTerms: true,
       });
     } catch (e) {
       const msg =
@@ -124,7 +134,8 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Tạo tài khoản</Text>
             <Text style={styles.sectionDesc}>
-              Điền thông tin để đăng ký tài khoản mới.
+              Điền thông tin để đăng ký tài khoản mới và xác nhận điều khoản cộng
+              đồng trước khi dùng tính năng chat.
             </Text>
 
             <View style={styles.fieldBlock}>
@@ -288,6 +299,60 @@ export default function RegisterScreen({ navigation }) {
                 <Text style={styles.helperText}>
                   Bạn có thể bỏ qua mục này và tiếp tục đăng ký.
                 </Text>
+              </View>
+            </View>
+
+            <View style={styles.fieldBlock}>
+              <Pressable
+                onPress={() => setAgreedToTerms((prev) => !prev)}
+                style={[
+                  styles.termsCard,
+                  agreedToTerms && styles.termsCardActive,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    agreedToTerms && styles.checkboxActive,
+                  ]}
+                >
+                  {agreedToTerms ? (
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  ) : null}
+                </View>
+
+                <View style={styles.termsContent}>
+                  <Text style={styles.termsTitle}>
+                    Tôi đồng ý Điều khoản sử dụng và Tiêu chuẩn cộng đồng
+                  </Text>
+                  <Text style={styles.termsDesc}>
+                    Hanaka Sport không dung thứ cho nội dung phản cảm, quấy rối,
+                    đe dọa, spam hoặc người dùng lạm dụng trong khu vực chat CLB.
+                  </Text>
+                </View>
+              </Pressable>
+
+              <View style={styles.termsLinksRow}>
+                <Pressable
+                  onPress={() => navigation.navigate("CommunitySafety")}
+                  hitSlop={8}
+                >
+                  <Text style={styles.termsLink}>Điều khoản & moderation</Text>
+                </Pressable>
+
+                <Text style={styles.termsSeparator}>·</Text>
+
+                <Pressable
+                  onPress={() =>
+                    navigation.navigate("PolicyWebView", {
+                      title: "Chính sách quyền riêng tư",
+                      url: COMMUNITY_PRIVACY_URL,
+                    })
+                  }
+                  hitSlop={8}
+                >
+                  <Text style={styles.termsLink}>Chính sách quyền riêng tư</Text>
+                </Pressable>
               </View>
             </View>
 

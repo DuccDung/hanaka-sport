@@ -187,6 +187,77 @@ export const styles = StyleSheet.create({
     color: "#64748B",
   },
 
+  termsCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+
+  termsCardActive: {
+    borderColor: COLORS.BLUE,
+    backgroundColor: "#EFF6FF",
+  },
+
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+
+  checkboxActive: {
+    backgroundColor: COLORS.BLUE,
+    borderColor: COLORS.BLUE,
+  },
+
+  termsContent: {
+    flex: 1,
+  },
+
+  termsTitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+
+  termsDesc: {
+    marginTop: 6,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#64748B",
+  },
+
+  termsLinksRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  termsLink: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.BLUE,
+  },
+
+  termsSeparator: {
+    fontSize: 12,
+    color: "#94A3B8",
+  },
+
   errorBox: {
     marginTop: 12,
     paddingHorizontal: 12,

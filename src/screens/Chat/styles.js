@@ -29,6 +29,12 @@ export const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
+  termsGateWrap: {
+    flex: 1,
+    padding: 16,
+    justifyContent: "center",
+  },
+
   roomCard: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -108,6 +114,74 @@ export const styles = StyleSheet.create({
   },
   demoActionText: {
     color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  reviewHelperCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#DCE7F5",
+    padding: 14,
+    marginBottom: 14,
+  },
+  reviewHelperTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  reviewHelperBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  reviewHelperBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.BLUE,
+  },
+  reviewHelperCount: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  reviewHelperTitle: {
+    marginTop: 12,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  reviewHelperText: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#475569",
+  },
+  reviewHelperActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  reviewOutlineBtn: {
+    paddingHorizontal: 16,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reviewOutlineBtnText: {
+    color: COLORS.BLUE,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -217,6 +291,52 @@ export const styles = StyleSheet.create({
     color: "#DC2626",
     fontWeight: "700",
   },
+  msgActionBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E8EEF8",
+  },
+  msgMaskedBubble: {
+    borderStyle: "dashed",
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
+  },
+  msgMaskedText: {
+    color: "#9A3412",
+    fontStyle: "italic",
+  },
+
+  safetyBanner: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: -4,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  safetyBannerBody: {
+    flex: 1,
+  },
+  safetyBannerTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#1D4ED8",
+  },
+  safetyBannerText: {
+    marginTop: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#475569",
+  },
 
   inputBar: {
     borderTopWidth: 1,
@@ -247,5 +367,12 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.BLUE,
     alignItems: "center",
     justifyContent: "center",
+  },
+  inputNotice: {
+    marginTop: 6,
+    marginHorizontal: 2,
+    fontSize: 11,
+    lineHeight: 16,
+    color: "#6B7280",
   },
 });

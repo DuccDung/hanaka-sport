@@ -11,15 +11,16 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registerStyles";
 import { confirmOtp, resendOtp } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
+import { acceptCommunityTerms } from "../../services/communitySafetyService";
 
 export default function RegisterOtpScreen({ navigation, route }) {
   const email = route?.params?.email || "";
   const fullName = route?.params?.fullName || "";
+  const agreedToTerms = !!route?.params?.agreedToTerms;
   const { setAuthSession } = useAuth();
 
   const [otp, setOtp] = useState("");
@@ -53,6 +54,13 @@ export default function RegisterOtpScreen({ navigation, route }) {
         expiresAtUtc: data.expiresAtUtc,
         user: data.user,
       });
+
+      if (agreedToTerms) {
+        await acceptCommunityTerms({
+          source: "register_otp",
+          userId: data?.user?.userId || null,
+        });
+      }
 
       Alert.alert("Thành công", "Xác thực OTP thành công.");
 

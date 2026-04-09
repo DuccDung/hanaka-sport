@@ -79,4 +79,35 @@ export const styles = StyleSheet.create({
     color: "#4B5563",
     fontWeight: "400",
   },
+
+  navRow: {
+    minHeight: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+
+  navRowLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingRight: 12,
+  },
+
+  navRowLabel: {
+    flex: 1,
+    fontSize: 16,
+    lineHeight: 22,
+    color: "#1F2937",
+    fontWeight: "600",
+  },
+
+  sectionNote: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#64748B",
+  },
 });

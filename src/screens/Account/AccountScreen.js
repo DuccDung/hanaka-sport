@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,18 +15,20 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
-
 import { useAuth } from "../../context/AuthContext";
 import { styles } from "./styles";
 import { COLORS } from "../../constants/colors";
+import { COMMUNITY_PRIVACY_URL } from "../../constants/communitySafety";
 import {
   getMe,
   updateMe,
   uploadAvatar,
   deleteMe,
 } from "../../services/userService";
+import { getCommunityTermsState } from "../../services/communitySafetyService";
 
 const GENDERS = ["Nam", "Nữ", "Khác"];
 const PROVINCES = ["Bắc Giang", "Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng"];
@@ -87,6 +89,9 @@ export default function AccountScreen({ navigation }) {
   const [dobDate, setDobDate] = useState(
     userInSession?.birthOfDate ? new Date(userInSession.birthOfDate) : null,
   );
+  const [communityTermsAccepted, setCommunityTermsAccepted] = useState(false);
+  const [communityTermsAcceptedAt, setCommunityTermsAcceptedAt] =
+    useState(null);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [genderModal, setGenderModal] = useState(false);
@@ -97,7 +102,21 @@ export default function AccountScreen({ navigation }) {
     return userInSession?.verified ? "Đã xác thực" : "Chờ xác thực";
   }, [isLoggedIn, userInSession?.verified]);
 
-  const requireLogin = () => {
+  const communityText = useMemo(() => {
+    if (!communityTermsAccepted) {
+      return "Chưa đồng ý điều khoản cộng đồng";
+    }
+
+    if (!communityTermsAcceptedAt) {
+      return "Đã đồng ý điều khoản cộng đồng";
+    }
+
+    return `Đã đồng ý từ ${new Date(communityTermsAcceptedAt).toLocaleDateString(
+      "vi-VN",
+    )}`;
+  }, [communityTermsAccepted, communityTermsAcceptedAt]);
+
+  const requireLogin = useCallback(() => {
     if (isLoggedIn) return false;
 
     Alert.alert(
@@ -115,9 +134,9 @@ export default function AccountScreen({ navigation }) {
     );
 
     return true;
-  };
+  }, [isLoggedIn, navigation]);
 
-  const syncUserToState = (user) => {
+  const syncUserToState = useCallback((user) => {
     if (!user) return;
 
     setUserId(user?.userId ?? null);
@@ -129,9 +148,9 @@ export default function AccountScreen({ navigation }) {
     setProvince(user?.city ?? "");
     setBio(user?.bio ?? "");
     setDobDate(user?.birthOfDate ? new Date(user.birthOfDate) : null);
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (!accessToken) return;
 
     try {
@@ -150,12 +169,24 @@ export default function AccountScreen({ navigation }) {
     } finally {
       setRefreshingProfile(false);
     }
-  };
+  }, [accessToken, session, setAuthSession, syncUserToState]);
+
+  const loadCommunityTerms = useCallback(async () => {
+    const state = await getCommunityTermsState();
+    setCommunityTermsAccepted(!!state?.accepted);
+    setCommunityTermsAcceptedAt(state?.acceptedAt || null);
+  }, []);
 
   useEffect(() => {
     if (!accessToken) return;
     refreshProfile();
-  }, [accessToken]);
+  }, [accessToken, refreshProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCommunityTerms();
+    }, [loadCommunityTerms]),
+  );
 
   const onPickAvatar = async () => {
     if (requireLogin()) return;
@@ -425,6 +456,9 @@ export default function AccountScreen({ navigation }) {
         <Text style={styles.statusText}>
           Thành viên: <Text style={styles.statusBold}>{verifiedText}</Text>
         </Text>
+        <Text style={styles.statusSubText}>
+          Cộng đồng: <Text style={styles.statusBold}>{communityText}</Text>
+        </Text>
 
         <View style={styles.card}>
           <Label text="User ID" />
@@ -559,10 +593,19 @@ export default function AccountScreen({ navigation }) {
           </Pressable>
 
           <Pressable
+            onPress={() => navigation.navigate("CommunitySafety")}
+            style={[styles.btn, styles.btnBlueSoft]}
+          >
+            <Text style={styles.btnBlueSoftText}>
+              Điều khoản cộng đồng & báo cáo vi phạm
+            </Text>
+          </Pressable>
+
+          <Pressable
             onPress={() =>
               navigation.navigate("PolicyWebView", {
                 title: "Chính sách quyền riêng tư",
-                url: "https://hanakasport.click/policy/index",
+                url: COMMUNITY_PRIVACY_URL,
               })
             }
             style={[styles.btn, styles.btnGreen]}
