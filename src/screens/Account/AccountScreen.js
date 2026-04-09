@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import {
   deleteMe,
 } from "../../services/userService";
 import { getCommunityTermsState } from "../../services/communitySafetyService";
+import { getAuthSession } from "../../services/authStorage";
 
 const GENDERS = ["Nam", "Nữ", "Khác"];
 const PROVINCES = ["Bắc Giang", "Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng"];
@@ -96,6 +97,9 @@ export default function AccountScreen({ navigation }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [genderModal, setGenderModal] = useState(false);
   const [provinceModal, setProvinceModal] = useState(false);
+  const accessTokenRef = useRef(accessToken);
+  const profileRequestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   const verifiedText = useMemo(() => {
     if (!isLoggedIn) return "Chưa đăng nhập";
@@ -150,26 +154,81 @@ export default function AccountScreen({ navigation }) {
     setDobDate(user?.birthOfDate ? new Date(user.birthOfDate) : null);
   }, []);
 
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+
+    if (!accessToken) {
+      profileRequestIdRef.current += 1;
+      setRefreshingProfile(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      profileRequestIdRef.current += 1;
+    };
+  }, []);
+
+  const isCurrentProfileRequest = useCallback((requestId, tokenSnapshot) => {
+    return (
+      isMountedRef.current &&
+      profileRequestIdRef.current === requestId &&
+      !!tokenSnapshot &&
+      accessTokenRef.current === tokenSnapshot
+    );
+  }, []);
+
   const refreshProfile = useCallback(async () => {
     if (!accessToken) return;
+
+    const requestId = profileRequestIdRef.current + 1;
+    profileRequestIdRef.current = requestId;
+    const tokenSnapshot = accessToken;
 
     try {
       setRefreshingProfile(true);
       const me = await getMe();
 
+      if (!isCurrentProfileRequest(requestId, tokenSnapshot)) {
+        return;
+      }
+
+      const latestSession = await getAuthSession();
+
+      if (latestSession?.accessToken !== tokenSnapshot) {
+        return;
+      }
+
       syncUserToState(me);
 
       await setAuthSession({
-        accessToken: session.accessToken,
-        expiresAtUtc: session.expiresAtUtc,
+        accessToken: tokenSnapshot,
+        expiresAtUtc: latestSession?.expiresAtUtc || session?.expiresAtUtc,
         user: me,
       });
     } catch (error) {
+      if (!isCurrentProfileRequest(requestId, tokenSnapshot)) {
+        return;
+      }
       Alert.alert("Lỗi", "Không lấy được thông tin tài khoản.");
     } finally {
-      setRefreshingProfile(false);
+      if (
+        isMountedRef.current &&
+        profileRequestIdRef.current === requestId
+      ) {
+        setRefreshingProfile(false);
+      }
     }
-  }, [accessToken, session, setAuthSession, syncUserToState]);
+  }, [
+    accessToken,
+    isCurrentProfileRequest,
+    session?.expiresAtUtc,
+    setAuthSession,
+    syncUserToState,
+  ]);
 
   const loadCommunityTerms = useCallback(async () => {
     const state = await getCommunityTermsState();
@@ -404,12 +463,13 @@ export default function AccountScreen({ navigation }) {
           <Ionicons name="arrow-back" size={20} color="#111827" />
         </Pressable>
 
-        <Text style={styles.headerTitle}>
-          Thông tin tài khoản
-          {refreshingProfile ? "..." : ""}
-        </Text>
+        <Text style={styles.headerTitle}>Thông tin tài khoản</Text>
 
-        <View style={styles.headerRight} />
+        <View style={styles.headerRight}>
+          {refreshingProfile ? (
+            <ActivityIndicator size="small" color={COLORS.BLUE} />
+          ) : null}
+        </View>
       </View>
 
       <ScrollView
@@ -597,7 +657,7 @@ export default function AccountScreen({ navigation }) {
             style={[styles.btn, styles.btnBlueSoft]}
           >
             <Text style={styles.btnBlueSoftText}>
-              Điều khoản cộng đồng & báo cáo vi phạm
+              Điều khoản cộng đồng và quản lý chặn
             </Text>
           </Pressable>
 

@@ -1,7 +1,7 @@
 export const COMMUNITY_TERMS_VERSION = "2026-04-09";
 export const COMMUNITY_TERMS_LAST_UPDATED = "09/04/2026";
 
-export const COMMUNITY_SUPPORT_EMAIL = "support@hanakasport.click";
+export const COMMUNITY_SUPPORT_EMAIL = "duccdung999@gmail.com";
 export const COMMUNITY_SUPPORT_URL = "https://hanakasport.click";
 export const COMMUNITY_PRIVACY_URL = "https://hanakasport.click/policy/index";
 
@@ -51,4 +51,3 @@ export const COMMUNITY_REVIEW_STEPS = [
   "Mở chat mẫu, chạm biểu tượng lá chắn cạnh tin nhắn để báo cáo nội dung vi phạm.",
   "Chọn Chặn người dùng để gỡ tin nhắn của tài khoản đó khỏi màn hình ngay lập tức.",
 ];
-

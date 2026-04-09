@@ -30,9 +30,18 @@ export const styles = StyleSheet.create({
   },
 
   termsGateWrap: {
-    flex: 1,
     padding: 16,
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+  },
+  termsGateScroll: {
+    flex: 1,
+  },
+  termsGateScrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
+    paddingVertical: 16,
   },
 
   roomCard: {
@@ -168,6 +177,7 @@ export const styles = StyleSheet.create({
     marginTop: 12,
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: 10,
   },
   reviewOutlineBtn: {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -23,6 +24,7 @@ import {
 import { styles } from "./styles";
 import { addRealtimeListener } from "../../services/realtimeService";
 import { getReviewDemoChatRoom } from "../../mocks/reviewDemoData";
+import { useAuth } from "../../context/AuthContext";
 
 function formatTime(value) {
   if (!value) return "";
@@ -67,7 +69,7 @@ function ChatRoomItem({ item, onPress }) {
   );
 }
 
-function ReviewHelperCard({ reportCount, onOpenDemoChat, onOpenSafetyCenter }) {
+function ReviewHelperCard({ reportCount, onOpenDemoChat, onManageBlocks }) {
   return (
     <View style={styles.reviewHelperCard}>
       <View style={styles.reviewHelperTop}>
@@ -86,7 +88,8 @@ function ReviewHelperCard({ reportCount, onOpenDemoChat, onOpenSafetyCenter }) {
       </Text>
       <Text style={styles.reviewHelperText}>
         Để App Review kiểm tra: mở chat mẫu, chạm biểu tượng lá chắn cạnh tin
-        nhắn để báo cáo, hoặc chặn người dùng để ẩn nội dung ngay lập tức.
+        nhắn để báo cáo. Nếu đã chặn ai đó, bạn có thể vào mục quản lý chặn để
+        bỏ chặn ngay trong ứng dụng.
       </Text>
 
       <View style={styles.reviewHelperActions}>
@@ -94,11 +97,8 @@ function ReviewHelperCard({ reportCount, onOpenDemoChat, onOpenSafetyCenter }) {
           <Text style={styles.demoActionText}>Mở chat mẫu</Text>
         </Pressable>
 
-        <Pressable
-          style={styles.reviewOutlineBtn}
-          onPress={onOpenSafetyCenter}
-        >
-          <Text style={styles.reviewOutlineBtnText}>Mở safety center</Text>
+        <Pressable style={styles.reviewOutlineBtn} onPress={onManageBlocks}>
+          <Text style={styles.reviewOutlineBtnText}>Quản lý chặn</Text>
         </Pressable>
       </View>
     </View>
@@ -106,6 +106,7 @@ function ReviewHelperCard({ reportCount, onOpenDemoChat, onOpenSafetyCenter }) {
 }
 
 export default function ClubChatListScreen({ navigation }) {
+  const { session } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -115,6 +116,7 @@ export default function ClubChatListScreen({ navigation }) {
     acceptedAt: null,
   });
   const [reportCount, setReportCount] = useState(0);
+  const safetyScopeKey = `${session?.accessToken || "guest"}:${session?.user?.userId || "guest"}`;
 
   const loadSafetyState = useCallback(async () => {
     setTermsLoading(true);
@@ -131,6 +133,18 @@ export default function ClubChatListScreen({ navigation }) {
       setTermsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    setItems([]);
+    setLoading(true);
+    setRefreshing(false);
+    setTermsLoading(true);
+    setTermsState({
+      accepted: false,
+      acceptedAt: null,
+    });
+    setReportCount(0);
+  }, [safetyScopeKey]);
 
   const fetchRooms = useCallback(async ({ isRefresh = false } = {}) => {
     try {
@@ -154,7 +168,7 @@ export default function ClubChatListScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadSafetyState();
-    }, [loadSafetyState]),
+    }, [loadSafetyState, safetyScopeKey]),
   );
 
   useFocusEffect(
@@ -198,6 +212,10 @@ export default function ClubChatListScreen({ navigation }) {
     setTermsState(nextState);
   }, []);
 
+  const openBlockManager = useCallback(() => {
+    navigation.navigate("CommunitySafety");
+  }, [navigation]);
+
   const listHeader = useMemo(() => {
     if (!termsState.accepted) return null;
 
@@ -205,10 +223,10 @@ export default function ClubChatListScreen({ navigation }) {
       <ReviewHelperCard
         reportCount={reportCount}
         onOpenDemoChat={openDemoChat}
-        onOpenSafetyCenter={() => navigation.navigate("CommunitySafety")}
+        onManageBlocks={openBlockManager}
       />
     );
-  }, [navigation, openDemoChat, reportCount, termsState.accepted]);
+  }, [openDemoChat, openBlockManager, reportCount, termsState.accepted]);
 
   if (termsLoading) {
     return (
@@ -242,20 +260,27 @@ export default function ClubChatListScreen({ navigation }) {
           </Text>
         </View>
 
-        <View style={styles.termsGateWrap}>
-          <CommunityTermsCard
-            accepted={false}
-            onAccept={onAcceptTerms}
-            onOpenSafetyCenter={() => navigation.navigate("CommunitySafety")}
-            onOpenPrivacy={() =>
-              navigation.navigate("PolicyWebView", {
-                title: "Chính sách quyền riêng tư",
-                url: COMMUNITY_PRIVACY_URL,
-              })
-            }
-            acceptButtonLabel="Tôi đồng ý và vào khu vực chat"
-          />
-        </View>
+        <ScrollView
+          style={styles.termsGateScroll}
+          contentContainerStyle={styles.termsGateScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.termsGateWrap}>
+            <CommunityTermsCard
+              accepted={false}
+              compact
+              onAccept={onAcceptTerms}
+              onOpenSafetyCenter={openBlockManager}
+              onOpenPrivacy={() =>
+                navigation.navigate("PolicyWebView", {
+                  title: "Chính sách quyền riêng tư",
+                  url: COMMUNITY_PRIVACY_URL,
+                })
+              }
+              acceptButtonLabel="Tôi đồng ý và vào khu vực chat"
+            />
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -317,11 +342,9 @@ export default function ClubChatListScreen({ navigation }) {
 
               <Pressable
                 style={styles.reviewOutlineBtn}
-                onPress={() => navigation.navigate("CommunitySafety")}
+                onPress={openBlockManager}
               >
-                <Text style={styles.reviewOutlineBtnText}>
-                  Xem safety center
-                </Text>
+                <Text style={styles.reviewOutlineBtnText}>Quản lý chặn</Text>
               </Pressable>
             </View>
           }

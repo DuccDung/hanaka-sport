@@ -286,9 +286,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     (value) => {
       setText(value);
 
-      if (isDemoRoom) {
-        return;
-      }
+      if (isDemoRoom) return;
 
       sendTyping(clubId, value.trim().length > 0);
 
@@ -406,6 +404,10 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     [clubId, isDemoRoom],
   );
 
+  const openBlockManager = useCallback(() => {
+    navigation.navigate("CommunitySafety");
+  }, [navigation]);
+
   const handleBlockUser = useCallback(
     (item) => {
       const senderId = String(getSenderId(item));
@@ -436,7 +438,17 @@ export default function ClubChatRoomScreen({ navigation, route }) {
 
                 Alert.alert(
                   "Đã chặn người dùng",
-                  "Người dùng đã bị chặn, nội dung của họ đã bị gỡ khỏi cuộc trò chuyện của bạn.",
+                  "Người dùng đã bị chặn và nội dung của họ đã bị gỡ khỏi cuộc trò chuyện. Bạn có thể bỏ chặn trong mục quản lý chặn.",
+                  [
+                    {
+                      text: "Mở danh sách chặn",
+                      onPress: openBlockManager,
+                    },
+                    {
+                      text: "Đóng",
+                      style: "cancel",
+                    },
+                  ],
                 );
               } catch (error) {
                 Alert.alert(
@@ -449,7 +461,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         ],
       );
     },
-    [clubId, isDemoRoom],
+    [clubId, isDemoRoom, openBlockManager],
   );
 
   const onOpenMessageActions = useCallback(
@@ -516,8 +528,9 @@ export default function ClubChatRoomScreen({ navigation, route }) {
 
   const typingText = useMemo(() => {
     if (!typingUsers.length) return "";
-    if (typingUsers.length === 1)
+    if (typingUsers.length === 1) {
       return `${typingUsers[0].fullName} đang nhập...`;
+    }
     return `${typingUsers.length} người đang nhập...`;
   }, [typingUsers]);
 
@@ -535,13 +548,17 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           <Text style={styles.roomHeaderSub}>
             {typingText ||
               (isDemoRoom
-                ? "Chat mẫu cho App Review kiểm tra report/block/filter"
+                ? "Chat mẫu cho App Review kiểm tra report, block và filter"
                 : "Chat thành viên CLB đã bật moderation")}
           </Text>
         </View>
+
+        <Pressable onPress={openBlockManager} hitSlop={10}>
+          <Ionicons name="shield-half-outline" size={20} color="#fff" />
+        </Pressable>
       </View>
     );
-  }, [navigation, clubName, typingText, isDemoRoom]);
+  }, [navigation, clubName, typingText, isDemoRoom, openBlockManager]);
 
   return (
     <View style={styles.safe}>
@@ -555,7 +572,8 @@ export default function ClubChatRoomScreen({ navigation, route }) {
           <Text style={styles.safetyBannerTitle}>Bộ lọc an toàn đang hoạt động</Text>
           <Text style={styles.safetyBannerText}>
             Tin nhắn phản cảm có thể bị chặn hoặc ẩn. Chạm biểu tượng lá chắn
-            cạnh tin nhắn của người khác để báo cáo hoặc chặn người dùng.
+            cạnh tin nhắn của người khác để báo cáo hoặc chặn người dùng. Muốn
+            bỏ chặn, dùng biểu tượng lá chắn trên góc phải.
           </Text>
         </View>
       </View>
@@ -598,6 +616,14 @@ export default function ClubChatRoomScreen({ navigation, route }) {
                     Không còn tin nhắn hiển thị. Có thể bạn đã chặn các tài khoản
                     còn lại trong cuộc trò chuyện này.
                   </Text>
+                  <Pressable
+                    style={styles.reviewOutlineBtn}
+                    onPress={openBlockManager}
+                  >
+                    <Text style={styles.reviewOutlineBtnText}>
+                      Mở danh sách chặn
+                    </Text>
+                  </Pressable>
                 </View>
               }
             />
