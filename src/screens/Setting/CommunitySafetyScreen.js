@@ -244,7 +244,11 @@ export default function CommunitySafetyScreen({ navigation }) {
 
                 {item.pendingSync ? (
                   <View style={styles.pendingTag}>
-                    <Text style={styles.pendingTagText}>Đã ghi nhận</Text>
+                    <Text style={styles.pendingTagText}>Đã ghi nhận trên thiết bị</Text>
+                  </View>
+                ) : item.developerNotified ? (
+                  <View style={styles.pendingTag}>
+                    <Text style={styles.pendingTagText}>Đã gửi moderation</Text>
                   </View>
                 ) : null}
               </View>

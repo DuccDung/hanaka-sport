@@ -42,5 +42,6 @@ export const COMMUNITY_MODERATION_COMMITMENTS = [
   "Ứng dụng áp dụng bộ lọc an toàn cho nội dung chat và lưu lịch sử báo cáo vi phạm.",
   "Người dùng có thể báo cáo nội dung xấu hoặc chặn người dùng lạm dụng trực tiếp trong chat.",
   "Khi chặn người dùng, nội dung của họ bị gỡ khỏi phiên chat của bạn ngay lập tức.",
+  "Mọi hành động báo cáo hoặc chặn trong chat CLB đều được gửi ngay tới hộp thư moderation của Hanaka Sport.",
   "Đội ngũ Hanaka Sport cam kết xử lý báo cáo vi phạm trong vòng 24 giờ.",
 ];
