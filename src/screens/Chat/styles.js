@@ -300,12 +300,20 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
   },
   msgActionBtn: {
-    width: 24,
+    minWidth: 104,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    gap: 4,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#E8EEF8",
+  },
+  msgActionText: {
+    fontSize: 11,
+    color: COLORS.BLUE,
+    fontWeight: "700",
   },
   msgMaskedBubble: {
     borderStyle: "dashed",

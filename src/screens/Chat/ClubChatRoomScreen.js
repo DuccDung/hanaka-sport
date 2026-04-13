@@ -137,6 +137,7 @@ function MessageItem({ item, isMine, moderation, onDelete, onOpenActions }) {
               style={styles.msgActionBtn}
             >
               <Ionicons name="shield-outline" size={13} color={COLORS.BLUE} />
+              <Text style={styles.msgActionText}>Báo cáo / Chặn</Text>
             </Pressable>
           )}
         </View>
@@ -393,6 +394,11 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         "sendClubMessage error",
         error?.response?.data || error?.message,
       );
+      Alert.alert(
+        "Không thể gửi tin nhắn",
+        error?.response?.data?.message ||
+          "Tin nhắn chưa được gửi. Vui lòng kiểm tra nội dung hoặc kết nối mạng.",
+      );
       setText(content);
       fetchMessages();
     } finally {
@@ -439,7 +445,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
             style: "destructive",
             onPress: async () => {
               try {
-                await blockCommunityUser({
+                const blockedItem = await blockCommunityUser({
                   clubId,
                   userId: senderId,
                   fullName: getSenderName(item),
@@ -454,7 +460,9 @@ export default function ClubChatRoomScreen({ navigation, route }) {
 
                 Alert.alert(
                   "Đã chặn người dùng",
-                  "Người dùng đã bị chặn và nội dung của họ đã bị gỡ khỏi cuộc trò chuyện. Bạn có thể bỏ chặn trong mục quản lý chặn.",
+                  blockedItem?.developerNotified
+                    ? "Người dùng đã bị chặn, nội dung của họ đã bị gỡ khỏi cuộc trò chuyện và báo cáo đã được gửi tới moderation."
+                    : "Người dùng đã bị chặn và nội dung của họ đã bị gỡ khỏi cuộc trò chuyện. Báo cáo chưa gửi được tới moderation, vui lòng kiểm tra kết nối mạng.",
                   [
                     {
                       text: "Mở danh sách chặn",
@@ -516,7 +524,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       if (!selectedMessage) return;
 
       try {
-        await reportChatMessage({
+        const report = await reportChatMessage({
           clubId,
           messageId: selectedMessage.messageId,
           messageContent: selectedMessage.content || "",
@@ -527,8 +535,10 @@ export default function ClubChatRoomScreen({ navigation, route }) {
         });
 
         Alert.alert(
-          "Đã gửi báo cáo",
-          "Báo cáo của bạn đã được ghi nhận. Đội ngũ Hanaka Sport sẽ xử lý trong vòng 24 giờ.",
+          report?.developerNotified ? "Đã gửi báo cáo" : "Đã ghi nhận báo cáo",
+          report?.developerNotified
+            ? "Báo cáo của bạn đã được gửi tới moderation. Đội ngũ Hanaka Sport sẽ xử lý trong vòng 24 giờ."
+            : "Báo cáo đã được lưu trên thiết bị nhưng chưa gửi được tới moderation. Vui lòng kiểm tra kết nối mạng.",
         );
       } catch (error) {
         Alert.alert(

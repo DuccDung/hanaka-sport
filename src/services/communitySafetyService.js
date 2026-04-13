@@ -36,6 +36,16 @@ function normalizeId(value) {
   return String(value).trim();
 }
 
+function normalizeNumericId(value) {
+  const normalized = normalizeId(value);
+  if (!normalized || !/^\d+$/.test(normalized)) return null;
+
+  const numericValue = Number(normalized);
+  return Number.isSafeInteger(numericValue) && numericValue > 0
+    ? numericValue
+    : null;
+}
+
 function cloneValue(value) {
   if (Array.isArray(value)) return [...value];
   if (value && typeof value === "object") return { ...value };
@@ -274,6 +284,10 @@ function mapRemoteBlockedUser(item = {}, fallback = {}) {
     notes: item?.notes || fallback?.notes || "",
     source: item?.source || fallback?.source || "chat",
     blockedAt: item?.blockedAt || fallback?.blockedAt || new Date().toISOString(),
+    developerNotified:
+      item?.developerNotified ?? fallback?.developerNotified ?? false,
+    developerNotifiedAt:
+      item?.developerNotifiedAt || fallback?.developerNotifiedAt || null,
     pendingSync: false,
     syncedRemote: item?.syncedRemote ?? true,
   };
@@ -455,17 +469,17 @@ export async function getCommunityReports({ limit = 20 } = {}) {
 
 export async function submitCommunityReport(payload = {}) {
   const scope = await getCommunityScope();
-  const targetUserId = normalizeId(payload?.targetUserId);
+  const targetUserId = normalizeNumericId(payload?.targetUserId);
   const reportPayload = {
     reportId: createReportId("ugc"),
     kind: normalizeReportKind(payload?.kind),
     reason: normalizeReasonValue(payload?.reason),
     reasonLabel: makeReportReasonLabel(normalizeReasonValue(payload?.reason)),
     notes: payload?.notes?.trim() || "",
-    clubId: payload?.clubId || null,
-    messageId: payload?.messageId || null,
+    clubId: normalizeNumericId(payload?.clubId),
+    messageId: normalizeNumericId(payload?.messageId),
     messageContent: payload?.messageContent || "",
-    targetUserId: targetUserId || null,
+    targetUserId,
     targetUserName: payload?.targetUserName || "Người dùng",
     createdAt: new Date().toISOString(),
     source: payload?.source || "app",
@@ -571,31 +585,39 @@ export async function blockCommunityUser({
   );
 
   const normalizedReason = normalizeReasonValue(reason);
-  const remote = await tryRemoteRequest([
-    {
-      method: "post",
-      url: "/moderation/blocks",
-      data: {
-        clubId,
-        userId: normalizedUserId,
-        fullName: fullName || "Người dùng",
-        reason: normalizedReason,
-        messageId,
-        notes: "",
-        source,
-      },
-    },
-    {
-      method: "post",
-      url: `/users/${normalizedUserId}/block`,
-      data: {
-        clubId,
-        reason: normalizedReason,
-        messageId,
-        source,
-      },
-    },
-  ]);
+  const remoteClubId = normalizeNumericId(clubId);
+  const remoteMessageId = normalizeNumericId(messageId);
+  const remoteUserId = normalizeNumericId(userId);
+  const remote = remoteUserId
+    ? await tryRemoteRequest([
+        {
+          method: "post",
+          url: "/moderation/blocks",
+          data: {
+            clubId: remoteClubId,
+            userId: remoteUserId,
+            fullName: fullName || "Người dùng",
+            reason: normalizedReason,
+            messageId: remoteMessageId,
+            notes: "",
+            source,
+          },
+        },
+        {
+          method: "post",
+          url: `/users/${remoteUserId}/block`,
+          data: {
+            clubId: remoteClubId,
+            reason: normalizedReason,
+            messageId: remoteMessageId,
+            source,
+          },
+        },
+      ])
+    : {
+        ok: false,
+        error: null,
+      };
 
   const blockedItem =
     (remote.ok &&
@@ -625,96 +647,6 @@ export async function blockCommunityUser({
       (item) => normalizeId(item?.userId) !== normalizedUserId,
     ),
   ];
-
-  await writeScopedJson(STORAGE_KEYS.blockedUsers, nextBlockedUsers, {
-    userId: scope.userId,
-  });
-
-  const developerAlreadyNotifiedByBlockEndpoint =
-    remote.ok && remote.endpoint === "/moderation/blocks";
-
-  if (notifyDeveloper && !developerAlreadyNotifiedByBlockEndpoint) {
-    await reportChatUser({
-      clubId,
-      targetUserId: normalizedUserId,
-      targetUserName: blockedItem.fullName,
-      reason: normalizedReason,
-      notes: "Người dùng này đã bị chặn từ ứng dụng và cần moderator xem xét.",
-      source: "block_action",
-    });
-  }
-
-  return blockedItem;
-}
-
-async function legacyBlockCommunityUserDuplicate(userId) {
-  const normalizedUserId = normalizeId(userId);
-  if (!normalizedUserId) return [];
-
-  const scope = await getCommunityScope();
-  const existingUsers = await readLocalBlockedUsers({ userId: scope.userId });
-  const existingItem = existingUsers.find(
-    (item) => normalizeId(item?.userId) === normalizedUserId,
-  );
-
-  const normalizedReason = normalizeReasonValue(reason);
-  const remote = await tryRemoteRequest([
-    {
-      method: "post",
-      url: "/moderation/blocks",
-      data: {
-        clubId,
-        userId: normalizedUserId,
-        fullName: fullName || "Người dùng",
-        reason: normalizedReason,
-        messageId,
-        notes: "",
-        source,
-      },
-    },
-    {
-      method: "post",
-      url: `/users/${normalizedUserId}/block`,
-      data: {
-        clubId,
-        reason: normalizedReason,
-        messageId,
-        source,
-      },
-    },
-  ]);
-
-  const blockedItem =
-    (remote.ok &&
-      mapRemoteBlockedUser(remote?.data?.item, {
-        userId: normalizedUserId,
-        fullName: fullName || existingItem?.fullName || "Người dùng",
-        clubId: clubId || existingItem?.clubId || null,
-        messageId: messageId || existingItem?.messageId || null,
-        reason: normalizedReason,
-        source,
-      })) || {
-      userId: normalizedUserId,
-      fullName: fullName || existingItem?.fullName || "Người dùng",
-      clubId: clubId || existingItem?.clubId || null,
-      messageId: messageId || existingItem?.messageId || null,
-      blockedAt: existingItem?.blockedAt || new Date().toISOString(),
-      reason: normalizedReason,
-      source,
-      syncedRemote: false,
-      pendingSync: true,
-      remoteEndpoint: remote.endpoint || null,
-    };
-
-  const nextBlockedUsers = mergeByKey(
-    [
-      blockedItem,
-      ...existingUsers.filter(
-        (item) => normalizeId(item?.userId) !== normalizedUserId,
-      ),
-    ],
-    (item) => normalizeId(item?.userId),
-  );
 
   await writeScopedJson(STORAGE_KEYS.blockedUsers, nextBlockedUsers, {
     userId: scope.userId,
