@@ -17,10 +17,10 @@ import { COLORS } from "../../constants/colors";
 import { COMMUNITY_PRIVACY_URL } from "../../constants/communitySafety";
 import { getMyClubChatRooms } from "../../services/chatService";
 import {
-  acceptCommunityTerms,
+  acceptCommunityChatTerms,
   getBlockedUsers,
+  getCommunityChatTermsState,
   getCommunityReports,
-  getCommunityTermsState,
   getSafeCommunityText,
 } from "../../services/communitySafetyService";
 import { styles } from "./styles";
@@ -148,7 +148,7 @@ export default function ClubChatListScreen({ navigation }) {
 
     try {
       const [nextTermsState, nextBlockedUsers, reports] = await Promise.all([
-        getCommunityTermsState(),
+        getCommunityChatTermsState(),
         getBlockedUsers(),
         getCommunityReports({ limit: 20 }),
       ]);
@@ -233,7 +233,7 @@ export default function ClubChatListScreen({ navigation }) {
   }, [navigation]);
 
   const onAcceptTerms = useCallback(async () => {
-    const nextState = await acceptCommunityTerms({
+    const nextState = await acceptCommunityChatTerms({
       source: "chat_gate",
     });
 

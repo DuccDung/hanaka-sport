@@ -38,7 +38,7 @@ export const COMMUNITY_ZERO_TOLERANCE_ITEMS = [
 ];
 
 export const COMMUNITY_MODERATION_COMMITMENTS = [
-  "Người dùng phải đồng ý Điều khoản sử dụng trước khi truy cập nội dung cộng đồng.",
+  "Người dùng phải đồng ý Điều khoản sử dụng / EULA trước khi truy cập nội dung cộng đồng.",
   "Ứng dụng áp dụng bộ lọc an toàn cho nội dung chat và lưu lịch sử báo cáo vi phạm.",
   "Người dùng có thể báo cáo nội dung xấu hoặc chặn người dùng lạm dụng trực tiếp trong chat.",
   "Khi chặn người dùng, nội dung của họ bị gỡ khỏi phiên chat của bạn ngay lập tức.",

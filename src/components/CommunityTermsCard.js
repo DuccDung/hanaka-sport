@@ -47,10 +47,13 @@ export default function CommunityTermsCard({
         </View>
       </View>
 
-      <Text style={styles.title}>Điều khoản sử dụng & tiêu chuẩn cộng đồng</Text>
+      <Text style={styles.title}>
+        Điều khoản sử dụng / Tiêu chuẩn cộng đồng / EULA
+      </Text>
 
       <Text style={styles.subtitle}>
-        Người dùng phải đồng ý trước khi truy cập chat CLB.
+        Người dùng phải đồng ý EULA và tiêu chuẩn cộng đồng trước khi xem hoặc
+        gửi nội dung trong chat CLB.
       </Text>
 
       {acceptedAt ? (

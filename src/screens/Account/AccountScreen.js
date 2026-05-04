@@ -806,13 +806,16 @@ export default function AccountScreen({ navigation }) {
           </Pressable>
 
           <Pressable
-            onPress={onDeleteAccount}
+            onPress={() => {
+              if (requireLogin()) return;
+              navigation.navigate("DeleteAccount");
+            }}
             style={[
               styles.btn,
               styles.btnDanger,
-              (!canInteractWithProfile || deletingAccount) && styles.btnDisabled,
+              !canInteractWithProfile && styles.btnDisabled,
             ]}
-            disabled={!canInteractWithProfile || deletingAccount}
+            disabled={!canInteractWithProfile}
           >
             <Text style={styles.btnDangerText}>
               {deletingAccount ? "Đang xóa tài khoản..." : "Xóa tài khoản"}

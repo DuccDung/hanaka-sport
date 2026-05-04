@@ -8,6 +8,7 @@ import AuthStack from "./AuthStack";
 import VideoPlayerScreen from "../screens/Videos/VideoPlayerScreen";
 import AccountScreen from "../screens/Account/AccountScreen";
 import ChangePasswordScreen from "../screens/Account/ChangePasswordScreen";
+import DeleteAccountScreen from "../screens/Account/DeleteAccountScreen";
 import SettingsScreen from "../screens/Setting/SettingsScreen";
 import NotificationScreen from "../screens/Setting/NotificationScreen";
 import GuideScreen from "../screens/Setting/GuideScreen";
@@ -31,6 +32,7 @@ export default function AppNavigator() {
         <Root.Screen name="VideoPlayer" component={VideoPlayerScreen} />
         <Root.Screen name="Account" component={AccountScreen} />
         <Root.Screen name="ChangePassword" component={ChangePasswordScreen} />
+        <Root.Screen name="DeleteAccount" component={DeleteAccountScreen} />
         <Root.Screen name="Settings" component={SettingsScreen} />
         <Root.Screen name="Notification" component={NotificationScreen} />
         <Root.Screen name="Guide" component={GuideScreen} />

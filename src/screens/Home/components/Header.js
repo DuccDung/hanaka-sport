@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 import AppStatusBar from "../../../components/AppStatusBar";
+import NotificationBellButton from "../../../components/NotificationBellButton";
 import { COLORS } from "../../../constants/colors";
 import { styles } from "../styles";
 import { useAuth } from "../../../context/AuthContext";
@@ -44,12 +45,12 @@ export default function Header({ sport, onToggleSport, onPressAvatar }) {
         </SportWrapper>
 
         <View style={styles.headerRight}>
-          <Pressable
+          <NotificationBellButton
             style={styles.headerIcon}
+            size={22}
+            color="#fff"
             onPress={() => navigation.navigate("Notification")}
-          >
-            <Ionicons name="notifications-outline" size={22} color="#fff" />
-          </Pressable>
+          />
 
           <Pressable
             style={styles.headerIcon}

@@ -104,6 +104,10 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  navRowLabelDanger: {
+    color: "#B91C1C",
+  },
+
   sectionNote: {
     marginTop: 8,
     fontSize: 13,

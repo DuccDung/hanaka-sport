@@ -9,6 +9,7 @@ import {
 
 const STORAGE_KEYS = {
   terms: "communityTermsState_v1",
+  chatTerms: "communityChatTermsState_v1",
   blockedUsers: "communityBlockedUsers_v1",
   reports: "communityReports_v1",
 };
@@ -357,11 +358,7 @@ export function evaluateCommunityContent(content = "") {
   };
 }
 
-export async function getCommunityTermsState() {
-  const { value: saved } = await readScopedJson(STORAGE_KEYS.terms, null, {
-    legacyResolver: resolveLegacyTermsState,
-  });
-
+function normalizeTermsState(saved) {
   if (!saved) {
     return {
       version: COMMUNITY_TERMS_VERSION,
@@ -379,15 +376,15 @@ export async function getCommunityTermsState() {
   };
 }
 
-export async function hasAcceptedCommunityTerms() {
-  const state = await getCommunityTermsState();
-  return !!state.accepted;
+async function getTermsStateForKey(baseKey, options = {}) {
+  const { value: saved } = await readScopedJson(baseKey, null, options);
+  return normalizeTermsState(saved);
 }
 
-export async function acceptCommunityTerms({
-  source = "manual",
-  userId = null,
-} = {}) {
+async function acceptTermsForKey(
+  baseKey,
+  { source = "manual", userId = null } = {},
+) {
   const scope = await getCommunityScope(userId);
   const nextState = {
     version: COMMUNITY_TERMS_VERSION,
@@ -397,10 +394,44 @@ export async function acceptCommunityTerms({
     userId: scope.userId,
   };
 
-  await writeScopedJson(STORAGE_KEYS.terms, nextState, {
+  await writeScopedJson(baseKey, nextState, {
     userId: scope.userId,
   });
   return nextState;
+}
+
+export async function getCommunityTermsState() {
+  return getTermsStateForKey(STORAGE_KEYS.terms, {
+    legacyResolver: resolveLegacyTermsState,
+  });
+}
+
+export async function hasAcceptedCommunityTerms() {
+  const state = await getCommunityTermsState();
+  return !!state.accepted;
+}
+
+export async function acceptCommunityTerms({
+  source = "manual",
+  userId = null,
+} = {}) {
+  return acceptTermsForKey(STORAGE_KEYS.terms, { source, userId });
+}
+
+export async function getCommunityChatTermsState() {
+  return getTermsStateForKey(STORAGE_KEYS.chatTerms);
+}
+
+export async function hasAcceptedCommunityChatTerms() {
+  const state = await getCommunityChatTermsState();
+  return !!state.accepted;
+}
+
+export async function acceptCommunityChatTerms({
+  source = "chat_gate",
+  userId = null,
+} = {}) {
+  return acceptTermsForKey(STORAGE_KEYS.chatTerms, { source, userId });
 }
 
 export async function getBlockedUsers() {

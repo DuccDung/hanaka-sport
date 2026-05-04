@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AppStatusBar from "../../components/AppStatusBar";
+import NotificationBellButton from "../../components/NotificationBellButton";
 import { COLORS } from "../../constants/colors";
 import { styles } from "./styles";
 import { getMyClubs } from "../../services/clubService";
@@ -386,13 +387,12 @@ export default function MyClubsScreen({ navigation }) {
           </Text>
 
           <View style={styles.headerIcons}>
-            <Pressable
+            <NotificationBellButton
               style={styles.headerIconBtn}
-              hitSlop={10}
+              size={20}
+              color="#fff"
               onPress={() => rootNavigation.navigate("Notification")}
-            >
-              <Ionicons name="notifications-outline" size={20} color="#fff" />
-            </Pressable>
+            />
 
             <Pressable
               style={styles.headerIconBtn}

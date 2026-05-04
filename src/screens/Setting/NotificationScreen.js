@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -11,20 +11,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 
 import { COLORS } from "../../constants/colors";
 import { styles } from "./notificationStyles";
-import { getUpcomingMatchNotifications } from "../../services/notificationService";
-
-function buildOpponentText(item) {
-  const p1 = item?.opponentTeam?.player1?.name;
-  const p2 = item?.opponentTeam?.player2?.name;
-
-  if (p1 && p2) return `${p1} - ${p2}`;
-  if (p1) return p1;
-  return "Chưa xác định đối thủ";
-}
+import { getNotificationInbox } from "../../services/notificationService";
+import { addRealtimeListener } from "../../services/realtimeService";
 
 export default function NotificationScreen() {
   const navigation = useNavigation();
@@ -33,31 +25,51 @@ export default function NotificationScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNotifications = useCallback(async ({ isRefresh = false } = {}) => {
-    try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+  const fetchNotifications = useCallback(
+    async ({ isRefresh = false, silent = false } = {}) => {
+      try {
+        if (isRefresh) setRefreshing(true);
+        else if (!silent) setLoading(true);
 
-      const res = await getUpcomingMatchNotifications();
-      setNotifications(res?.items || []);
-    } catch (error) {
-      console.log(
-        "getUpcomingMatchNotifications error",
-        error?.response?.data || error?.message,
-      );
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+        const res = await getNotificationInbox();
+        setNotifications(res?.items || []);
+      } catch (error) {
+        console.log(
+          "getNotificationInbox error",
+          error?.response?.data || error?.message,
+        );
+        setNotifications([]);
+      } finally {
+        if (isRefresh) setRefreshing(false);
+        else if (!silent) setLoading(false);
+      }
+    },
+    [],
+  );
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications();
+    }, [fetchNotifications]),
+  );
 
-  const renderItem = ({ item }) => {
-    const opponentText = buildOpponentText(item);
+  useFocusEffect(
+    useCallback(() => {
+      const removeListener = addRealtimeListener((event) => {
+        if (
+          event?.type === "tournament.notification" ||
+          event?.type === "__socket_open__"
+        ) {
+          fetchNotifications({ silent: true });
+        }
+      });
+
+      return removeListener;
+    }, [fetchNotifications]),
+  );
+
+  const renderItem = useCallback(({ item }) => {
+    const metaLines = item?.metaLines || [];
 
     return (
       <View style={styles.notificationCard}>
@@ -67,28 +79,21 @@ export default function NotificationScreen() {
 
         <Text style={styles.notificationMessage}>{item.message}</Text>
 
-        <Text style={styles.notificationMessage}>Đối thủ: {opponentText}</Text>
+        {metaLines.map((line, index) => (
+          <Text
+            key={`${item.id}-meta-${index}`}
+            style={styles.notificationMessage}
+          >
+            {line}
+          </Text>
+        ))}
 
-        <Text style={styles.notificationMessage}>
-          Thời gian: {item?.match?.startAtText || "Chưa cập nhật"}
-        </Text>
-
-        <Text style={styles.notificationMessage}>
-          Địa điểm: {item?.match?.addressText || "Chưa cập nhật"}
-        </Text>
-
-        <Text style={styles.notificationMessage}>
-          Sân: {item?.match?.courtText || "Chưa cập nhật"}
-        </Text>
-
-        <Text style={styles.notificationTime}>
-          {item?.match?.startAtText || ""}
-        </Text>
+        <Text style={styles.notificationTime}>{item?.timeText || ""}</Text>
       </View>
     );
-  };
+  }, []);
 
-  const keyExtractor = useMemo(() => (item) => String(item.id), []);
+  const keyExtractor = useCallback((item) => String(item.id), []);
 
   return (
     <SafeAreaView style={styles.notificationSafe}>
@@ -139,7 +144,7 @@ export default function NotificationScreen() {
                 color="#9CA3AF"
               />
               <Text style={styles.notificationEmptyText}>
-                Hiện chưa có thông báo thi đấu sắp tới.
+                Hiện chưa có thông báo nào.
               </Text>
             </View>
           }

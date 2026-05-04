@@ -16,13 +16,18 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import AppStatusBar from "../../components/AppStatusBar";
+import CommunityTermsCard from "../../components/CommunityTermsCard";
 import OptionPickerModal from "../../components/OptionPickerModal";
 import { COLORS } from "../../constants/colors";
-import { COMMUNITY_REPORT_REASONS } from "../../constants/communitySafety";
+import {
+  COMMUNITY_PRIVACY_URL,
+  COMMUNITY_REPORT_REASONS,
+} from "../../constants/communitySafety";
 import { styles } from "./styles";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -31,9 +36,11 @@ import {
   sendClubMessage,
 } from "../../services/chatService";
 import {
+  acceptCommunityChatTerms,
   blockCommunityUser,
   evaluateCommunityContent,
   getBlockedUserIds,
+  getCommunityChatTermsState,
   getSafeCommunityText,
   reportChatMessage,
 } from "../../services/communitySafetyService";
@@ -155,19 +162,53 @@ export default function ClubChatRoomScreen({ navigation, route }) {
     session?.user || (isDemoRoom ? getReviewDemoCurrentUser() : null);
   const myUserId = String(me?.userId ?? "");
 
-  const [items, setItems] = useState(() =>
-    isDemoRoom ? getReviewDemoMessages() : [],
-  );
+  const [items, setItems] = useState([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(!isDemoRoom);
+  const [termsLoading, setTermsLoading] = useState(true);
+  const [termsState, setTermsState] = useState({
+    accepted: false,
+    acceptedAt: null,
+  });
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
   const [blockedUserIds, setBlockedUserIds] = useState([]);
   const [reportPickerVisible, setReportPickerVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const safetyScopeKey = `${session?.accessToken || "guest"}:${session?.user?.userId || "guest"}`;
 
   const flatListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  const loadTermsState = useCallback(async () => {
+    setTermsLoading(true);
+
+    try {
+      const nextTermsState = await getCommunityChatTermsState();
+      setTermsState(nextTermsState);
+    } finally {
+      setTermsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setItems([]);
+    setText("");
+    setLoading(!isDemoRoom);
+    setTermsLoading(true);
+    setTermsState({
+      accepted: false,
+      acceptedAt: null,
+    });
+    setBlockedUserIds([]);
+    setTypingUsers([]);
+  }, [isDemoRoom, safetyScopeKey]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTermsState();
+    }, [loadTermsState, safetyScopeKey]),
+  );
 
   const loadBlockedUsers = useCallback(async () => {
     const blockedIds = await getBlockedUserIds();
@@ -208,11 +249,13 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   );
 
   useEffect(() => {
+    if (!termsState.accepted) return;
+
     fetchMessages();
-  }, [fetchMessages]);
+  }, [fetchMessages, termsState.accepted]);
 
   useEffect(() => {
-    if (isDemoRoom) return undefined;
+    if (isDemoRoom || !termsState.accepted) return undefined;
 
     subscribeClubRoom(clubId);
 
@@ -283,7 +326,7 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       unsubscribe();
       sendTyping(clubId, false);
     };
-  }, [blockedUserIds, clubId, isDemoRoom, myUserId]);
+  }, [blockedUserIds, clubId, isDemoRoom, myUserId, termsState.accepted]);
 
   const visibleItems = useMemo(() => {
     return items.filter(
@@ -429,6 +472,14 @@ export default function ClubChatRoomScreen({ navigation, route }) {
   const openBlockManager = useCallback(() => {
     navigation.navigate("CommunitySafety");
   }, [navigation]);
+
+  const onAcceptTerms = useCallback(async () => {
+    const nextState = await acceptCommunityChatTerms({
+      source: isDemoRoom ? "demo_chat_room_gate" : "chat_room_gate",
+    });
+
+    setTermsState(nextState);
+  }, [isDemoRoom]);
 
   const handleBlockUser = useCallback(
     (item) => {
@@ -585,6 +636,55 @@ export default function ClubChatRoomScreen({ navigation, route }) {
       </View>
     );
   }, [navigation, clubName, typingText, isDemoRoom, openBlockManager]);
+
+  if (termsLoading) {
+    return (
+      <View style={styles.safe}>
+        <AppStatusBar backgroundColor={COLORS.BLUE} />
+
+        {header}
+
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color={COLORS.BLUE} />
+          <Text style={styles.stateText}>
+            Đang kiểm tra Điều khoản sử dụng / EULA...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!termsState.accepted) {
+    return (
+      <View style={styles.safe}>
+        <AppStatusBar backgroundColor={COLORS.BLUE} />
+
+        {header}
+
+        <ScrollView
+          style={styles.termsGateScroll}
+          contentContainerStyle={styles.termsGateScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.termsGateWrap}>
+            <CommunityTermsCard
+              accepted={false}
+              compact
+              onAccept={onAcceptTerms}
+              onOpenSafetyCenter={openBlockManager}
+              onOpenPrivacy={() =>
+                navigation.navigate("PolicyWebView", {
+                  title: "Chính sách quyền riêng tư",
+                  url: COMMUNITY_PRIVACY_URL,
+                })
+              }
+              acceptButtonLabel="Tôi đồng ý EULA và vào chat"
+            />
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safe}>

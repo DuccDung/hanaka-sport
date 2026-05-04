@@ -19,11 +19,11 @@ import {
   COMMUNITY_SUPPORT_URL,
 } from "../../constants/communitySafety";
 import {
-  acceptCommunityTerms,
+  acceptCommunityChatTerms,
   getBlockedUsers,
+  getCommunityChatTermsState,
   getCommunityReports,
   getCommunityReasonLabel,
-  getCommunityTermsState,
   unblockCommunityUser,
 } from "../../services/communitySafetyService";
 import { styles } from "./communitySafetyStyles";
@@ -45,7 +45,7 @@ export default function CommunitySafetyScreen({ navigation }) {
 
   const loadData = useCallback(async () => {
     const [nextTermsState, nextBlockedUsers, nextReports] = await Promise.all([
-      getCommunityTermsState(),
+      getCommunityChatTermsState(),
       getBlockedUsers(),
       getCommunityReports({ limit: 10 }),
     ]);
@@ -62,7 +62,7 @@ export default function CommunitySafetyScreen({ navigation }) {
   );
 
   const onAcceptTerms = useCallback(async () => {
-    const nextState = await acceptCommunityTerms({
+    const nextState = await acceptCommunityChatTerms({
       source: "community_safety_screen",
     });
 
