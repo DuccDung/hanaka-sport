@@ -1,6 +1,5 @@
-// src/screens/Tournament/registrationStyles.js
+// src/screens/Tournament/registrationListStyles.js
 import { StyleSheet } from "react-native";
-import { COLORS } from "../../constants/colors";
 
 export const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#EEF2F8" },
@@ -16,23 +15,49 @@ export const styles = StyleSheet.create({
   backBtn: { padding: 6, marginRight: 6 },
   headerTitle: { fontSize: 15, fontWeight: "600", color: "#1E2430" },
 
-  // Links row
-  linksRow: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingBottom: 10,
+  // Action buttons row (like web)
+  actionsRow: {
     flexDirection: "row",
-    gap: 14,
-    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 14,
+    backgroundColor: "#fff",
   },
-  linkItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  linkText: { fontSize: 14, fontWeight: "400", color: COLORS.BLUE },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 38,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+  },
+  actionButtonPrimary: {
+    backgroundColor: "#DBEAFE",
+  },
+  actionButtonIcon: {
+    fontSize: 16,
+    color: "#1E2430",
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#1E2430",
+  },
+  actionButtonTextPrimary: {
+    color: "#2563EB",
+    fontWeight: "600",
+  },
 
-  // Stats badges
+  // Stats badges (keep similar)
   statsRow: {
     backgroundColor: "#fff",
     paddingHorizontal: 12,
-    paddingBottom: 10,
+    paddingBottom: 14,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
@@ -88,8 +113,6 @@ export const styles = StyleSheet.create({
   colVdv1: { flex: 1.15 },
   colVdv2: { flex: 1.15 },
   colPoint: { width: 52, alignItems: "center" },
-  colBt: { width: 46, alignItems: "center" },
-  colMoney: { width: 44, alignItems: "center" },
 
   // List
   listPad: { paddingBottom: 18 },
@@ -111,8 +134,6 @@ export const styles = StyleSheet.create({
   gridRow: { flexDirection: "row", alignItems: "flex-start", marginTop: 10 },
   playerCol: { flex: 1.15, alignItems: "center" },
   pointCol: { width: 52, alignItems: "center", paddingTop: 10 },
-  btCol: { width: 46, alignItems: "center", paddingTop: 6 },
-  moneyCol: { width: 44, alignItems: "center", paddingTop: 6 },
 
   avatarRing: {
     width: 54,
@@ -155,92 +176,4 @@ export const styles = StyleSheet.create({
   },
 
   pointsText: { fontSize: 13, fontWeight: "700", color: "#EF4444" },
-
-  minusBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: "#E5E7EB",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 3,
-    borderWidth: 1.5,
-    borderColor: "#9CA3AF",
-    backgroundColor: "#fff",
-  },
-  checkboxChecked: {
-    borderColor: COLORS.BLUE,
-    backgroundColor: COLORS.BLUE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // Bottom actions inside item
-  bottomActions: {
-    marginTop: 10,
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-  },
-
-  actionBtn: {
-    height: 34,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  actionBlue: { backgroundColor: COLORS.BLUE },
-  actionBlueText: { color: "#fff" },
-
-  actionOutline: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#F97316",
-  },
-  actionOutlineText: { color: "#F97316" },
-
-  actionText: { fontSize: 13, fontWeight: "500" },
-
-  // Tabs
-  tabsRow: {
-    backgroundColor: "#fff",
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    position: "relative",
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  tabTextActive: {
-    color: "#2563EB",
-    fontWeight: "600",
-  },
-  tabUnderline: {
-    position: "absolute",
-    bottom: 0,
-    left: 16,
-    right: 16,
-    height: 2,
-    backgroundColor: "#2563EB",
-    borderRadius: 1,
-  },
 });

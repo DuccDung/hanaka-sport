@@ -97,19 +97,21 @@ export default function RegistrationListScreen({ navigation, route }) {
   const tournamentId = tournament?.tournamentId || route?.params?.tournamentId;
 
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState("ALL"); // ALL, SUCCESS, WAITING
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [resp, setResp] = useState(null);
   const [openingZalo, setOpeningZalo] = useState(false);
+  // TODO: Add registration state check when available
+  // const [canRegister, setCanRegister] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
       setErrorMsg("");
       setLoading(true);
 
-      const res = await publicListTournamentRegistrations(tournamentId, tab);
+      // Always fetch all registrations (no tab filtering)
+      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
       setResp(res);
     } catch (e) {
       setErrorMsg(
@@ -120,7 +122,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setLoading(false);
     }
-  }, [tournamentId, tab]);
+  }, [tournamentId]);
 
   useEffect(() => {
     fetchData();
@@ -131,7 +133,7 @@ export default function RegistrationListScreen({ navigation, route }) {
       setErrorMsg("");
       setRefreshing(true);
 
-      const res = await publicListTournamentRegistrations(tournamentId, tab);
+      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
       setResp(res);
     } catch (e) {
       setErrorMsg(
@@ -142,7 +144,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setRefreshing(false);
     }
-  }, [tournamentId, tab]);
+  }, [tournamentId]);
 
   const handleOpenZaloGroup = useCallback(async () => {
     try {
@@ -214,25 +216,17 @@ export default function RegistrationListScreen({ navigation, route }) {
   }, [resp]);
 
   const displayItems = useMemo(() => {
-    // First filter by tab
-    let items = allItems;
-    if (tab === "SUCCESS") {
-      items = allItems.filter((r) => r.success);
-    } else if (tab === "WAITING") {
-      items = allItems.filter((r) => r.waitingPair);
-    }
-
-    // Then filter by search query
+    // No tab filtering - show all items
     const q = normalize(query.trim());
-    if (!q) return items;
+    if (!q) return allItems;
 
-    return items.filter((r) => {
+    return allItems.filter((r) => {
       const hay = normalize(
         `${r.regCode} ${r.regTime} ${r.vdv1.name} ${r.vdv2.name}`,
       );
       return hay.includes(q);
     });
-  }, [allItems, tab, query]);
+  }, [allItems, query]);
 
   const stats = useMemo(() => {
     const c = resp?.counts;
@@ -346,51 +340,34 @@ export default function RegistrationListScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <View style={styles.linksRow}>
+      {/* Action buttons row - no tabs */}
+      <View style={styles.actionsRow}>
+        {/* Đăng ký button */}
         <Pressable
-          style={styles.linkItem}
-          hitSlop={10}
+          style={[styles.actionButton, styles.actionButtonPrimary]}
+          onPress={() => {
+            // Navigate to registration screen
+            navigation.navigate("TournamentRegister", {
+              tournamentId: tournamentId,
+            });
+          }}
+        >
+          <Ionicons name="create-outline" size={16} color="#2563EB" style={styles.actionButtonIcon} />
+          <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
+            Đăng ký tham gia
+          </Text>
+        </Pressable>
+
+        {/* Zalo group button */}
+        <Pressable
+          style={styles.actionButton}
           onPress={handleOpenZaloGroup}
           disabled={openingZalo}
         >
-          <Ionicons
-            name="link-outline"
-            size={16}
-            color={styles.linkText.color}
-          />
-          <Text style={styles.linkText}>
-            {openingZalo ? "Đang mở nhóm Zalo..." : "Link nhóm Zalo"}
+          <Ionicons name="link-outline" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+          <Text style={styles.actionButtonText}>
+            {openingZalo ? "Đang mở..." : "Nhóm Zalo"}
           </Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.tabsRow}>
-        <Pressable
-          style={styles.tabBtn}
-          onPress={() => setTab("ALL")}
-        >
-          <Text style={[styles.tabText, tab === "ALL" && styles.tabTextActive]}>
-            Tất cả
-          </Text>
-          {tab === "ALL" ? <View style={styles.tabUnderline} /> : null}
-        </Pressable>
-        <Pressable
-          style={styles.tabBtn}
-          onPress={() => setTab("SUCCESS")}
-        >
-          <Text style={[styles.tabText, tab === "SUCCESS" && styles.tabTextActive]}>
-            Thành công
-          </Text>
-          {tab === "SUCCESS" ? <View style={styles.tabUnderline} /> : null}
-        </Pressable>
-        <Pressable
-          style={styles.tabBtn}
-          onPress={() => setTab("WAITING")}
-        >
-          <Text style={[styles.tabText, tab === "WAITING" && styles.tabTextActive]}>
-            Chờ ghép
-          </Text>
-          {tab === "WAITING" ? <View style={styles.tabUnderline} /> : null}
         </Pressable>
       </View>
 
