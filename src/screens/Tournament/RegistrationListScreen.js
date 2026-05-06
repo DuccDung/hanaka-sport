@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
-import { styles } from "./registrationStyles";
+import { styles } from "./registrationListStyles";
 import { publicListTournamentRegistrations } from "../../services/tournamentService";
 import { getZaloGroupLink } from "../../services/publicLinkService";
 
@@ -97,6 +97,7 @@ export default function RegistrationListScreen({ navigation, route }) {
   const tournamentId = tournament?.tournamentId || route?.params?.tournamentId;
 
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState("ALL"); // ALL, SUCCESS, WAITING
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -108,7 +109,7 @@ export default function RegistrationListScreen({ navigation, route }) {
       setErrorMsg("");
       setLoading(true);
 
-      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
+      const res = await publicListTournamentRegistrations(tournamentId, tab);
       setResp(res);
     } catch (e) {
       setErrorMsg(
@@ -119,7 +120,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setLoading(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, tab]);
 
   useEffect(() => {
     fetchData();
@@ -130,7 +131,7 @@ export default function RegistrationListScreen({ navigation, route }) {
       setErrorMsg("");
       setRefreshing(true);
 
-      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
+      const res = await publicListTournamentRegistrations(tournamentId, tab);
       setResp(res);
     } catch (e) {
       setErrorMsg(
@@ -141,7 +142,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setRefreshing(false);
     }
-  }, [tournamentId]);
+  }, [tournamentId, tab]);
 
   const handleOpenZaloGroup = useCallback(async () => {
     try {
@@ -212,17 +213,26 @@ export default function RegistrationListScreen({ navigation, route }) {
     });
   }, [resp]);
 
-  const data = useMemo(() => {
-    const q = normalize(query.trim());
-    if (!q) return allItems;
+  const displayItems = useMemo(() => {
+    // First filter by tab
+    let items = allItems;
+    if (tab === "SUCCESS") {
+      items = allItems.filter((r) => r.success);
+    } else if (tab === "WAITING") {
+      items = allItems.filter((r) => r.waitingPair);
+    }
 
-    return allItems.filter((r) => {
+    // Then filter by search query
+    const q = normalize(query.trim());
+    if (!q) return items;
+
+    return items.filter((r) => {
       const hay = normalize(
         `${r.regCode} ${r.regTime} ${r.vdv1.name} ${r.vdv2.name}`,
       );
       return hay.includes(q);
     });
-  }, [query, allItems]);
+  }, [allItems, tab, query]);
 
   const stats = useMemo(() => {
     const c = resp?.counts;
@@ -354,6 +364,36 @@ export default function RegistrationListScreen({ navigation, route }) {
         </Pressable>
       </View>
 
+      <View style={styles.tabsRow}>
+        <Pressable
+          style={styles.tabBtn}
+          onPress={() => setTab("ALL")}
+        >
+          <Text style={[styles.tabText, tab === "ALL" && styles.tabTextActive]}>
+            Tất cả
+          </Text>
+          {tab === "ALL" ? <View style={styles.tabUnderline} /> : null}
+        </Pressable>
+        <Pressable
+          style={styles.tabBtn}
+          onPress={() => setTab("SUCCESS")}
+        >
+          <Text style={[styles.tabText, tab === "SUCCESS" && styles.tabTextActive]}>
+            Thành công
+          </Text>
+          {tab === "SUCCESS" ? <View style={styles.tabUnderline} /> : null}
+        </Pressable>
+        <Pressable
+          style={styles.tabBtn}
+          onPress={() => setTab("WAITING")}
+        >
+          <Text style={[styles.tabText, tab === "WAITING" && styles.tabTextActive]}>
+            Chờ ghép
+          </Text>
+          {tab === "WAITING" ? <View style={styles.tabUnderline} /> : null}
+        </Pressable>
+      </View>
+
       <View style={styles.statsRow}>
         <View style={[styles.statBadge, styles.statGreen]}>
           <Text style={[styles.statText, styles.statGreenText]}>
@@ -404,7 +444,7 @@ export default function RegistrationListScreen({ navigation, route }) {
 
       <FlatList
         contentContainerStyle={styles.listPad}
-        data={data}
+        data={displayItems}
         keyExtractor={(it) => it.id}
         renderItem={renderItem}
         ListEmptyComponent={renderEmpty}

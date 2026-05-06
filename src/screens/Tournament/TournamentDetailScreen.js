@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import RenderHtml from "react-native-render-html";
 import { styles } from "./detailStyles";
 import { publicGetTournamentDetail } from "../../services/tournamentService";
+import { getMyTournamentRegistrationState } from "../../services/tournamentService";
 
 function pad2(n) {
   return String(n).padStart(2, "0");
@@ -96,6 +97,8 @@ export default function TournamentDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [dto, setDto] = useState(null);
+  const [regState, setRegState] = useState(null);
+  const [regStateLoading, setRegStateLoading] = useState(true);
 
   const { width } = useWindowDimensions();
 
@@ -116,15 +119,31 @@ export default function TournamentDetailScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
+  const fetchRegState = useCallback(async () => {
+    try {
+      setRegStateLoading(true);
+      const res = await getMyTournamentRegistrationState(tournamentId);
+      setRegState(res);
+    } catch (e) {
+      // Not fatal if registration state fails
+      setRegState(null);
+    } finally {
+      setRegStateLoading(false);
+    }
+  }, [tournamentId]);
+
   useEffect(() => {
+    if (!tournamentId) return;
     fetchDetail();
-  }, [fetchDetail]);
+    fetchRegState();
+  }, [fetchDetail, fetchRegState, tournamentId]);
 
   const t = useMemo(() => {
     if (!dto && preview) return mapDtoToUi(preview);
     if (dto) return mapDtoToUi(dto);
 
     return {
+      tournamentId: tournamentId,
       title: "Chi tiết giải đấu",
       banner:
         "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80",
@@ -133,11 +152,11 @@ export default function TournamentDetailScreen({ navigation, route }) {
       playoffType: "-",
       formatText: "-",
       gameType: "-",
-      singleLimit: "-",
-      doubleLimit: "-",
+      singleLimit: 0,
+      doubleLimit: 0,
       location: "-",
-      expectedTeams: "-",
-      matches: "-",
+      expectedTeams: 0,
+      matches: 0,
       statusText: "-",
       stateText: "-",
       organizer: "-",
@@ -146,7 +165,23 @@ export default function TournamentDetailScreen({ navigation, route }) {
       pairedCount: 0,
       content: "",
     };
-  }, [dto, preview]);
+  }, [dto, preview, tournamentId]);
+
+  // Registration eligibility state
+  const registrationInfo = useMemo(() => {
+    if (!regState) return null;
+    return {
+      canRegister: regState.CanCreateRegistration === true,
+      hasRegistration: regState.HasRegistration === true,
+      hasSuccessfulPair: regState.HasSuccessfulPair === true,
+      hasWaitingPair: regState.HasWaitingPair === true,
+      hasPendingSent: regState.HasPendingSentPairRequest === true,
+      hasPendingReceived: regState.HasPendingReceivedPairRequest === true,
+      capacity: regState.CapacityRemaining ?? 0,
+      maxLevel: regState.MaxLevel,
+      minLevel: regState.MinLevel,
+    };
+  }, [regState]);
 
   const contentHtml = normalizeHtml(t.content);
   const hasContent = !!contentHtml;
@@ -373,19 +408,23 @@ export default function TournamentDetailScreen({ navigation, route }) {
           <View style={{ height: 16 }} />
           <Text style={styles.sectionCaps}>QUẢN LÝ GIẢI ĐẤU</Text>
 
-          <View style={styles.actionsGrid}>
+          <View style={styles.actionsRow}>
+            {/* Danh sách đăng ký */}
             <Pressable
-              style={styles.actionBtn}
+              style={styles.actionButton}
               onPress={() =>
-                navigation.navigate("TournamentRegistration", { tournament: t })
+                navigation.navigate("TournamentRegistration", {
+                  tournamentId: t.tournamentId,
+                })
               }
             >
-              <Ionicons name="list" size={16} color="#1E2430" />
-              <Text style={styles.actionText}>Danh sách đăng ký</Text>
+              <Ionicons name="list" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+              <Text style={styles.actionButtonText}>Danh sách đăng ký</Text>
             </Pressable>
 
+            {/* Thể lệ giải */}
             <Pressable
-              style={styles.actionBtn}
+              style={styles.actionButton}
               onPress={() =>
                 navigation.navigate("TournamentRule", {
                   tournamentId: t.tournamentId,
@@ -393,32 +432,49 @@ export default function TournamentDetailScreen({ navigation, route }) {
                 })
               }
             >
-              <Ionicons name="hammer" size={16} color="#1E2430" />
-              <Text style={styles.actionText}>Thể lệ giải</Text>
+              <Ionicons name="hammer" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+              <Text style={styles.actionButtonText}>Thể lệ giải</Text>
             </Pressable>
 
+            {/* Lịch thi đấu */}
             <Pressable
-              style={styles.actionBtn}
+              style={styles.actionButton}
               onPress={() =>
                 navigation.navigate("TournamentSchedule", { tournament: t })
               }
             >
-              <Ionicons name="calendar" size={16} color="#1E2430" />
-              <Text style={styles.actionText}>Lịch thi đấu</Text>
+              <Ionicons name="calendar" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+              <Text style={styles.actionButtonText}>Lịch thi đấu</Text>
             </Pressable>
 
+            {/* Bảng xếp hạng */}
             <Pressable
-              style={styles.actionBtn}
+              style={styles.actionButton}
               onPress={() =>
                 navigation.navigate("TournamentStandings", { tournament: t })
               }
             >
-              <Ionicons name="stats-chart" size={16} color="#1E2430" />
-              <Text style={styles.actionText}>Bảng xếp hạng</Text>
+              <Ionicons name="stats-chart" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+              <Text style={styles.actionButtonText}>Bảng xếp hạng</Text>
             </Pressable>
           </View>
 
-          <View style={{ height: 24 }} />
+          {/* Nút Trạng thái của tôi - full width */}
+          {regState && (
+            <Pressable
+              style={[styles.actionButton, { width: '100%', marginTop: 10 }]}
+              onPress={() =>
+                navigation.navigate("MyTournamentRegistration", {
+                  tournamentId: t.tournamentId,
+                })
+              }
+            >
+              <Ionicons name="person" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+              <Text style={styles.actionButtonText}>
+                {registrationInfo?.hasRegistration ? "Quản lý đăng ký" : "Trạng thái của tôi"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
     </View>

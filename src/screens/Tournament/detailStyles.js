@@ -71,17 +71,77 @@ export const styles = StyleSheet.create({
     color: "#6B7280",
     marginTop: 8,
     marginBottom: 10,
+    letterSpacing: 1,
   },
 
-  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  actionBtn: {
+  // Web-like action buttons (horizontal layout)
+  actionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 8,
+  },
+  actionButton: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
+    minHeight: 38,
     paddingHorizontal: 12,
-    height: 38,
+    paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: "#F3F4F6",
   },
-  actionText: { fontSize: 14, fontWeight: "400", color: "#1E2430" },
+  actionButtonIcon: {
+    fontSize: 16,
+    color: "#1E2430",
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#1E2430",
+  },
+
+  // Legacy circle buttons (keep for reference, can remove)
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 8,
+  },
+  actionGridItem: {
+    width: (width - 24 - 24) / 3, // 3 columns with gap
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  actionIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  actionIconCirclePrimary: {
+    backgroundColor: "#DBEAFE",
+  },
+  actionIconCircleWarning: {
+    backgroundColor: "#FEF3C7",
+  },
+  actionIconCircleSuccess: {
+    backgroundColor: "#D1FAE5",
+  },
+  actionIconCircleOrange: {
+    backgroundColor: "#FFEDD5",
+  },
+  actionLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#374151",
+    textAlign: "center",
+  },
+  actionLabelWhite: {
+    color: "#fff",
+  },
 });

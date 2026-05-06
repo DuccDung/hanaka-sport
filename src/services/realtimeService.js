@@ -1,9 +1,29 @@
 import { WS_BASE_URL } from "../constants/config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 let ws = null;
 let reconnectTimer = null;
 let manualClose = false;
 
 const listeners = new Set();
+
+// Tournament notification unread count
+let tournamentUnreadCount = 0;
+
+async function loadUnreadCount() {
+  try {
+    const saved = await AsyncStorage.getItem("tournament_unread_count");
+    if (saved) tournamentUnreadCount = parseInt(saved, 10) || 0;
+  } catch {}
+}
+
+async function saveUnreadCount() {
+  try {
+    await AsyncStorage.setItem("tournament_unread_count", String(tournamentUnreadCount));
+  } catch {}
+}
+
+loadUnreadCount();
 
 function emit(event) {
   listeners.forEach((cb) => {
@@ -44,6 +64,28 @@ export function connectRealtime(token) {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
+
+      // Handle tournament notifications
+      if (data.type === "tournament.notification") {
+        const payload = data.payload;
+        const { NotificationType, Title, Body, PairRequestId, TournamentId } = payload;
+
+        // Increment unread count
+        tournamentUnreadCount++;
+        saveUnreadCount();
+
+        // Emit specific event for screens to handle
+        emit({
+          type: "tournament_notification",
+          notificationType: NotificationType,
+          title: Title,
+          body: Body,
+          pairRequestId: PairRequestId,
+          tournamentId: TournamentId,
+          payload,
+        });
+      }
+
       emit(data);
     } catch (e) {
       console.log("ws parse error", e);
@@ -98,4 +140,19 @@ export function unsubscribeClubRoom(clubId) {
 
 export function sendTyping(clubId, isTyping) {
   return sendRealtime({ type: "club.typing", clubId, isTyping });
+}
+
+// Tournament notification helpers
+export function getTournamentUnreadCount() {
+  return tournamentUnreadCount;
+}
+
+export function clearTournamentUnreadCount() {
+  tournamentUnreadCount = 0;
+  saveUnreadCount();
+}
+
+export function incrementTournamentUnreadCount() {
+  tournamentUnreadCount++;
+  saveUnreadCount();
 }

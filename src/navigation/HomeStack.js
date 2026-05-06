@@ -28,6 +28,9 @@ import CoachDetailScreen from "../screens/Coach/CoachDetailScreen";
 import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
 import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
+import TournamentRegisterScreen from "../screens/Tournament/TournamentRegistrationScreen";
+import PairRequestInboxScreen from "../screens/Tournament/PairRequestInboxScreen";
+import MyTournamentRegistrationScreen from "../screens/Tournament/MyTournamentRegistrationScreen";
 import HanakaRatingInfoScreen from "../screens/Members/HanakaRatingInfoScreen";
 const Stack = createNativeStackNavigator();
 
@@ -121,6 +124,21 @@ export default function HomeStack() {
       <Stack.Screen
         name="TournamentRegistration"
         component={RegistrationListScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="TournamentRegister"
+        component={TournamentRegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PairRequestInbox"
+        component={PairRequestInboxScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyTournamentRegistration"
+        component={MyTournamentRegistrationScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

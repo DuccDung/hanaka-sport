@@ -18,8 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./styles";
 
 import {
-  adminListTournaments,
-  mapTabToAdminStatus,
+  publicListTournaments,
 } from "../../services/tournamentService";
 
 function normalize(str = "") {
@@ -45,9 +44,20 @@ function formatDateTime(value) {
 }
 
 const TAB = {
-  ongoing: "Đang",
-  finished: "Kết thúc",
+  ongoing: "Đang diễn ra",
+  finished: "Đã kết thúc",
 };
+
+function mapTabToPublicStatus(tab) {
+  switch (tab) {
+    case "ongoing":
+      return "OPEN";
+    case "finished":
+      return "CLOSED";
+    default:
+      return "ALL";
+  }
+}
 
 export default function TournamentScreen({ navigation }) {
   const [query, setQuery] = useState("");
@@ -64,11 +74,11 @@ export default function TournamentScreen({ navigation }) {
 
   const [errorMsg, setErrorMsg] = useState("");
 
-  const status = useMemo(() => mapTabToAdminStatus(tab), [tab]);
+  const status = useMemo(() => mapTabToPublicStatus(tab), [tab]);
 
   const fetchPage = useCallback(
     async ({ nextPage = 1, append = false } = {}) => {
-      const res = await adminListTournaments({
+      const res = await publicListTournaments({
         status,
         page: nextPage,
         pageSize,

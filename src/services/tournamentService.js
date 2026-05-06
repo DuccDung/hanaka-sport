@@ -321,3 +321,150 @@ export async function getTournamentRule(tournamentId) {
   const res = await apiClient.get(`/tournaments/${tournamentId}/rule`);
   return res.data;
 }
+
+/**
+ * GET: /api/tournaments/{tournamentId}/registrations/me/state
+ * Returns registration eligibility and state for current user
+ */
+export async function getMyTournamentRegistrationState(tournamentId) {
+  if (!tournamentId) {
+    throw new Error("tournamentId is required");
+  }
+
+  const res = await apiClient.get(
+    `/tournaments/${tournamentId}/registrations/me/state`
+  );
+  return res.data;
+}
+
+/**
+ * GET: /api/users?query=...&page=1&pageSize=20
+ * Search for users (requires JWT auth)
+ * Returns members only (role MEMBER)
+ */
+export async function searchUsers(query, options = {}) {
+  if (!query) throw new Error("query is required");
+
+  const res = await apiClient.get("/users", {
+    params: {
+      q: query,
+      page: 1,
+      pageSize: options.limit || 20,
+    },
+  });
+
+  // Response: { page, pageSize, total, items: [{ userId, fullName, city, gender, verified, avatarUrl, ratingSingle, ratingDouble, ratingUpdatedAt, avatarUrl }] }
+  return res.data.items || [];
+}
+
+/**
+ * GET: /api/tournament-registrations/tournaments/{tournamentId}/partner-search?query=xxx&pageSize=10
+ * Search for potential partners in a specific tournament
+ * Returns users with registration status and canInvite flag
+ */
+export async function searchPartner(tournamentId, query, pageSize = 10) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  if (!query) throw new Error("query is required");
+
+  const res = await apiClient.get(
+    `/tournament-registrations/tournaments/${tournamentId}/partner-search`,
+    {
+      params: { query, pageSize },
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * POST: /api/tournaments/{tournamentId}/registrations/single
+ * Register as single player
+ */
+export async function registerSingle({ tournamentId }) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  const res = await apiClient.post(
+    `/tournaments/${tournamentId}/registrations/single`
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournaments/{tournamentId}/registrations/waiting-pair
+ * Register as a waiting pair (no partner specified yet)
+ */
+export async function registerWaitingPair({ tournamentId }) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  const res = await apiClient.post(
+    `/tournaments/${tournamentId}/registrations/waiting-pair`
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournaments/{tournamentId}/pair-requests
+ * Create a pair request to another user
+ * Body: { requestedToUserId: number, message?: string }
+ */
+export async function createPairRequest(tournamentId, { requestedToUserId, message }) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  if (!requestedToUserId) throw new Error("requestedToUserId is required");
+
+  const res = await apiClient.post(
+    `/tournaments/${tournamentId}/pair-requests`,
+    {
+      requestedToUserId,
+      message: message || "",
+    }
+  );
+  return res.data;
+}
+
+/**
+ * GET: /api/notifications/pair-requests
+ * Get pending pair request notifications (received only)
+ */
+export async function getPairRequestNotifications() {
+  const res = await apiClient.get("/notifications/pair-requests");
+  return res.data;
+}
+
+/**
+ * POST: /api/tournaments/pair-requests/{pairRequestId}/accept
+ * Accept a received pair request
+ */
+export async function acceptPairRequest(pairRequestId) {
+  if (!pairRequestId) throw new Error("pairRequestId is required");
+
+  const res = await apiClient.post(
+    `/tournaments/pair-requests/${pairRequestId}/accept`
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournaments/pair-requests/{pairRequestId}/reject
+ * Reject a received pair request
+ * Body: { responseNote?: string }
+ */
+export async function rejectPairRequest(pairRequestId, responseNote = "") {
+  if (!pairRequestId) throw new Error("pairRequestId is required");
+
+  const res = await apiClient.post(
+    `/tournaments/pair-requests/${pairRequestId}/reject`,
+    { responseNote }
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournaments/pair-requests/{pairRequestId}/cancel
+ * Cancel a sent pair request
+ */
+export async function cancelPairRequest(pairRequestId) {
+  if (!pairRequestId) throw new Error("pairRequestId is required");
+
+  const res = await apiClient.post(
+    `/tournaments/pair-requests/${pairRequestId}/cancel`
+  );
+  return res.data;
+}
