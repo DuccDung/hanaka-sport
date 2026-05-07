@@ -25,7 +25,23 @@ function pad2(n) {
 
 function formatDateTime(value) {
   if (!value) return "-";
-  const d = new Date(value);
+  // Convert to primitive if it's an object
+  let dateValue;
+  if (typeof value === "string" || typeof value === "number") {
+    dateValue = value;
+  } else if (value && typeof value === "object") {
+    // Try to extract ISO string or convert to string
+    if (value.toISOString) {
+      dateValue = value.toISOString();
+    } else if (value.toString) {
+      dateValue = value.toString();
+    } else {
+      return "-";
+    }
+  } else {
+    return "-";
+  }
+  const d = new Date(dateValue);
   if (Number.isNaN(d.getTime())) return "-";
   return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} ${pad2(
     d.getHours()
@@ -34,8 +50,23 @@ function formatDateTime(value) {
 
 function getExpiryText(expiresAt) {
   if (!expiresAt) return "Không xác định";
+  // Convert to primitive if it's an object
+  let dateValue;
+  if (typeof expiresAt === "string" || typeof expiresAt === "number") {
+    dateValue = expiresAt;
+  } else if (expiresAt && typeof expiresAt === "object") {
+    if (expiresAt.toISOString) {
+      dateValue = expiresAt.toISOString();
+    } else if (expiresAt.toString) {
+      dateValue = expiresAt.toString();
+    } else {
+      return "Không xác định";
+    }
+  } else {
+    return "Không xác định";
+  }
   const now = new Date();
-  const exp = new Date(expiresAt);
+  const exp = new Date(dateValue);
   const diffMs = exp - now;
   const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
   const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -48,7 +79,8 @@ function getExpiryText(expiresAt) {
 }
 
 function getStatusColor(status) {
-  switch (status) {
+  const safeStatus = typeof status === "string" ? status : "PENDING";
+  switch (safeStatus) {
     case "PENDING":
       return "#F59E0B"; // vàng
     case "ACCEPTED":
@@ -65,7 +97,8 @@ function getStatusColor(status) {
 }
 
 function getStatusLabel(status) {
-  switch (status) {
+  const safeStatus = typeof status === "string" ? status : "";
+  switch (safeStatus) {
     case "PENDING":
       return "Đang chờ";
     case "ACCEPTED":
@@ -77,12 +110,13 @@ function getStatusLabel(status) {
     case "EXPIRED":
       return "Đã hết hạn";
     default:
-      return status || "Không xác định";
+      return safeStatus || "Không xác định";
   }
 }
 
 function AvatarCircle({ uri, name, size = 40 }) {
-  const initial = name?.[0]?.toUpperCase() || "?";
+  const safeName = typeof name === "string" ? name : (name ?? "");
+  const initial = safeName?.[0]?.toUpperCase() || "?";
   const showImage = uri && (uri.startsWith("http://") || uri.startsWith("https://"));
 
   return (
@@ -161,41 +195,57 @@ export default function PairRequestManagementScreen({ navigation }) {
     try {
       if (!isRefresh) {
         setLoading(true);
-	      }
-	      setErrorMsg("");
+      }
+      setErrorMsg("");
 
-	      // Call real API
-	      const data = await getMyPairRequests(activeTab === "sent");
+      // Call real API
+      const data = await getMyPairRequests(activeTab === "sent");
 
-	      // Handle response format: could be { items: [...] } or array directly
-	      const items = Array.isArray(data) ? data : (data?.items || data || []);
+      // Handle response format: could be { items: [...] } or array directly
+      const items = Array.isArray(data) ? data : (data?.items || data || []);
 
-	      // Map server response to UI format if needed
-	      const mappedItems = items.map((item) => ({
-	        pairRequestId: item.pairRequestId,
-	        tournamentId: item.tournamentId,
-	        tournamentTitle: item.tournamentTitle || "Không xác định",
-	        requestedToUser: {
-	          userId: item.requestedToUser?.userId,
-	          fullName: item.requestedToUser?.fullName || "Người chơi ẩn danh",
-	          avatarUrl: item.requestedToUser?.avatarUrl,
-	          ratingDouble: item.requestedToUser?.ratingDouble || 0,
-	        },
-	        requestedAt: item.requestedAt,
-	        expiresAt: item.expiresAt,
-	        status: item.status || "PENDING",
-	        // Optional fields
-	        registrationId: item.registrationId,
-	        tournamentBanner: item.tournamentBanner,
-	        tournamentDate: item.tournamentDate,
-	        tournamentLocation: item.tournamentLocation,
-	        requestedByUser: item.requestedByUser,
-	        registration: item.registration,
-	        respondedAt: item.respondedAt,
-	        responseNote: item.responseNote,
-	      }));
+      // Map server response to UI format (support both PascalCase and camelCase)
+      const mappedItems = items.map((item) => {
+        // Helper to get UserBrief from either naming convention
+        const getUserBrief = (user) => {
+          if (!user) return null;
+          const safeString = (val) => {
+            if (val == null) return "";
+            return typeof val === "string" ? val : String(val);
+          };
+          return {
+            userId: user.UserId ?? user.userId,
+            fullName: safeString(user.FullName ?? user.fullName) || "Người chơi ẩn danh",
+            avatarUrl: user.AvatarUrl ?? user.avatarUrl,
+            ratingDouble: (user.RatingDouble ?? user.ratingDouble) || 0,
+          };
+        };
 
-	      setRequests(mappedItems);
+        // Debug: log first raw item to check data types
+        if (process.env.NODE_ENV !== "production" && items.length > 0 && item === items[0]) {
+          console.log("[PairRequestManagement] Raw item:", JSON.stringify(item, null, 2));
+        }
+
+        return {
+          pairRequestId: item.PairRequestId ?? item.pairRequestId,
+          tournamentId: item.TournamentId ?? item.tournamentId,
+          tournamentTitle: (item.TournamentTitle ?? item.tournamentTitle) || "Không xác định",
+          tournamentBanner: item.TournamentBanner ?? item.tournamentBanner,
+          tournamentDate: item.TournamentDate ?? item.tournamentDate,
+          tournamentLocation: item.TournamentLocation ?? item.tournamentLocation,
+          requestedToUser: getUserBrief(item.RequestedToUser ?? item.requestedToUser),
+          requestedByUser: getUserBrief(item.RequestedByUser ?? item.requestedByUser),
+          requestedAt: item.RequestedAt ?? item.requestedAt,
+          expiresAt: item.ExpiresAt ?? item.expiresAt,
+          status: (item.Status ?? item.status) || "PENDING",
+          // Optional fields
+          registrationId: item.RegistrationId ?? item.registrationId,
+          respondedAt: item.RespondedAt ?? item.respondedAt,
+          responseNote: item.ResponseNote ?? item.responseNote,
+        };
+      }).filter(item => item.pairRequestId != null); // Filter out items with null/undefined ID
+
+      setRequests(mappedItems);
     } catch (e) {
       setErrorMsg(
         e?.response?.data?.message ||
@@ -218,9 +268,17 @@ export default function PairRequestManagementScreen({ navigation }) {
   }, [fetchRequests]);
 
   const handleCancel = useCallback((pairRequest) => {
+    const safeString = (val) => {
+      if (val == null) return "";
+      return typeof val === "string" ? val : String(val);
+    };
+
+    const tournamentTitle = safeString(pairRequest.tournamentTitle) || "N/A";
+    const receiverName = safeString(pairRequest.requestedToUser?.fullName) || "N/A";
+
     Alert.alert(
       "Hủy lời mời",
-      `Bạn có chắc muốn hủy lời mời ghép cặp này?\n\nGiải: ${pairRequest.tournamentTitle || "N/A"}\nNgười nhận: ${pairRequest.requestedToUser?.fullName || "N/A"}`,
+      `Bạn có chắc muốn hủy lời mời ghép cặp này?\n\nGiải: ${tournamentTitle}\nNgười nhận: ${receiverName}`,
       [
         { text: "Không", style: "cancel" },
         {
@@ -253,6 +311,24 @@ export default function PairRequestManagementScreen({ navigation }) {
 
     const otherUser = item.requestedToUser || item.requestedByUser || {};
 
+    // Defensive: ensure all nested values are primitives
+    const getString = (obj, key, fallback = "") => {
+      const val = obj?.[key];
+      if (val == null) return fallback;
+      return typeof val === "string" ? val : typeof val === "number" || typeof val === "boolean" ? String(val) : fallback;
+    };
+
+    const getNumber = (obj, key, fallback = 0) => {
+      const val = obj?.[key];
+      if (val == null) return fallback;
+      const num = Number(val);
+      return isNaN(num) ? fallback : num;
+    };
+
+    const tournamentTitle = getString(item, "tournamentTitle", "Không xác định");
+    const fullName = getString(otherUser, "fullName", "Người chơi ẩn danh");
+    const ratingDouble = getNumber(displayUser, "ratingDouble");
+
     return (
       <Pressable
         style={styles.item}
@@ -263,19 +339,16 @@ export default function PairRequestManagementScreen({ navigation }) {
         }}
       >
         <View style={styles.itemHeader}>
-          <AvatarCircle uri={displayUser.avatarUrl} name={displayUser.fullName} size={48} />
+          <AvatarCircle uri={getString(displayUser, "avatarUrl")} name={fullName} size={48} />
           <View style={styles.itemInfo}>
             <Text style={styles.tournamentTitle} numberOfLines={2}>
-              {item.tournamentTitle || "Không xác định"}
+              {tournamentTitle}
             </Text>
             <Text style={styles.receiverName}>
-              {activeTab === "sent"
-                ? `Đến: ${otherUser.fullName || "Người chơi ẩn danh"}`
-                : `Từ: ${otherUser.fullName || "Người chơi ẩn danh"}`
-              }
+              {activeTab === "sent" ? `Đến: ${fullName}` : `Từ: ${fullName}`}
             </Text>
-            {activeTab === "received" && displayUser.ratingDouble && (
-              <Text style={styles.metaText}>Rating đôi: {displayUser.ratingDouble.toFixed(1)}</Text>
+            {activeTab === "received" && ratingDouble > 0 && (
+              <Text style={styles.metaText}>Rating đôi: {ratingDouble.toFixed(1)}</Text>
             )}
             <View style={styles.metaRow}>
               <Text style={styles.metaText}>Gửi: {formatDateTime(item.requestedAt)}</Text>

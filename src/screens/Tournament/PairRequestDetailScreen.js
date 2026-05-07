@@ -10,6 +10,7 @@ import {
   Alert,
   ScrollView,
   Modal,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -61,6 +62,66 @@ function AvatarCircle({ uri, name, size = 56 }) {
   );
 }
 
+function normalizeDetail(data) {
+  if (!data) return null;
+
+  const safeString = (val) => {
+    if (val == null) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "number" || typeof val === "boolean") return String(val);
+    return "";
+  };
+
+  const safeNumber = (val, defaultValue = 0) => {
+    if (val == null) return defaultValue;
+    const num = Number(val);
+    return isNaN(num) ? defaultValue : num;
+  };
+
+  const normalizeUser = (user) => {
+    if (!user) return null;
+    return {
+      userId: user.UserId ?? user.userId,
+      fullName: safeString(user.FullName ?? user.fullName) || "Người chơi ẩn danh",
+      avatarUrl: user.AvatarUrl ?? user.avatarUrl,
+      ratingDouble: safeNumber(user.RatingDouble ?? user.ratingDouble, 0),
+      verified: !!user.Verified ?? !!user.verified,
+    };
+  };
+
+  const normalizeRegistration = (reg) => {
+    if (!reg) return null;
+    return {
+      registrationId: reg.RegistrationId ?? reg.registrationId,
+      regCode: safeString(reg.RegCode ?? reg.regCode),
+      player1Name: safeString(reg.Player1Name ?? reg.player1Name),
+      player2Name: safeString(reg.Player2Name ?? reg.player2Name),
+      points: safeNumber(reg.Points ?? reg.points, 0),
+      success: !!reg.Success ?? !!reg.success,
+      waitingPair: !!reg.WaitingPair ?? !!reg.waitingPair,
+    };
+  };
+
+  return {
+    pairRequestId: data.PairRequestId ?? data.pairRequestId,
+    tournamentId: data.TournamentId ?? data.tournamentId,
+    tournamentTitle: (data.TournamentTitle ?? data.tournamentTitle) || "Không xác định",
+    tournamentBanner: safeString(data.TournamentBanner ?? data.tournamentBanner),
+    tournamentDate: data.TournamentDate ?? data.tournamentDate,
+    tournamentLocation: safeString(data.TournamentLocation ?? data.tournamentLocation),
+    requestedByUser: normalizeUser(data.RequestedByUser ?? data.requestedByUser),
+    requestedToUser: normalizeUser(data.RequestedToUser ?? data.requestedToUser),
+    requestedAt: data.RequestedAt ?? data.requestedAt,
+    expiresAt: data.ExpiresAt ?? data.expiresAt,
+    status: (data.Status ?? data.status) || "PENDING",
+    registrationId: data.RegistrationId ?? data.registrationId,
+    respondedAt: data.RespondedAt ?? data.respondedAt,
+    responseNote: safeString(data.ResponseNote ?? data.responseNote),
+    isSent: data.IsSent ?? data.isSent,
+    registration: normalizeRegistration(data.Registration ?? data.registration),
+  };
+}
+
 export default function PairRequestDetailScreen({ navigation, route }) {
   const { pairRequestId } = route.params;
   const [detail, setDetail] = useState(null);
@@ -70,12 +131,32 @@ export default function PairRequestDetailScreen({ navigation, route }) {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Helper functions inside component to use closures
+  const safeString = useCallback((val) => {
+    if (val == null) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "number" || typeof val === "boolean") return String(val);
+    return "";
+  }, []);
+
+  const safeNumber = useCallback((val, defaultValue = 0) => {
+    if (val == null) return defaultValue;
+    const num = Number(val);
+    return isNaN(num) ? defaultValue : num;
+  }, []);
+
   const fetchDetail = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMsg("");
       const data = await getPairRequestDetail(pairRequestId);
-      setDetail(data);
+      console.log("[PairRequestDetail] Raw API response:", JSON.stringify(data, null, 2));
+      const normalized = normalizeDetail(data);
+      console.log("[PairRequestDetail] Normalized detail:", {
+        ...normalized,
+        tournamentBanner: normalized?.tournamentBanner,
+      });
+      setDetail(normalized);
     } catch (e) {
       setErrorMsg(
         e?.response?.data?.message || e?.message || "Không tải được thông tin lời mời."
@@ -93,11 +174,17 @@ export default function PairRequestDetailScreen({ navigation, route }) {
   const isPending = detail?.status === "PENDING";
   const canAct = isPending && (!isSent || detail?.registrationId); // can cancel if sent, can accept/reject if received
 
+  const safeRating = useCallback((rating) => {
+    const num = safeNumber(rating, null);
+    return num !== null ? num.toFixed(1) : "N/A";
+  }, [safeNumber]);
+
   const handleCancel = useCallback(async () => {
     if (!detail) return;
+    const tournamentTitle = safeString(detail.tournamentTitle) || "N/A";
     Alert.alert(
       "Hủy lời mời",
-      `Bạn có chắc muốn hủy lời mời ghép cặp này?\n\nGiải: ${detail.tournamentTitle || "N/A"}`,
+      `Bạn có chắc muốn hủy lời mời ghép cặp này?\n\nGiải: ${tournamentTitle}`,
       [
         { text: "Không", style: "cancel" },
         {
@@ -118,7 +205,7 @@ export default function PairRequestDetailScreen({ navigation, route }) {
         },
       ]
     );
-  }, [detail, pairRequestId, navigation]);
+  }, [detail, pairRequestId, navigation, safeString]);
 
   const handleAccept = useCallback(async () => {
     if (!detail) return;
@@ -176,7 +263,11 @@ export default function PairRequestDetailScreen({ navigation, route }) {
         {timeline.map((item, idx) => (
           <View key={idx} style={styles.timelineItem}>
             <View style={styles.timelineIconContainer}>
-              <Ionicons name={item.icon} size={20} color={idx === 0 ? "#2563EB" : (item.label.includes("chấp nhận") ? "#22C55E" : item.label.includes("từ chối") || item.label.includes("hủy") ? "#DC2626" : "#6B7280")} />
+              <Ionicons
+                name={item.icon}
+                size={20}
+                color={idx === 0 ? "#2563EB" : (item.label.includes("chấp nhận") ? "#22C55E" : item.label.includes("từ chối") || item.label.includes("hủy") ? "#DC2626" : "#6B7280")}
+              />
             </View>
             <View style={styles.timelineContent}>
               <Text style={styles.timelineLabel}>{item.label}</Text>
@@ -189,7 +280,40 @@ export default function PairRequestDetailScreen({ navigation, route }) {
     );
   };
 
-  const getStatusColor = (status) => {
+  const getRegistrationStatusLabel = () => {
+    // Nếu pair request đã được accept, ưu tiên hiển thị trạng thái accept
+    if (detail?.status === "ACCEPTED") {
+      return "Đã chấp nhận";
+    }
+    // Nếu registration success đã true, hiển thị thành công
+    if (registration?.success) {
+      return "Thành công";
+    }
+    // Nếu registration đang chờ ghép (waiting)
+    if (registration?.waitingPair) {
+      return "Chờ ghép";
+    }
+    // Registration đã có nhưng chưa success, không phải waiting
+    if (registration && !registration.success && !registration.waitingPair) {
+      return "Đã đăng ký"; // fallback
+    }
+    return "Chưa đăng ký";
+  };
+
+  const getRegistrationStatusColor = () => {
+    if (detail?.status === "ACCEPTED") {
+      return "#22C55E"; // xanh
+    }
+    if (registration?.success) {
+      return "#22C55E"; // xanh
+    }
+    if (registration?.waitingPair) {
+      return "#F59E0B"; // vàng
+    }
+    return "#6B7280"; // xám
+  };
+
+  const getPairRequestStatusColor = (status) => {
     switch (status) {
       case "PENDING": return "#F59E0B";
       case "ACCEPTED": return "#22C55E";
@@ -200,7 +324,7 @@ export default function PairRequestDetailScreen({ navigation, route }) {
     }
   };
 
-  const getStatusLabel = (status) => {
+  const getPairRequestStatusLabel = (status) => {
     switch (status) {
       case "PENDING": return "Đang chờ";
       case "ACCEPTED": return "Đã chấp nhận";
@@ -263,8 +387,8 @@ export default function PairRequestDetailScreen({ navigation, route }) {
           </Pressable>
           <Text style={styles.headerTitle}>Chi tiết lời mời</Text>
           {isPending && (
-            <View style={[styles.statusBadgeLarge, { backgroundColor: getStatusColor(detail.status) }]}>
-              <Text style={styles.statusBadgeLargeText}>{getStatusLabel(detail.status)}</Text>
+            <View style={[styles.statusBadgeLarge, { backgroundColor: getPairRequestStatusColor(detail.status) }]}>
+              <Text style={styles.statusBadgeLargeText}>{getPairRequestStatusLabel(detail.status)}</Text>
             </View>
           )}
         </View>
@@ -272,13 +396,31 @@ export default function PairRequestDetailScreen({ navigation, route }) {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Tournament Banner */}
-        {detail.tournamentBanner && (
-          <Image source={{ uri: detail.tournamentBanner }} style={styles.tournamentBanner} resizeMode="cover" />
+        {detail.tournamentBanner ? (
+          <Image
+            source={{ uri: detail.tournamentBanner }}
+            style={styles.tournamentBanner}
+            resizeMode="cover"
+            onError={(e) => {
+              console.error("[PairRequestDetail] Banner load error:", {
+                error: e.nativeEvent.error,
+                uri: detail.tournamentBanner,
+                bannerValue: detail.tournamentBanner,
+              });
+            }}
+            onLoad={() => {
+              console.log("[PairRequestDetail] Banner loaded successfully:", detail.tournamentBanner);
+            }}
+          />
+        ) : (
+          <View style={[styles.tournamentBanner, styles.bannerPlaceholder]}>
+            <Ionicons name="image-outline" size={48} color="#D1D5DB" />
+          </View>
         )}
 
         {/* Tournament Info */}
         <View style={styles.tournamentInfo}>
-          <Text style={styles.tournamentTitle}>{detail.tournamentTitle || "Không xác định"}</Text>
+          <Text style={styles.tournamentTitle}>{safeString(detail.tournamentTitle) || "Không xác định"}</Text>
           <View style={styles.tournamentMeta}>
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={14} color="#6B7280" />
@@ -287,7 +429,7 @@ export default function PairRequestDetailScreen({ navigation, route }) {
             {detail.tournamentLocation && (
               <View style={styles.metaItem}>
                 <Ionicons name="location-outline" size={14} color="#6B7280" />
-                <Text style={styles.metaText}>{detail.tournamentLocation}</Text>
+                <Text style={styles.metaText}>{safeString(detail.tournamentLocation)}</Text>
               </View>
             )}
           </View>
@@ -299,8 +441,8 @@ export default function PairRequestDetailScreen({ navigation, route }) {
           <View style={styles.partnerCard}>
             <AvatarCircle uri={otherUser?.avatarUrl} name={otherUser?.fullName} size={64} />
             <View style={styles.partnerInfo}>
-              <Text style={styles.partnerName}>{otherUser?.fullName || "Người chơi ẩn danh"}</Text>
-              <Text style={styles.partnerRating}>Rating đôi: {otherUser?.ratingDouble?.toFixed(1) || "N/A"}</Text>
+              <Text style={styles.partnerName}>{safeString(otherUser?.fullName) || "Người chơi ẩn danh"}</Text>
+              <Text style={styles.partnerRating}>Rating đôi: {safeRating(otherUser?.ratingDouble)}</Text>
               {otherUser?.verified && (
                 <View style={styles.verifiedBadge}>
                   <Ionicons name="checkmark-circle" size={12} color="#22C55E" />
@@ -318,22 +460,22 @@ export default function PairRequestDetailScreen({ navigation, route }) {
             <View style={styles.regCard}>
               <View style={styles.regRow}>
                 <Text style={styles.regLabel}>Mã đăng ký:</Text>
-                <Text style={styles.regValue}>{registration.regCode || "N/A"}</Text>
+                <Text style={styles.regValue}>{safeString(registration.regCode) || "N/A"}</Text>
               </View>
               <View style={styles.regRow}>
                 <Text style={styles.regLabel}>Đội:</Text>
                 <Text style={styles.regValue}>
-                  {registration.player1Name} + {registration.player2Name || "(Chờ ghép)"}
+                  {safeString(registration.player1Name)} + {safeString(registration.player2Name) || "(Chờ ghép)"}
                 </Text>
               </View>
               <View style={styles.regRow}>
                 <Text style={styles.regLabel}>Điểm:</Text>
-                <Text style={styles.regValue}>{registration.points?.toFixed(1) || 0}</Text>
+                <Text style={styles.regValue}>{safeNumber(registration.points, 0).toFixed(1)}</Text>
               </View>
               <View style={styles.regRow}>
                 <Text style={styles.regLabel}>Trạng thái:</Text>
-                <View style={[styles.regStatusBadge, { backgroundColor: registration.success ? "#22C55E" : "#F59E0B" }]}>
-                  <Text style={styles.regStatusText}>{registration.success ? "Thành công" : "Chờ ghép"}</Text>
+                <View style={[styles.regStatusBadge, { backgroundColor: getRegistrationStatusColor() }]}>
+                  <Text style={styles.regStatusText}>{getRegistrationStatusLabel()}</Text>
                 </View>
               </View>
             </View>
@@ -356,7 +498,7 @@ export default function PairRequestDetailScreen({ navigation, route }) {
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Hết hạn:</Text>
-              <Text style={[styles.detailValue, { color: getStatusColor(detail.status) }]}>
+              <Text style={[styles.detailValue, { color: getPairRequestStatusColor(detail.status) }]}>
                 {formatDateTime(detail.expiresAt)}
               </Text>
             </View>
@@ -369,7 +511,7 @@ export default function PairRequestDetailScreen({ navigation, route }) {
             {detail.responseNote && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Lời nhắn:</Text>
-                <Text style={styles.detailValue}>{detail.responseNote}</Text>
+                <Text style={styles.detailValue}>{safeString(detail.responseNote)}</Text>
               </View>
             )}
           </View>

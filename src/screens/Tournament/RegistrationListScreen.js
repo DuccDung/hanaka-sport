@@ -381,7 +381,7 @@ export default function RegistrationListScreen({ navigation, route }) {
         <Text style={styles.idx}>{item.index}</Text>
         <Text style={styles.itemHeaderText}>
           Mã đk: <Text style={styles.itemHeaderStrong}>{item.regCode}</Text>{" "}
-          {item.regTime}
+          <Text>{item.regTime}</Text>
         </Text>
       </View>
 

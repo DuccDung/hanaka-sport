@@ -78,6 +78,13 @@ export const styles = StyleSheet.create({
     height: 160,
     backgroundColor: "#E5E7EB",
   },
+  bannerPlaceholder: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#E5E7EB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   // Tournament Info
   tournamentInfo: {
