@@ -52,6 +52,46 @@ export const styles = StyleSheet.create({
     color: "#2563EB",
     fontWeight: "600",
   },
+  actionButtonDisabled: {
+    opacity: 0.5,
+  },
+
+  // Reason row for cannot register
+  reasonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    backgroundColor: "#fff",
+  },
+  reasonText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#DC2626",
+    fontWeight: "500",
+  },
+
+  // Invite button for waiting registration
+  inviteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 16,
+  },
+  inviteBtnPressed: {
+    opacity: 0.7,
+  },
+  inviteBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
 
   // Stats badges (keep similar)
   statsRow: {

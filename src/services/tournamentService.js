@@ -323,8 +323,9 @@ export async function getTournamentRule(tournamentId) {
 }
 
 /**
- * GET: /api/tournaments/{tournamentId}/registrations/me/state
+ * GET: /api/tournament-registrations/tournaments/{tournamentId}/me
  * Returns registration eligibility and state for current user
+ * Endpoint theo TournamentRegistrationUserController.GetMyTournamentRegistrationState()
  */
 export async function getMyTournamentRegistrationState(tournamentId) {
   if (!tournamentId) {
@@ -332,7 +333,7 @@ export async function getMyTournamentRegistrationState(tournamentId) {
   }
 
   const res = await apiClient.get(
-    `/tournaments/${tournamentId}/registrations/me/state`
+    `/tournament-registrations/tournaments/${tournamentId}/me`
   );
   return res.data;
 }
@@ -377,42 +378,43 @@ export async function searchPartner(tournamentId, query, pageSize = 10) {
 }
 
 /**
- * POST: /api/tournaments/{tournamentId}/registrations/single
+ * POST: /api/tournament-registrations/tournaments/{tournamentId}/single
  * Register as single player
  */
 export async function registerSingle({ tournamentId }) {
   if (!tournamentId) throw new Error("tournamentId is required");
   const res = await apiClient.post(
-    `/tournaments/${tournamentId}/registrations/single`
+    `/tournament-registrations/tournaments/${tournamentId}/single`
   );
   return res.data;
 }
 
 /**
- * POST: /api/tournaments/{tournamentId}/registrations/waiting-pair
+ * POST: /api/tournament-registrations/tournaments/{tournamentId}/waiting
  * Register as a waiting pair (no partner specified yet)
  */
 export async function registerWaitingPair({ tournamentId }) {
   if (!tournamentId) throw new Error("tournamentId is required");
   const res = await apiClient.post(
-    `/tournaments/${tournamentId}/registrations/waiting-pair`
+    `/tournament-registrations/tournaments/${tournamentId}/waiting`
   );
   return res.data;
 }
 
 /**
- * POST: /api/tournaments/{tournamentId}/pair-requests
+ * POST: /api/tournament-registrations/tournaments/{tournamentId}/pair-requests
  * Create a pair request to another user
- * Body: { requestedToUserId: number, message?: string }
+ * Body: { requestedToUserId: number, requestedToRegistrationId?: number, message?: string }
  */
-export async function createPairRequest(tournamentId, { requestedToUserId, message }) {
+export async function createPairRequest(tournamentId, { requestedToUserId, requestedToRegistrationId, message }) {
   if (!tournamentId) throw new Error("tournamentId is required");
-  if (!requestedToUserId) throw new Error("requestedToUserId is required");
+  if (!requestedToUserId && !requestedToRegistrationId) throw new Error("Either requestedToUserId or requestedToRegistrationId is required");
 
   const res = await apiClient.post(
-    `/tournaments/${tournamentId}/pair-requests`,
+    `/tournament-registrations/tournaments/${tournamentId}/pair-requests`,
     {
       requestedToUserId,
+      requestedToRegistrationId,
       message: message || "",
     }
   );

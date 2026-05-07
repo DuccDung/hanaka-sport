@@ -20,12 +20,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registrationListStyles";
 import { publicListTournamentRegistrations } from "../../services/tournamentService";
 import { getZaloGroupLink } from "../../services/publicLinkService";
+import { getMyTournamentRegistrationState } from "../../services/tournamentService";
+import { getAuthSession } from "../../services/authStorage";
 
 function normalize(str = "") {
   return String(str)
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 }
 
 function pad2(n) {
@@ -102,8 +104,9 @@ export default function RegistrationListScreen({ navigation, route }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [resp, setResp] = useState(null);
   const [openingZalo, setOpeningZalo] = useState(false);
-  // TODO: Add registration state check when available
-  // const [canRegister, setCanRegister] = useState(false);
+  const [regState, setRegState] = useState(null);
+  const [regStateLoading, setRegStateLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -124,17 +127,44 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
+  const fetchRegState = useCallback(async () => {
+    if (!tournamentId) return;
+    try {
+      setRegStateLoading(true);
+
+      const [stateData, session] = await Promise.all([
+        getMyTournamentRegistrationState(tournamentId).catch(() => null),
+        getAuthSession(),
+      ]);
+
+      setRegState(stateData);
+      if (session?.user?.userId) {
+        setCurrentUserId(session.user.userId);
+      }
+    } catch (e) {
+      console.log("Failed to load registration state:", e?.message);
+    } finally {
+      setRegStateLoading(false);
+    }
+  }, [tournamentId]);
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchRegState();
+  }, [fetchData, fetchRegState]);
 
   const onRefresh = useCallback(async () => {
     try {
       setErrorMsg("");
       setRefreshing(true);
 
-      const res = await publicListTournamentRegistrations(tournamentId, "ALL");
+      const [res, stateData] = await Promise.all([
+        publicListTournamentRegistrations(tournamentId, "ALL"),
+        getMyTournamentRegistrationState(tournamentId).catch(() => null),
+      ]);
+
       setResp(res);
+      if (stateData) setRegState(stateData);
     } catch (e) {
       setErrorMsg(
         e?.response?.data?.message ||
@@ -195,6 +225,7 @@ export default function RegistrationListScreen({ navigation, route }) {
           level: v1?.level ?? 0,
           verified: !!v1?.verified,
           isGuest: !!v1?.isGuest,
+          userId: v1?.userId,
         },
         vdv2: v2
           ? {
@@ -203,6 +234,7 @@ export default function RegistrationListScreen({ navigation, route }) {
               level: v2?.level ?? 0,
               verified: !!v2?.verified,
               isGuest: !!v2?.isGuest,
+              userId: v2?.userId,
             }
           : {
               name: "Chờ ghép",
@@ -210,6 +242,7 @@ export default function RegistrationListScreen({ navigation, route }) {
               level: 0,
               verified: false,
               isGuest: true,
+              userId: null,
             },
       };
     });
@@ -292,6 +325,42 @@ export default function RegistrationListScreen({ navigation, route }) {
           <Text style={styles.pointsText}>{item.points}</Text>
         </View>
       </View>
+
+      {/* Nút Mời cho waiting registration của chính user */}
+      {item.waitingPair && item.vdv2?.name === "Chờ ghép" && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.inviteBtn,
+            pressed && styles.inviteBtnPressed,
+          ]}
+          onPress={() => {
+            if (!currentUserId) {
+              Alert.alert("Lỗi", "Không xác định được người dùng hiện tại.");
+              return;
+            }
+
+            // Chỉ cho phép mời nếu là registration của chính user
+            const isOwnWaiting =
+              regState?.registration?.registrationId === Number(item.id);
+
+            if (!isOwnWaiting) {
+              Alert.alert(
+                "Thông báo",
+                "Bạn chỉ có thể mời đối tác cho đăng ký chờ ghép của mình."
+              );
+              return;
+            }
+
+            // Điều hướng đến PartnerSearch để tìm đối tác
+            navigation.navigate("PartnerSearch", {
+              tournamentId,
+            });
+          }}
+        >
+          <Ionicons name="person-add-outline" size={16} color="#fff" />
+          <Text style={styles.inviteBtnText}>Mời người chơi khác</Text>
+        </Pressable>
+      )}
     </View>
   );
 
@@ -344,17 +413,27 @@ export default function RegistrationListScreen({ navigation, route }) {
       <View style={styles.actionsRow}>
         {/* Đăng ký button */}
         <Pressable
-          style={[styles.actionButton, styles.actionButtonPrimary]}
+          style={[
+            styles.actionButton,
+            styles.actionButtonPrimary,
+            (!regState?.canRegister || regStateLoading) && styles.actionButtonDisabled,
+          ]}
           onPress={() => {
+            if (!regState?.canRegister) {
+              const reason = regState?.reason || "Bạn không thể đăng ký giải này lúc này.";
+              Alert.alert("Thông báo", reason);
+              return;
+            }
             // Navigate to registration screen
             navigation.navigate("TournamentRegister", {
               tournamentId: tournamentId,
             });
           }}
+          disabled={!regState?.canRegister || regStateLoading}
         >
           <Ionicons name="create-outline" size={16} color="#2563EB" style={styles.actionButtonIcon} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
-            Đăng ký tham gia
+            {regStateLoading ? "Đang kiểm tra..." : "Đăng ký tham gia"}
           </Text>
         </Pressable>
 
@@ -370,6 +449,16 @@ export default function RegistrationListScreen({ navigation, route }) {
           </Text>
         </Pressable>
       </View>
+
+      {/* Hiển thị lý do không thể đăng ký */}
+      {regState && !regState.canRegister && !regStateLoading && (
+        <View style={styles.reasonRow}>
+          <Ionicons name="information-circle-outline" size={16} color="#DC2626" />
+          <Text style={styles.reasonText}>
+            {regState.reason || "Không thể đăng ký giải này."}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.statsRow}>
         <View style={[styles.statBadge, styles.statGreen]}>
