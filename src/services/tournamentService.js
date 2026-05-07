@@ -470,3 +470,15 @@ export async function cancelPairRequest(pairRequestId) {
   );
   return res.data;
 }
+
+/**
+ * GET: /api/tournament-registrations/pair-requests?sent=true
+ * Get pair requests for current user (sent or received)
+ * Note: This endpoint may not exist yet - verify backend
+ */
+export async function getMyPairRequests(sent = false) {
+  const res = await apiClient.get("/tournament-registrations/pair-requests", {
+    params: { sent },
+  });
+  return res.data;
+}

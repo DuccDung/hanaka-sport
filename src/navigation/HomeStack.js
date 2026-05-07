@@ -30,6 +30,7 @@ import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
 import TournamentRegisterScreen from "../screens/Tournament/TournamentRegisterScreen";
 import PartnerSearchScreen from "../screens/Tournament/PartnerSearchScreen";
+import PairRequestManagementScreen from "../screens/Tournament/PairRequestManagementScreen";
 import PairRequestInboxScreen from "../screens/Tournament/PairRequestInboxScreen";
 import MyTournamentRegistrationScreen from "../screens/Tournament/MyTournamentRegistrationScreen";
 import HanakaRatingInfoScreen from "../screens/Members/HanakaRatingInfoScreen";
@@ -135,6 +136,11 @@ export default function HomeStack() {
       <Stack.Screen
         name="PartnerSearch"
         component={PartnerSearchScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PairRequestManagement"
+        component={PairRequestManagementScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

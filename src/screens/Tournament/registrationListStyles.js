@@ -15,11 +15,11 @@ export const styles = StyleSheet.create({
   backBtn: { padding: 6, marginRight: 6 },
   headerTitle: { fontSize: 15, fontWeight: "600", color: "#1E2430" },
 
-  // Action buttons row (like web)
+  // Action buttons row - 2 rows, 3 columns
   actionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 14,
@@ -29,23 +29,25 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    minHeight: 38,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    gap: 6,
+    minHeight: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: "#F3F4F6",
+    // Width for 3 columns: (100% - 2*gap) / 3 ≈ 28%
+    width: "30%",
   },
   actionButtonPrimary: {
     backgroundColor: "#DBEAFE",
   },
   actionButtonIcon: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#1E2430",
   },
   actionButtonText: {
-    fontSize: 14,
-    fontWeight: "400",
+    fontSize: 12,
+    fontWeight: "500",
     color: "#1E2430",
   },
   actionButtonTextPrimary: {
@@ -54,6 +56,29 @@ export const styles = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.5,
+  },
+
+  // Stats button variants
+  actionButtonSuccess: {
+    backgroundColor: "#F0FDF4",
+  },
+  actionButtonTextSuccess: {
+    color: "#16A34A",
+    fontWeight: "600",
+  },
+  actionButtonWaiting: {
+    backgroundColor: "#FFFBEB",
+  },
+  actionButtonTextWaiting: {
+    color: "#D97706",
+    fontWeight: "600",
+  },
+  actionButtonCapacity: {
+    backgroundColor: "#F3F4F6",
+  },
+  actionButtonTextCapacity: {
+    color: "#4B5563",
+    fontWeight: "600",
   },
 
   // Reason row for cannot register
@@ -216,4 +241,78 @@ export const styles = StyleSheet.create({
   },
 
   pointsText: { fontSize: 13, fontWeight: "700", color: "#EF4444" },
+
+  // Pending Pair Request Popup
+  popupOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  popupContent: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 340,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  popupIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  popupTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1E2430",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  popupMessage: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  popupButtonRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  popupButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  popupButtonExit: {
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  popupButtonExitText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  popupButtonView: {
+    backgroundColor: "#2563EB",
+  },
+  popupButtonViewText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
 });

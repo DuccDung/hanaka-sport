@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -22,6 +23,7 @@ import { publicListTournamentRegistrations } from "../../services/tournamentServ
 import { getZaloGroupLink } from "../../services/publicLinkService";
 import { getMyTournamentRegistrationState } from "../../services/tournamentService";
 import { getAuthSession } from "../../services/authStorage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function normalize(str = "") {
   return String(str)
@@ -107,6 +109,8 @@ export default function RegistrationListScreen({ navigation, route }) {
   const [regState, setRegState] = useState(null);
   const [regStateLoading, setRegStateLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [showPendingPopup, setShowPendingPopup] = useState(false);
+  const [popupDismissed, setPopupDismissed] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -148,10 +152,50 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
+  // Check if we should show pending pair request popup
+  const checkPendingPopup = useCallback(async (state) => {
+    if (popupDismissed) return; // User already dismissed
+
+    // Check if user has pending pair requests that block registration
+    const hasPendingPairRequest = state?.pendingPairRequests?.length > 0;
+    const reason = state?.reason || "";
+
+    // Show popup if reason mentions pending pair request
+    const shouldShow = hasPendingPairRequest || reason.toLowerCase().includes("lời mời ghép đôi");
+
+    if (shouldShow) {
+      setShowPendingPopup(true);
+    } else {
+      setShowPendingPopup(false);
+    }
+  }, [popupDismissed]);
+
   useEffect(() => {
     fetchData();
     fetchRegState();
   }, [fetchData, fetchRegState]);
+
+  // Check popup when regState changes
+  useEffect(() => {
+    if (regState) {
+      checkPendingPopup(regState);
+    }
+  }, [regState, checkPendingPopup]);
+
+  // Load dismissed state on mount
+  useEffect(() => {
+    const loadPopupDismissed = async () => {
+      try {
+        const dismissed = await AsyncStorage.getItem(`pendingPairPopupDismissed_${tournamentId}`);
+        if (dismissed === "true") {
+          setPopupDismissed(true);
+        }
+      } catch (e) {
+        console.error("Failed to load popup dismissed state:", e);
+      }
+    };
+    loadPopupDismissed();
+  }, [tournamentId]);
 
   const onRefresh = useCallback(async () => {
     try {
@@ -175,6 +219,22 @@ export default function RegistrationListScreen({ navigation, route }) {
       setRefreshing(false);
     }
   }, [tournamentId]);
+
+  const handleDismissPendingPopup = useCallback(async () => {
+    setShowPendingPopup(false);
+    // Mark as dismissed for this tournament
+    try {
+      await AsyncStorage.setItem(`pendingPairPopupDismissed_${tournamentId}`, "true");
+      setPopupDismissed(true);
+    } catch (e) {
+      console.error("Failed to save popup dismissed state:", e);
+    }
+  }, [tournamentId]);
+
+  const handleViewPendingRequests = useCallback(() => {
+    setShowPendingPopup(false);
+    navigation.navigate("PairRequestManagement", {});
+  }, [navigation]);
 
   const handleOpenZaloGroup = useCallback(async () => {
     try {
@@ -431,10 +491,21 @@ export default function RegistrationListScreen({ navigation, route }) {
           }}
           disabled={!regState?.canRegister || regStateLoading}
         >
-          <Ionicons name="create-outline" size={16} color="#2563EB" style={styles.actionButtonIcon} />
+          <Ionicons name="create-outline" size={14} color="#2563EB" style={styles.actionButtonIcon} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
-            {regStateLoading ? "Đang kiểm tra..." : "Đăng ký tham gia"}
+            {regStateLoading ? "Đang kiểm tra" : "Đăng ký"}
           </Text>
+        </Pressable>
+
+        {/* Lời mời của tôi button */}
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => {
+            navigation.navigate("PairRequestManagement", {});
+          }}
+        >
+          <Ionicons name="person-add-outline" size={14} color="#1E2430" style={styles.actionButtonIcon} />
+          <Text style={styles.actionButtonText}>Lời mời</Text>
         </Pressable>
 
         {/* Zalo group button */}
@@ -443,43 +514,61 @@ export default function RegistrationListScreen({ navigation, route }) {
           onPress={handleOpenZaloGroup}
           disabled={openingZalo}
         >
-          <Ionicons name="link-outline" size={16} color="#1E2430" style={styles.actionButtonIcon} />
+          <Ionicons name="link-outline" size={14} color="#1E2430" style={styles.actionButtonIcon} />
           <Text style={styles.actionButtonText}>
-            {openingZalo ? "Đang mở..." : "Nhóm Zalo"}
+            {openingZalo ? "Đang mở" : "Zalo"}
+          </Text>
+        </Pressable>
+
+        {/* Thành công button */}
+        <Pressable
+          style={[styles.actionButton, styles.actionButtonSuccess]}
+          onPress={() => {
+            Alert.alert("Thành công", `Có ${stats.success} đội đăng ký thành công.`);
+          }}
+        >
+          <Ionicons name="checkmark-circle-outline" size={14} color="#22C55E" style={styles.actionButtonIcon} />
+          <Text style={[styles.actionButtonText, styles.actionButtonTextSuccess]}>
+            Thành công ({stats.success})
+          </Text>
+        </Pressable>
+
+        {/* Chờ ghép button */}
+        <Pressable
+          style={[styles.actionButton, styles.actionButtonWaiting]}
+          onPress={() => {
+            Alert.alert("Chờ ghép", `${stats.waitingPair} đội đang chờ ghép cặp.`);
+          }}
+        >
+          <Ionicons name="time-outline" size={14} color="#F59E0B" style={styles.actionButtonIcon} />
+          <Text style={[styles.actionButtonText, styles.actionButtonTextWaiting]}>
+            Chờ ghép ({stats.waitingPair})
+          </Text>
+        </Pressable>
+
+        {/* Còn chỗ button */}
+        <Pressable
+          style={[styles.actionButton, styles.actionButtonCapacity]}
+          onPress={() => {
+            Alert.alert("Còn chỗ", `Giải còn ${stats.capacity} chỗ trống.`);
+          }}
+        >
+          <Ionicons name="people-outline" size={14} color="#6B7280" style={styles.actionButtonIcon} />
+          <Text style={[styles.actionButtonText, styles.actionButtonTextCapacity]}>
+            Còn chỗ ({stats.capacity})
           </Text>
         </Pressable>
       </View>
 
-      {/* Hiển thị lý do không thể đăng ký */}
-      {regState && !regState.canRegister && !regStateLoading && (
+      {/* Lý do không thể đăng ký - chỉ hiển thị nếu không phải là pending pair request */}
+      {regState && !regState.canRegister && !regStateLoading && !showPendingPopup && regState.reason && !regState.reason.toLowerCase().includes("lời mời ghép đôi") && (
         <View style={styles.reasonRow}>
           <Ionicons name="information-circle-outline" size={16} color="#DC2626" />
           <Text style={styles.reasonText}>
-            {regState.reason || "Không thể đăng ký giải này."}
+            {regState.reason}
           </Text>
         </View>
       )}
-
-      <View style={styles.statsRow}>
-        <View style={[styles.statBadge, styles.statGreen]}>
-          <Text style={[styles.statText, styles.statGreenText]}>
-            Thành công
-          </Text>
-          <Text style={[styles.statNum, styles.statGreenText]}>
-            {stats.success}
-          </Text>
-        </View>
-
-        <View style={[styles.statBadge, styles.statOrange]}>
-          <Text style={styles.statText}>Chờ ghép</Text>
-          <Text style={styles.statNum}>{stats.waitingPair}</Text>
-        </View>
-
-        <View style={[styles.statBadge, styles.statGrey]}>
-          <Text style={styles.statText}>Còn chỗ</Text>
-          <Text style={styles.statNum}>{stats.capacity}</Text>
-        </View>
-      </View>
 
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -507,6 +596,40 @@ export default function RegistrationListScreen({ navigation, route }) {
           <Text style={styles.thText}>Điểm</Text>
         </View>
       </View>
+
+      {/* Pending Pair Request Popup */}
+      <Modal
+        visible={showPendingPopup}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPendingPopup(false)}
+      >
+        <View style={styles.popupOverlay}>
+          <View style={styles.popupContent}>
+            <View style={styles.popupIconContainer}>
+              <Ionicons name="time-outline" size={40} color="#F59E0B" />
+            </View>
+            <Text style={styles.popupTitle}>Lời mời ghép đôi đang chờ</Text>
+            <Text style={styles.popupMessage}>
+              Bạn có lời mời ghép đôi đang được chờ xử lý. Bạn cần phản hồi các lời mời này trước khi có thể đăng ký tham gia giải.
+            </Text>
+            <View style={styles.popupButtonRow}>
+              <Pressable
+                style={[styles.popupButton, styles.popupButtonExit]}
+                onPress={handleDismissPendingPopup}
+              >
+                <Text style={styles.popupButtonExitText}>Thoát</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.popupButton, styles.popupButtonView]}
+                onPress={handleViewPendingRequests}
+              >
+                <Text style={styles.popupButtonViewText}>Xem chi tiết</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <FlatList
         contentContainerStyle={styles.listPad}
