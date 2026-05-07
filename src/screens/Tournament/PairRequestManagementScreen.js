@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./pairRequestManagementStyles";
-import { getMyPairRequests } from "../../services/tournamentService";
+import { getMyPairRequests, cancelPairRequest } from "../../services/tournamentService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 function pad2(n) {
@@ -161,126 +161,41 @@ export default function PairRequestManagementScreen({ navigation }) {
     try {
       if (!isRefresh) {
         setLoading(true);
-      }
-      setErrorMsg("");
+	      }
+	      setErrorMsg("");
 
-      // MOCK DATA - Replace with real API when backend endpoint exists
-      // Backend needed: GET /api/tournament-registrations/pair-requests?sent=true|false
-      const now = new Date();
-      const mockData = {
-        items: [
-          ...(activeTab === "sent"
-            ? [
-                {
-                  pairRequestId: 1,
-                  tournamentId: 6,
-                  tournamentTitle: "Giải Pickleball Mở Rộng Hà Nội 2024",
-                  requestedToUser: {
-                    userId: 123,
-                    fullName: "Nguyễn Văn An",
-                    avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
-                    ratingDouble: 8.5,
-                  },
-                  requestedAt: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), // 2h ago
-                  expiresAt: new Date(now.getTime() + 46 * 60 * 60 * 1000).toISOString(), // +46h
-                  status: "PENDING",
-                },
-                {
-                  pairRequestId: 2,
-                  tournamentId: 7,
-                  tournamentTitle: "Giải Pickleball Đôi Hỗn Hợp",
-                  requestedToUser: {
-                    userId: 456,
-                    fullName: "Trần Thị Bình",
-                    avatarUrl: null,
-                    ratingDouble: 7.2,
-                  },
-                  requestedAt: new Date(now.getTime() - 25 * 60 * 60 * 1000).toISOString(), // 25h ago
-                  expiresAt: new Date(now.getTime() + 23 * 60 * 60 * 1000).toISOString(), // +23h
-                  status: "PENDING",
-                },
-                {
-                  pairRequestId: 3,
-                  tournamentId: 8,
-                  tournamentTitle: "Giải Pickleball Cấp Thành Phố",
-                  requestedToUser: {
-                    userId: 789,
-                    fullName: "Lê Văn Cường",
-                    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100",
-                    ratingDouble: 9.0,
-                  },
-                  requestedAt: new Date(now.getTime() - 50 * 60 * 60 * 1000).toISOString(), // 50h ago
-                  expiresAt: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(), // -2h (expired)
-                  status: "EXPIRED",
-                },
-                {
-                  pairRequestId: 4,
-                  tournamentId: 9,
-                  tournamentTitle: "Giải Pickleball Mùa Xuân",
-                  requestedToUser: {
-                    userId: 101,
-                    fullName: "Phạm Thị Dung",
-                    avatarUrl: null,
-                    ratingDouble: 6.8,
-                  },
-                  requestedAt: new Date(now.getTime() - 72 * 60 * 60 * 1000).toISOString(), // 72h ago
-                  expiresAt: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), // -24h
-                  status: "REJECTED",
-                },
-                {
-                  pairRequestId: 5,
-                  tournamentId: 10,
-                  tournamentTitle: "Giải Pickleball Mùa Hè",
-                  requestedToUser: {
-                    userId: 202,
-                    fullName: "Hoàng Văn Em",
-                    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100",
-                    ratingDouble: 8.0,
-                  },
-                  requestedAt: new Date(now.getTime() - 100 * 60 * 60 * 1000).toISOString(), // 100h ago
-                  expiresAt: new Date(now.getTime() - 52 * 60 * 60 * 1000).toISOString(), // -52h
-                  status: "ACCEPTED",
-                },
-              ]
-            : [
-                // Mock data for "received" tab
-                {
-                  pairRequestId: 101,
-                  tournamentId: 11,
-                  tournamentTitle: "Giải Pickleball Nội Dung Đôi",
-                  requestedToUser: {
-                    userId: 303,
-                    fullName: "Võ Thị Gấm",
-                    avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100",
-                    ratingDouble: 7.5,
-                  },
-                  requestedAt: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString(), // 5h ago
-                  expiresAt: new Date(now.getTime() + 43 * 60 * 60 * 1000).toISOString(), // +43h
-                  status: "PENDING",
-                },
-                {
-                  pairRequestId: 102,
-                  tournamentId: 12,
-                  tournamentTitle: "Giải Pickleball Mở Rộng Miền Nam",
-                  requestedToUser: {
-                    userId: 404,
-                    fullName: "Đặng Văn Hùng",
-                    avatarUrl: null,
-                    ratingDouble: 8.2,
-                  },
-                  requestedAt: new Date(now.getTime() - 30 * 60 * 60 * 1000).toISOString(), // 30h ago
-                  expiresAt: new Date(now.getTime() + 18 * 60 * 60 * 1000).toISOString(), // +18h
-                  status: "PENDING",
-                },
-              ]),
-        ],
-      };
-      setRequests(mockData.items);
+	      // Call real API
+	      const data = await getMyPairRequests(activeTab === "sent");
 
-      // Real API call (uncomment when backend endpoint exists):
-      // const data = await getMyPairRequests(activeTab === "sent");
-      // const items = data?.items || data || [];
-      // setRequests(items);
+	      // Handle response format: could be { items: [...] } or array directly
+	      const items = Array.isArray(data) ? data : (data?.items || data || []);
+
+	      // Map server response to UI format if needed
+	      const mappedItems = items.map((item) => ({
+	        pairRequestId: item.pairRequestId,
+	        tournamentId: item.tournamentId,
+	        tournamentTitle: item.tournamentTitle || "Không xác định",
+	        requestedToUser: {
+	          userId: item.requestedToUser?.userId,
+	          fullName: item.requestedToUser?.fullName || "Người chơi ẩn danh",
+	          avatarUrl: item.requestedToUser?.avatarUrl,
+	          ratingDouble: item.requestedToUser?.ratingDouble || 0,
+	        },
+	        requestedAt: item.requestedAt,
+	        expiresAt: item.expiresAt,
+	        status: item.status || "PENDING",
+	        // Optional fields
+	        registrationId: item.registrationId,
+	        tournamentBanner: item.tournamentBanner,
+	        tournamentDate: item.tournamentDate,
+	        tournamentLocation: item.tournamentLocation,
+	        requestedByUser: item.requestedByUser,
+	        registration: item.registration,
+	        respondedAt: item.respondedAt,
+	        responseNote: item.responseNote,
+	      }));
+
+	      setRequests(mappedItems);
     } catch (e) {
       setErrorMsg(
         e?.response?.data?.message ||
@@ -313,8 +228,7 @@ export default function PairRequestManagementScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
             try {
-              // TODO: Implement cancelPairRequest API call
-              // await cancelPairRequest(pairRequest.pairRequestId);
+              await cancelPairRequest(pairRequest.pairRequestId);
               Alert.alert("Thành công", "Đã hủy lời mời.");
               // Remove from list
               setRequests((prev) => prev.filter((r) => r.pairRequestId !== pairRequest.pairRequestId));
@@ -330,19 +244,39 @@ export default function PairRequestManagementScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const isPending = item.status === "PENDING";
     const canCancel = isPending && activeTab === "sent";
-    const receiver = item.requestedToUser || {};
+
+    // For sent tab, show the receiver (requestedToUser)
+    // For received tab, show the sender (requestedByUser)
+    const displayUser = activeTab === "sent"
+      ? (item.requestedToUser || {})
+      : (item.requestedByUser || {});
+
+    const otherUser = item.requestedToUser || item.requestedByUser || {};
 
     return (
-      <View style={styles.item}>
+      <Pressable
+        style={styles.item}
+        onPress={() => {
+          navigation.navigate("PairRequestDetail", {
+            pairRequestId: item.pairRequestId,
+          });
+        }}
+      >
         <View style={styles.itemHeader}>
-          <AvatarCircle uri={receiver.avatarUrl} name={receiver.fullName} size={48} />
+          <AvatarCircle uri={displayUser.avatarUrl} name={displayUser.fullName} size={48} />
           <View style={styles.itemInfo}>
             <Text style={styles.tournamentTitle} numberOfLines={2}>
               {item.tournamentTitle || "Không xác định"}
             </Text>
             <Text style={styles.receiverName}>
-              {receiver.fullName || "Người chơi ẩn danh"}
+              {activeTab === "sent"
+                ? `Đến: ${otherUser.fullName || "Người chơi ẩn danh"}`
+                : `Từ: ${otherUser.fullName || "Người chơi ẩn danh"}`
+              }
             </Text>
+            {activeTab === "received" && displayUser.ratingDouble && (
+              <Text style={styles.metaText}>Rating đôi: {displayUser.ratingDouble.toFixed(1)}</Text>
+            )}
             <View style={styles.metaRow}>
               <Text style={styles.metaText}>Gửi: {formatDateTime(item.requestedAt)}</Text>
               <Text style={styles.metaText}>Hết hạn: {getExpiryText(item.expiresAt)}</Text>
@@ -356,13 +290,16 @@ export default function PairRequestManagementScreen({ navigation }) {
         {canCancel && (
           <Pressable
             style={styles.cancelButton}
-            onPress={() => handleCancel(item)}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleCancel(item);
+            }}
           >
             <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
             <Text style={styles.cancelButtonText}>Hủy lời mời</Text>
           </Pressable>
         )}
-      </View>
+      </Pressable>
     );
   };
 

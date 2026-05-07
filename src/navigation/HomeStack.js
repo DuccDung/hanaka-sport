@@ -32,6 +32,7 @@ import TournamentRegisterScreen from "../screens/Tournament/TournamentRegisterSc
 import PartnerSearchScreen from "../screens/Tournament/PartnerSearchScreen";
 import PairRequestManagementScreen from "../screens/Tournament/PairRequestManagementScreen";
 import PairRequestInboxScreen from "../screens/Tournament/PairRequestInboxScreen";
+import PairRequestDetailScreen from "../screens/Tournament/PairRequestDetailScreen";
 import MyTournamentRegistrationScreen from "../screens/Tournament/MyTournamentRegistrationScreen";
 import HanakaRatingInfoScreen from "../screens/Members/HanakaRatingInfoScreen";
 const Stack = createNativeStackNavigator();
@@ -141,6 +142,11 @@ export default function HomeStack() {
       <Stack.Screen
         name="PairRequestManagement"
         component={PairRequestManagementScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PairRequestDetail"
+        component={PairRequestDetailScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

@@ -93,7 +93,7 @@ export const styles = StyleSheet.create({
   reasonText: {
     flex: 1,
     fontSize: 13,
-    color: "#DC2626",
+    color: "#22C55E",
     fontWeight: "500",
   },
 

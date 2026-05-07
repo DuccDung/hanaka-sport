@@ -175,6 +175,14 @@ export default function RegistrationListScreen({ navigation, route }) {
     fetchRegState();
   }, [fetchData, fetchRegState]);
 
+  // Refresh regState when screen is focused (after navigation back)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchRegState();
+    });
+    return unsubscribe;
+  }, [navigation, fetchRegState]);
+
   // Check popup when regState changes
   useEffect(() => {
     if (regState) {

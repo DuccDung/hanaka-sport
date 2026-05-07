@@ -431,20 +431,20 @@ export async function getPairRequestNotifications() {
 }
 
 /**
- * POST: /api/tournaments/pair-requests/{pairRequestId}/accept
+ * POST: /api/tournament-registrations/pair-requests/{pairRequestId}/accept
  * Accept a received pair request
  */
 export async function acceptPairRequest(pairRequestId) {
   if (!pairRequestId) throw new Error("pairRequestId is required");
 
   const res = await apiClient.post(
-    `/tournaments/pair-requests/${pairRequestId}/accept`
+    `/tournament-registrations/pair-requests/${pairRequestId}/accept`
   );
   return res.data;
 }
 
 /**
- * POST: /api/tournaments/pair-requests/{pairRequestId}/reject
+ * POST: /api/tournament-registrations/pair-requests/{pairRequestId}/reject
  * Reject a received pair request
  * Body: { responseNote?: string }
  */
@@ -452,21 +452,21 @@ export async function rejectPairRequest(pairRequestId, responseNote = "") {
   if (!pairRequestId) throw new Error("pairRequestId is required");
 
   const res = await apiClient.post(
-    `/tournaments/pair-requests/${pairRequestId}/reject`,
+    `/tournament-registrations/pair-requests/${pairRequestId}/reject`,
     { responseNote }
   );
   return res.data;
 }
 
 /**
- * POST: /api/tournaments/pair-requests/{pairRequestId}/cancel
+ * POST: /api/tournament-registrations/pair-requests/{pairRequestId}/cancel
  * Cancel a sent pair request
  */
 export async function cancelPairRequest(pairRequestId) {
   if (!pairRequestId) throw new Error("pairRequestId is required");
 
   const res = await apiClient.post(
-    `/tournaments/pair-requests/${pairRequestId}/cancel`
+    `/tournament-registrations/pair-requests/${pairRequestId}/cancel`
   );
   return res.data;
 }
@@ -480,5 +480,15 @@ export async function getMyPairRequests(sent = false) {
   const res = await apiClient.get("/tournament-registrations/pair-requests", {
     params: { sent },
   });
+  return res.data;
+}
+
+/**
+ * GET: /api/tournament-registrations/pair-requests/{pairRequestId}
+ * Get detail of a specific pair request
+ * Note: This endpoint may need to be added to backend
+ */
+export async function getPairRequestDetail(pairRequestId) {
+  const res = await apiClient.get(`/tournament-registrations/pair-requests/${pairRequestId}`);
   return res.data;
 }
