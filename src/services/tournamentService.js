@@ -321,3 +321,187 @@ export async function getTournamentRule(tournamentId) {
   const res = await apiClient.get(`/tournaments/${tournamentId}/rule`);
   return res.data;
 }
+
+/**
+ * GET: /api/tournament-registrations/tournaments/{tournamentId}/me
+ * Returns registration eligibility and state for current user
+ * Endpoint theo TournamentRegistrationUserController.GetMyTournamentRegistrationState()
+ */
+export async function getMyTournamentRegistrationState(tournamentId) {
+  if (!tournamentId) {
+    throw new Error("tournamentId is required");
+  }
+
+  const res = await apiClient.get(
+    `/tournament-registrations/tournaments/${tournamentId}/me`
+  );
+  return res.data;
+}
+
+/**
+ * GET: /api/users?query=...&page=1&pageSize=20
+ * Search for users (requires JWT auth)
+ * Returns members only (role MEMBER)
+ */
+export async function searchUsers(query, options = {}) {
+  if (!query) throw new Error("query is required");
+
+  const res = await apiClient.get("/users", {
+    params: {
+      q: query,
+      page: 1,
+      pageSize: options.limit || 20,
+    },
+  });
+
+  // Response: { page, pageSize, total, items: [{ userId, fullName, city, gender, verified, avatarUrl, ratingSingle, ratingDouble, ratingUpdatedAt, avatarUrl }] }
+  return res.data.items || [];
+}
+
+/**
+ * GET: /api/tournament-registrations/tournaments/{tournamentId}/partner-search?query=xxx&pageSize=10
+ * Search for potential partners in a specific tournament
+ * Returns users with registration status and canInvite flag
+ */
+export async function searchPartner(tournamentId, query, pageSize = 10) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  if (!query) throw new Error("query is required");
+
+  const res = await apiClient.get(
+    `/tournament-registrations/tournaments/${tournamentId}/partner-search`,
+    {
+      params: { query, pageSize },
+    }
+  );
+
+  return res.data;
+}
+
+/**
+ * POST: /api/tournament-registrations/tournaments/{tournamentId}/single
+ * Register as single player
+ */
+export async function registerSingle({ tournamentId }) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  const res = await apiClient.post(
+    `/tournament-registrations/tournaments/${tournamentId}/single`
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournament-registrations/tournaments/{tournamentId}/waiting
+ * Register as a waiting pair (no partner specified yet)
+ */
+export async function registerWaitingPair({ tournamentId }) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  const res = await apiClient.post(
+    `/tournament-registrations/tournaments/${tournamentId}/waiting`
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournament-registrations/tournaments/{tournamentId}/pair-requests
+ * Create a pair request to another user
+ * Body: { requestedToUserId: number, requestedToRegistrationId?: number, message?: string }
+ */
+export async function createPairRequest(tournamentId, { requestedToUserId, requestedToRegistrationId, message }) {
+  if (!tournamentId) throw new Error("tournamentId is required");
+  if (!requestedToUserId && !requestedToRegistrationId) throw new Error("Either requestedToUserId or requestedToRegistrationId is required");
+
+  const res = await apiClient.post(
+    `/tournament-registrations/tournaments/${tournamentId}/pair-requests`,
+    {
+      requestedToUserId,
+      requestedToRegistrationId,
+      message: message || "",
+    }
+  );
+  return res.data;
+}
+
+/**
+ * GET: /api/notifications/pair-requests
+ * Get pending pair request notifications (received only)
+ */
+export async function getPairRequestNotifications() {
+  const res = await apiClient.get("/notifications/pair-requests");
+  return res.data;
+}
+
+/**
+ * POST: /api/tournament-registrations/pair-requests/{pairRequestId}/accept
+ * Accept a received pair request
+ */
+export async function acceptPairRequest(pairRequestId) {
+  if (!pairRequestId) throw new Error("pairRequestId is required");
+
+  const res = await apiClient.post(
+    `/tournament-registrations/pair-requests/${pairRequestId}/accept`
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournament-registrations/pair-requests/{pairRequestId}/reject
+ * Reject a received pair request
+ * Body: { responseNote?: string }
+ */
+export async function rejectPairRequest(pairRequestId, responseNote = "") {
+  if (!pairRequestId) throw new Error("pairRequestId is required");
+
+  const res = await apiClient.post(
+    `/tournament-registrations/pair-requests/${pairRequestId}/reject`,
+    { responseNote }
+  );
+  return res.data;
+}
+
+/**
+ * POST: /api/tournament-registrations/pair-requests/{pairRequestId}/cancel
+ * Cancel a sent pair request
+ */
+export async function cancelPairRequest(pairRequestId) {
+  if (!pairRequestId) throw new Error("pairRequestId is required");
+
+  const res = await apiClient.post(
+    `/tournament-registrations/pair-requests/${pairRequestId}/cancel`
+  );
+  return res.data;
+}
+
+/**
+ * GET: /api/tournament-registrations/pair-requests?sent=true
+ * Get pair requests for current user (sent or received)
+ * Note: This endpoint may not exist yet - verify backend
+ */
+export async function getMyPairRequests(sent = false) {
+  const res = await apiClient.get("/tournament-registrations/pair-requests", {
+    params: { sent },
+  });
+  return res.data;
+}
+
+/**
+ * GET: /api/tournament-registrations/pair-requests/{pairRequestId}
+ * Get detail of a specific pair request
+ * Note: This endpoint may need to be added to backend
+ */
+export async function getPairRequestDetail(pairRequestId) {
+  const res = await apiClient.get(`/tournament-registrations/pair-requests/${pairRequestId}`);
+  return res.data;
+}
+
+// Fetch pending pair request notifications from server
+export async function fetchPendingPairRequests() {
+  const res = await apiClient.get(`/notifications/pair-requests`);
+  // Backend trả về { items: [], total: 0 } hoặc array trực tiếp
+  const data = res.data;
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data && Array.isArray(data.items)) {
+    return data.items;
+  }
+  return [];
+}

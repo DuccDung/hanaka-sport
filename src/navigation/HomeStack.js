@@ -28,17 +28,27 @@ import CoachDetailScreen from "../screens/Coach/CoachDetailScreen";
 import CourtDetailScreen from "../screens/Court/CourtDetailScreen";
 import RefereeDetailScreen from "../screens/Referee/RefereeDetailScreen";
 import TournamentRuleScreen from "../screens/Tournament/TournamentRuleScreen";
+import TournamentRegisterScreen from "../screens/Tournament/TournamentRegisterScreen";
+import PartnerSearchScreen from "../screens/Tournament/PartnerSearchScreen";
+import PairRequestManagementScreen from "../screens/Tournament/PairRequestManagementScreen";
+import PairRequestInboxScreen from "../screens/Tournament/PairRequestInboxScreen";
+import PairRequestDetailScreen from "../screens/Tournament/PairRequestDetailScreen";
+import MyTournamentRegistrationScreen from "../screens/Tournament/MyTournamentRegistrationScreen";
 import HanakaRatingInfoScreen from "../screens/Members/HanakaRatingInfoScreen";
+import PairRequestNotificationManager from "../components/PairRequestNotificationManager";
+
 const Stack = createNativeStackNavigator();
 
-export default function HomeStack() {
+export default function HomeStack({ navigation }) {
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="HomeMain"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
+    <>
+      <PairRequestNotificationManager navigation={navigation} />
+      <Stack.Navigator>
+        <Stack.Screen
+          name="HomeMain"
+          component={HomeScreen}
+          options={{ headerShown: false }}
+        />
 
       <Stack.Screen
         name="Rules"
@@ -124,6 +134,36 @@ export default function HomeStack() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="TournamentRegister"
+        component={TournamentRegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PartnerSearch"
+        component={PartnerSearchScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PairRequestManagement"
+        component={PairRequestManagementScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PairRequestDetail"
+        component={PairRequestDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PairRequestInbox"
+        component={PairRequestInboxScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyTournamentRegistration"
+        component={MyTournamentRegistrationScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="TournamentSchedule"
         component={TournamentScheduleScreen}
         options={{ headerShown: false }}
@@ -179,5 +219,6 @@ export default function HomeStack() {
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
+    </>
   );
 }
