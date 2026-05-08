@@ -25,8 +25,18 @@ function sanitizeUserListResponse(payload) {
 /**
  * GET: /api/users/me
  */
-export async function getMe() {
-  const res = await apiClient.get("/users/me");
+export async function getMe(options = {}) {
+  const accessToken =
+    typeof options === "string" ? options : options?.accessToken;
+  const config = accessToken
+    ? {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    : undefined;
+
+  const res = await apiClient.get("/users/me", config);
   return sanitizeUserPayload(res.data);
 }
 

@@ -4,27 +4,48 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
   getAuthSession,
   saveAuthSession,
-  clearAuthSession,
+  clearStoredAccountData,
 } from "../services/authStorage";
 import {
   connectRealtime,
   disconnectRealtime,
+  clearRealtimeAccountState,
 } from "../services/realtimeService";
 import { sanitizeUserPayload } from "../services/userService";
+import { logoutFromServer } from "../services/authApi";
 
 const AuthContext = createContext(null);
 
-function sanitizeSession(session) {
+function createEmptySession() {
   return {
-    accessToken: session?.accessToken || null,
-    expiresAtUtc: session?.expiresAtUtc || null,
-    user: sanitizeUserPayload(session?.user),
+    accessToken: null,
+    expiresAtUtc: null,
+    user: null,
   };
+}
+
+function sanitizeSession(session) {
+  const accessToken = session?.accessToken || null;
+
+  return {
+    accessToken,
+    expiresAtUtc: accessToken ? session?.expiresAtUtc || null : null,
+    user: accessToken ? sanitizeUserPayload(session?.user) || null : null,
+  };
+}
+
+async function persistSessionSnapshot(session) {
+  if (session?.accessToken) {
+    await saveAuthSession(session);
+  } else {
+    await clearStoredAccountData(session);
+  }
 }
 
 function AppRealtimeBootstrap() {
@@ -48,58 +69,113 @@ function AppRealtimeBootstrap() {
 }
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState({
-    accessToken: null,
-    expiresAtUtc: null,
-    user: null,
-  });
+  const [session, setSession] = useState(createEmptySession);
 
   const [booting, setBooting] = useState(true);
+  const sessionWriteRef = useRef({
+    id: 0,
+    session: createEmptySession(),
+  });
 
   useEffect(() => {
+    const bootWriteId = sessionWriteRef.current.id;
+
     (async () => {
       try {
         const s = await getAuthSession();
+        const nextSession = sanitizeSession(s || createEmptySession());
 
-        setSession(
-          sanitizeSession(
-            s || {
-              accessToken: null,
-              expiresAtUtc: null,
-              user: null,
-            },
-          ) || {
-            accessToken: null,
-            expiresAtUtc: null,
-            user: null,
-          },
-        );
+        if (sessionWriteRef.current.id === bootWriteId) {
+          sessionWriteRef.current = {
+            id: bootWriteId,
+            session: nextSession,
+          };
+          setSession(nextSession);
+        }
       } finally {
         setBooting(false);
       }
     })();
   }, []);
 
-  const setAuthSession = useCallback(async ({ accessToken, expiresAtUtc, user }) => {
+  const setAuthSession = useCallback(async ({
+    accessToken,
+    expiresAtUtc,
+    user,
+    replace = false,
+  }) => {
     const nextSession = sanitizeSession({
       accessToken,
       expiresAtUtc,
       user,
     });
 
+    if (
+      nextSession.accessToken &&
+      !replace &&
+      sessionWriteRef.current.session?.accessToken !== nextSession.accessToken
+    ) {
+      return false;
+    }
+
+    const previousSession = sessionWriteRef.current.session;
+    const writeId = sessionWriteRef.current.id + 1;
+
+    sessionWriteRef.current = {
+      id: writeId,
+      session: nextSession,
+    };
+
+    if (!nextSession.accessToken) {
+      setSession(createEmptySession());
+      disconnectRealtime();
+
+      await clearRealtimeAccountState();
+      await clearStoredAccountData(previousSession);
+
+      if (sessionWriteRef.current.id === writeId) {
+        setSession(createEmptySession());
+      } else {
+        await persistSessionSnapshot(sessionWriteRef.current.session);
+      }
+
+      return true;
+    }
+
     await saveAuthSession(nextSession);
-    setSession(nextSession);
+
+    if (sessionWriteRef.current.id === writeId) {
+      setSession(nextSession);
+    } else {
+      await persistSessionSnapshot(sessionWriteRef.current.session);
+    }
+
+    return true;
   }, []);
 
   const logout = useCallback(async () => {
-    await clearAuthSession();
+    const previousSession = sessionWriteRef.current.session;
+    const nextSession = createEmptySession();
+    const writeId = sessionWriteRef.current.id + 1;
+
+    sessionWriteRef.current = {
+      id: writeId,
+      session: nextSession,
+    };
+
+    setSession(nextSession);
     disconnectRealtime();
 
-    setSession({
-      accessToken: null,
-      expiresAtUtc: null,
-      user: null,
-    });
+    logoutFromServer().catch(() => {});
+
+    await clearRealtimeAccountState();
+    await clearStoredAccountData(previousSession);
+
+    if (sessionWriteRef.current.id === writeId) {
+      setSession(createEmptySession());
+    } else {
+      await persistSessionSnapshot(sessionWriteRef.current.session);
+    }
   }, []);
 
   const contextValue = useMemo(

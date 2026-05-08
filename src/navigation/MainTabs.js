@@ -8,16 +8,22 @@ import VideosScreen from "../screens/Videos/VideosScreen";
 import HomeStack from "./HomeStack";
 import MyClubStack from "./MyClubStack";
 import ChatStack from "./ChatStack";
+import { useAuth } from "../context/AuthContext";
 
 const Tab = createBottomTabNavigator();
 
 export default function MainTabs() {
+  const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 10);
   const tabBarHeight = 56 + bottomInset;
+  const navigatorKey = session?.accessToken
+    ? `auth:${session?.user?.userId || session.accessToken}`
+    : "guest";
 
   return (
     <Tab.Navigator
+      key={navigatorKey}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: "#FFFFFF",

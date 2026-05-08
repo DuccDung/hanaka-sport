@@ -22,6 +22,18 @@ export const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
   },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1E2430",
+    marginBottom: 6,
+  },
+  sectionDesc: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: "#6B7280",
+    marginBottom: 18,
+  },
 
   label: { fontSize: 13, fontWeight: "700", color: "#1E2430", marginBottom: 8 },
 
@@ -82,6 +94,29 @@ export const styles = StyleSheet.create({
 
   forgotText: { fontSize: 13, color: "#EF4444", fontWeight: "600" },
 
+  errorBox: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  errorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#DC2626",
+    fontWeight: "600",
+  },
+  infoText: {
+    marginTop: 12,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#2563EB",
+    fontWeight: "600",
+  },
+
   submitBtn: {
     marginTop: 14,
     height: 48,
@@ -103,4 +138,11 @@ export const styles = StyleSheet.create({
   },
   footerText: { fontSize: 13, color: "#6B7280" },
   footerLink: { fontSize: 13, fontWeight: "700", color: COLORS.BLUE },
+  secondaryActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
 });

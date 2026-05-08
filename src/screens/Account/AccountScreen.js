@@ -68,11 +68,50 @@ function normalizeAvatarUrl(value) {
   return s;
 }
 
+function normalizeIdentityValue(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim().toLowerCase();
+}
+
+function confirmAction({
+  title,
+  message,
+  cancelText = "Huỷ",
+  confirmText,
+  destructive = false,
+  onConfirm,
+}) {
+  if (Platform.OS === "web") {
+    const ok =
+      typeof globalThis !== "undefined" &&
+      typeof globalThis.confirm === "function"
+        ? globalThis.confirm(`${title}\n\n${message}`)
+        : true;
+
+    if (ok) {
+      void onConfirm?.();
+    }
+
+    return;
+  }
+
+  Alert.alert(title, message, [
+    { text: cancelText, style: "cancel" },
+    {
+      text: confirmText,
+      style: destructive ? "destructive" : "default",
+      onPress: onConfirm,
+    },
+  ]);
+}
+
 export default function AccountScreen({ navigation }) {
   const { session, logout, setAuthSession, booting } = useAuth();
 
   const accessToken = session?.accessToken || null;
   const userInSession = session?.user || null;
+  const sessionUserId = normalizeIdentityValue(userInSession?.userId);
+  const sessionEmail = normalizeIdentityValue(userInSession?.email);
   const isLoggedIn = !!accessToken;
 
   const [loading, setLoading] = useState(false);
@@ -215,6 +254,33 @@ export default function AccountScreen({ navigation }) {
     };
   }, []);
 
+  const resetToHome = useCallback(() => {
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: "MainTabs",
+          state: {
+            index: 0,
+            routes: [{ name: "Home" }],
+          },
+        },
+      ],
+    });
+  }, [navigation]);
+
+  const performLogout = useCallback(async () => {
+    profileRequestIdRef.current += 1;
+    accessTokenRef.current = null;
+    clearUserState();
+
+    try {
+      await logout();
+    } finally {
+      resetToHome();
+    }
+  }, [clearUserState, logout, resetToHome]);
+
   const isCurrentProfileRequest = useCallback((requestId, tokenSnapshot) => {
     return (
       isMountedRef.current &&
@@ -230,9 +296,11 @@ export default function AccountScreen({ navigation }) {
     const requestId = profileRequestIdRef.current + 1;
     profileRequestIdRef.current = requestId;
     const tokenSnapshot = accessToken;
+    const expectedUserId = sessionUserId;
+    const expectedEmail = sessionEmail;
 
     try {
-      const me = await getMe();
+      const me = await getMe({ accessToken: tokenSnapshot });
 
       if (!isCurrentProfileRequest(requestId, tokenSnapshot)) {
         return;
@@ -241,6 +309,16 @@ export default function AccountScreen({ navigation }) {
       const latestSession = await getAuthSession();
 
       if (latestSession?.accessToken !== tokenSnapshot) {
+        return;
+      }
+
+      const returnedUserId = normalizeIdentityValue(me?.userId);
+      const returnedEmail = normalizeIdentityValue(me?.email);
+
+      if (
+        (expectedUserId && returnedUserId && expectedUserId !== returnedUserId) ||
+        (expectedEmail && returnedEmail && expectedEmail !== returnedEmail)
+      ) {
         return;
       }
 
@@ -261,6 +339,8 @@ export default function AccountScreen({ navigation }) {
     accessToken,
     isCurrentProfileRequest,
     session?.expiresAtUtc,
+    sessionEmail,
+    sessionUserId,
     setAuthSession,
     syncUserToState,
   ]);
@@ -278,16 +358,6 @@ export default function AccountScreen({ navigation }) {
         expiresAtUtc: session?.expiresAtUtc || null,
         user: session?.user || null,
       };
-    }
-
-    const latestSession = await getAuthSession();
-    if (latestSession?.accessToken) {
-      await setAuthSession({
-        accessToken: latestSession.accessToken,
-        expiresAtUtc: latestSession.expiresAtUtc,
-        user: latestSession.user || session?.user || null,
-      });
-      return latestSession;
     }
 
     Alert.alert(
@@ -310,7 +380,6 @@ export default function AccountScreen({ navigation }) {
     navigation,
     session?.expiresAtUtc,
     session?.user,
-    setAuthSession,
   ]);
 
   useEffect(() => {
@@ -475,24 +544,7 @@ export default function AccountScreen({ navigation }) {
               Alert.alert("Thành công", "Tài khoản của bạn đã được xóa.", [
                 {
                   text: "OK",
-                  onPress: async () => {
-                    try {
-                      await logout();
-                    } finally {
-                      navigation.reset({
-                        index: 0,
-                        routes: [
-                          {
-                            name: "MainTabs",
-                            state: {
-                              index: 0,
-                              routes: [{ name: "Home" }],
-                            },
-                          },
-                        ],
-                      });
-                    }
-                  },
+                  onPress: performLogout,
                 },
               ]);
             } catch (error) {
@@ -512,32 +564,14 @@ export default function AccountScreen({ navigation }) {
     );
   };
 
-  const onLogout = async () => {
-    Alert.alert("Đăng xuất", "Bạn chắc chắn muốn đăng xuất?", [
-      { text: "Huỷ", style: "cancel" },
-      {
-        text: "Đăng xuất",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await logout();
-          } finally {
-            navigation.reset({
-              index: 0,
-              routes: [
-                {
-                  name: "MainTabs",
-                  state: {
-                    index: 0,
-                    routes: [{ name: "Home" }],
-                  },
-                },
-              ],
-            });
-          }
-        },
-      },
-    ]);
+  const onLogout = () => {
+    confirmAction({
+      title: "Đăng xuất",
+      message: "Bạn chắc chắn muốn đăng xuất?",
+      confirmText: "Đăng xuất",
+      destructive: true,
+      onConfirm: performLogout,
+    });
   };
 
   const onChangeDate = (event, selectedDate) => {

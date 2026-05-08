@@ -13,6 +13,11 @@ let tournamentUnreadCount = 0;
 // Pair request notifications storage
 const PAIR_NOTIFICATIONS_KEY = "pair_request_notifications";
 const DISMISSED_NOTIFICATIONS_KEY = "dismissed_pair_requests";
+const REALTIME_STORAGE_KEYS = [
+  "tournament_unread_count",
+  PAIR_NOTIFICATIONS_KEY,
+  DISMISSED_NOTIFICATIONS_KEY,
+];
 
 async function loadUnreadCount() {
   try {
@@ -238,6 +243,18 @@ export function disconnectRealtime() {
     } catch {}
     ws = null;
   }
+}
+
+export async function clearRealtimeAccountState() {
+  tournamentUnreadCount = 0;
+  disconnectRealtime();
+
+  try {
+    await AsyncStorage.multiSet(REALTIME_STORAGE_KEYS.map((key) => [key, ""]));
+    await AsyncStorage.multiRemove(REALTIME_STORAGE_KEYS);
+  } catch {}
+
+  emit({ type: "__account_cleared__" });
 }
 
 export function sendRealtime(data) {

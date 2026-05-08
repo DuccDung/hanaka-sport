@@ -127,6 +127,7 @@ export default function PairRequestDetailScreen({ navigation, route }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [bannerLoadFailed, setBannerLoadFailed] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -169,6 +170,10 @@ export default function PairRequestDetailScreen({ navigation, route }) {
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  useEffect(() => {
+    setBannerLoadFailed(false);
+  }, [detail?.tournamentBanner]);
 
   const isSent = detail?.isSent; // true if this user sent the request
   const isPending = detail?.status === "PENDING";
@@ -396,13 +401,14 @@ export default function PairRequestDetailScreen({ navigation, route }) {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Tournament Banner */}
-        {detail.tournamentBanner ? (
+        {detail.tournamentBanner && !bannerLoadFailed ? (
           <Image
             source={{ uri: detail.tournamentBanner }}
             style={styles.tournamentBanner}
             resizeMode="cover"
             onError={(e) => {
-              console.error("[PairRequestDetail] Banner load error:", {
+              setBannerLoadFailed(true);
+              console.warn("[PairRequestDetail] Banner load error:", {
                 error: e.nativeEvent.error,
                 uri: detail.tournamentBanner,
                 bannerValue: detail.tournamentBanner,

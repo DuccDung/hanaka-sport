@@ -1,5 +1,5 @@
 // src/components/PairRequestNotificationManager.js
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View, AppState } from "react-native";
 import PairRequestNotificationPopup from "./PairRequestNotificationPopup";
 import {
@@ -47,26 +47,43 @@ function normalizePairNotification(raw = {}) {
 
 export default function PairRequestNotificationManager({ navigation }) {
   const { session } = useAuth();
+  const accessToken = session?.accessToken || null;
+  const accessTokenRef = useRef(accessToken);
   const [pendingNotifications, setPendingNotifications] = useState([]);
   const [currentPopup, setCurrentPopup] = useState(null); // { notification, pairRequestId }
   const [appState, setAppState] = useState(AppState.currentState);
 
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+
+    if (!accessToken) {
+      setPendingNotifications([]);
+      setCurrentPopup(null);
+    }
+  }, [accessToken]);
+
   // Fetch pending notifications from server and local storage
   const checkPendingNotifications = useCallback(async () => {
-    if (!session?.accessToken) return;
+    const tokenSnapshot = accessTokenRef.current;
+    if (!tokenSnapshot) return;
 
     try {
       console.log("Checking pending notifications...");
       // Sync with server to get latest pending notifications
       const serverNotifications = (await fetchPendingPairRequests()).map(normalizePairNotification);
+      if (accessTokenRef.current !== tokenSnapshot) return;
+
       console.log("Fetched pending pair requests from server:", serverNotifications);
       // Save to local storage
       await savePairRequestNotifications(serverNotifications);
+      if (accessTokenRef.current !== tokenSnapshot) return;
 
       // Filter: only show if not dismissed (by NotificationId)
       const unseen = [];
       for (const n of serverNotifications) {
         const dismissed = await isPairRequestNotificationDismissed(n.NotificationId);
+        if (accessTokenRef.current !== tokenSnapshot) return;
+
         console.log(`Notification ${n.NotificationId} from server, dismissed:`, dismissed);
         if (!dismissed) {
           unseen.push(n);
@@ -89,19 +106,28 @@ export default function PairRequestNotificationManager({ navigation }) {
     } catch (e) {
       console.error("Failed to check pending notifications:", e);
     }
-  }, [session]);
+  }, []);
 
   // Listen for realtime new pair requests
   useEffect(() => {
     const unsubscribe = addRealtimeListener(async (event) => {
       console.log("Realtime event received in manager:", event.type, event.notification);
-      if (event.type === "new_pair_request" && session?.accessToken) {
+      if (event.type === "__account_cleared__") {
+        setPendingNotifications([]);
+        setCurrentPopup(null);
+        return;
+      }
+
+      if (event.type === "new_pair_request" && accessTokenRef.current) {
+        const tokenSnapshot = accessTokenRef.current;
         // A new pair request arrived via WS
         const notification = normalizePairNotification(event.notification);
         console.log("Processing new_pair_request:", notification.NotificationId, notification.PairRequestId);
 
         // Check if this notification is dismissed before showing
         const isDismissed = await isPairRequestNotificationDismissed(notification.NotificationId);
+        if (accessTokenRef.current !== tokenSnapshot) return;
+
         console.log(`Notification ${notification.NotificationId} dismissed:`, isDismissed);
 
         // Update pending notifications state - only add if not dismissed
@@ -132,7 +158,7 @@ export default function PairRequestNotificationManager({ navigation }) {
     });
 
     return unsubscribe;
-  }, [session]);
+  }, []);
 
   // Check on mount and when app comes to foreground
   useEffect(() => {
@@ -140,7 +166,7 @@ export default function PairRequestNotificationManager({ navigation }) {
 
     const handleAppStateChange = (nextAppState) => {
       setAppState(nextAppState);
-      if (nextAppState === "active" && session?.accessToken) {
+      if (nextAppState === "active" && accessTokenRef.current) {
         // App came to foreground - check for pending notifications
         checkPendingNotifications();
       }
@@ -151,7 +177,7 @@ export default function PairRequestNotificationManager({ navigation }) {
     return () => {
       subscription?.remove();
     };
-  }, [session, checkPendingNotifications]);
+  }, [checkPendingNotifications]);
 
   const handleClosePopup = useCallback(async (notificationId) => {
     setCurrentPopup(null);

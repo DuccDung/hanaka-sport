@@ -16,7 +16,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./loginStyles";
 import { login } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
-import { getMe } from "../../services/userService";
 import { COLORS } from "../../constants/colors";
 
 function isEmailLike(v = "") {
@@ -25,7 +24,7 @@ function isEmailLike(v = "") {
 }
 
 export default function LoginScreen({ navigation }) {
-  const { setAuthSession } = useAuth();
+  const { logout, setAuthSession } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,26 +41,18 @@ export default function LoginScreen({ navigation }) {
 
     try {
       setLoading(true);
+      await logout();
 
       const data = await login({
         identifier: email.trim(),
         password,
       });
 
-      let me = data.user;
-      try {
-        me = await getMe();
-      } catch (e) {
-        console.log(
-          "getMe after login failed:",
-          e?.response?.data || e?.message,
-        );
-      }
-
       await setAuthSession({
         accessToken: data.accessToken,
         expiresAtUtc: data.expiresAtUtc,
-        user: me,
+        user: data.user || { email: email.trim() },
+        replace: true,
       });
 
       Keyboard.dismiss();
@@ -132,6 +123,21 @@ export default function LoginScreen({ navigation }) {
                   size={20}
                   color="#6B7280"
                 />
+              </Pressable>
+            </View>
+
+            <View style={styles.rowBetween}>
+              <View />
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("ForgotPassword", {
+                    email: email.trim(),
+                  })
+                }
+                hitSlop={10}
+                disabled={loading}
+              >
+                <Text style={styles.forgotText}>Quên mật khẩu?</Text>
               </Pressable>
             </View>
 

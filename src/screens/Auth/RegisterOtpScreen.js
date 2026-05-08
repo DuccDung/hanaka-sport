@@ -53,6 +53,7 @@ export default function RegisterOtpScreen({ navigation, route }) {
         accessToken: data.accessToken,
         expiresAtUtc: data.expiresAtUtc,
         user: data.user,
+        replace: true,
       });
 
       if (agreedToTerms) {
