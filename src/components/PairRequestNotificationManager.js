@@ -34,7 +34,7 @@ export default function PairRequestNotificationManager({ navigation }) {
       const unseen = [];
       for (const n of serverNotifications) {
         const dismissed = await isPairRequestNotificationDismissed(n.NotificationId);
-        console.log(`Notification ${n.NotificationId} dismissed:`, dismissed);
+        console.log(`Notification ${n.NotificationId} from server, dismissed:`, dismissed);
         if (!dismissed) {
           unseen.push(n);
         }
@@ -43,9 +43,10 @@ export default function PairRequestNotificationManager({ navigation }) {
       setPendingNotifications(unseen);
 
       // If there's at least one unseen, show the first one
-      if (unseen.length > 0 && appState === "active") {
+      // Note: This function is called only when app is active (on mount or foreground)
+      if (unseen.length > 0) {
         const first = unseen[0];
-        console.log("Showing popup for notification:", first);
+        console.log("Showing popup for first unseen notification:", first);
         setCurrentPopup({
           notification: first,
           pairRequestId: first.PairRequestId,
@@ -55,23 +56,38 @@ export default function PairRequestNotificationManager({ navigation }) {
     } catch (e) {
       console.error("Failed to check pending notifications:", e);
     }
-  }, [session, appState]);
+  }, [session]);
 
   // Listen for realtime new pair requests
   useEffect(() => {
-    const unsubscribe = addRealtimeListener((event) => {
+    const unsubscribe = addRealtimeListener(async (event) => {
       console.log("Realtime event received in manager:", event.type, event.notification);
       if (event.type === "new_pair_request" && session?.accessToken) {
         // A new pair request arrived via WS
         const notification = event.notification;
+        console.log("Processing new_pair_request:", notification.NotificationId, notification.PairRequestId);
+
+        // Check if this notification is dismissed before showing
+        const isDismissed = await isPairRequestNotificationDismissed(notification.NotificationId);
+        console.log(`Notification ${notification.NotificationId} dismissed:`, isDismissed);
+
+        // Update pending notifications state - only add if not dismissed
         setPendingNotifications((prev) => {
-          // Avoid duplicate by NotificationId
           const exists = prev.some((n) => n.NotificationId === notification.NotificationId);
           if (exists) return prev;
-          return [notification, ...prev];
+
+          // Only add to list if not dismissed
+          if (!isDismissed) {
+            console.log("Adding notification to pending list and showing popup");
+            return [notification, ...prev];
+          } else {
+            console.log("Notification is dismissed, NOT showing popup");
+            return prev;
+          }
         });
-        // Show popup immediately if app is active
-        if (AppState.currentState === "active") {
+
+        // Show popup immediately only if app is active AND notification not dismissed
+        if (AppState.currentState === "active" && !isDismissed) {
           console.log("App active, showing popup for notification:", notification);
           setCurrentPopup({
             notification,
