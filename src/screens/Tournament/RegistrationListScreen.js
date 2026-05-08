@@ -19,9 +19,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registrationListStyles";
-import { publicListTournamentRegistrations } from "../../services/tournamentService";
-import { getZaloGroupLink } from "../../services/publicLinkService";
-import { getMyTournamentRegistrationState } from "../../services/tournamentService";
+import {
+  getMyPairRequests,
+  getMyTournamentRegistrationState,
+  publicGetTournamentDetail,
+  publicListTournamentRegistrations,
+} from "../../services/tournamentService";
 import { getAuthSession } from "../../services/authStorage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -57,6 +60,201 @@ function isValidHttpUrl(uri) {
   if (!uri) return false;
   const s = String(uri);
   return s.startsWith("http://") || s.startsWith("https://");
+}
+
+function firstValue(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function asText(...values) {
+  const found = firstValue(...values);
+  if (found === undefined) return "";
+  if (typeof found === "string") return found.trim();
+  if (typeof found === "number" || typeof found === "boolean") return String(found);
+  return "";
+}
+
+function normalizeExternalLink(link) {
+  const raw = asText(link);
+  if (!raw) return "";
+  if (/^(https?:\/\/|zalo:\/\/|mailto:|tel:)/i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function getTournamentZaloLink(tournament) {
+  return normalizeExternalLink(
+    firstValue(
+      tournament?.zaloLink,
+      tournament?.ZaloLink,
+      tournament?.zaloGroupLink,
+      tournament?.ZaloGroupLink,
+    ),
+  );
+}
+
+function asBool(...values) {
+  const found = firstValue(...values);
+  if (found === undefined) return false;
+  if (typeof found === "boolean") return found;
+  if (typeof found === "string") return found.toLowerCase() === "true";
+  return Boolean(found);
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.Items)) return value.Items;
+  return [];
+}
+
+function sameId(a, b) {
+  if (a === undefined || a === null || b === undefined || b === null) return false;
+  return String(a) === String(b);
+}
+
+function getStateReason(state) {
+  return asText(
+    state?.CannotRegisterReason,
+    state?.cannotRegisterReason,
+    state?.Reason,
+    state?.reason,
+  );
+}
+
+function normalizeRegistrationState(state) {
+  const canRegister = firstValue(
+    state?.CanCreateRegistration,
+    state?.canCreateRegistration,
+    state?.CanRegister,
+    state?.canRegister,
+  );
+
+  return {
+    canRegister: asBool(canRegister),
+    hasRegistration: asBool(state?.HasRegistration, state?.hasRegistration),
+    hasSuccessfulPair: asBool(state?.HasSuccessfulPair, state?.hasSuccessfulPair),
+    hasWaitingPair: asBool(state?.HasWaitingPair, state?.hasWaitingPair),
+    hasPendingSent: asBool(
+      state?.HasPendingSentPairRequest,
+      state?.hasPendingSentPairRequest,
+    ),
+    hasPendingReceived: asBool(
+      state?.HasPendingReceivedPairRequest,
+      state?.hasPendingReceivedPairRequest,
+    ),
+    reason: getStateReason(state),
+    registration: firstValue(state?.Registration, state?.registration),
+  };
+}
+
+function normalizeUserBrief(user) {
+  if (!user) return null;
+
+  return {
+    fullName: asText(
+      user.FullName,
+      user.fullName,
+      user.Name,
+      user.name,
+      user.DisplayName,
+      user.displayName,
+    ),
+  };
+}
+
+function normalizePairRequest(item = {}) {
+  const status = asText(item.Status, item.status).toUpperCase() || "PENDING";
+
+  return {
+    pairRequestId: firstValue(item.PairRequestId, item.pairRequestId, item.id),
+    tournamentId: firstValue(item.TournamentId, item.tournamentId),
+    tournamentTitle: asText(item.TournamentTitle, item.tournamentTitle),
+    requestedByUser: normalizeUserBrief(
+      firstValue(item.RequestedByUser, item.requestedByUser, item.RequestedBy, item.requestedBy),
+    ),
+    requestedToUser: normalizeUserBrief(
+      firstValue(item.RequestedToUser, item.requestedToUser, item.RequestedTo, item.requestedTo),
+    ),
+    status,
+  };
+}
+
+function normalizePairRequestList(data, tournamentId) {
+  return asArray(data)
+    .map(normalizePairRequest)
+    .filter((item) => sameId(item.tournamentId, tournamentId))
+    .filter((item) => !item.status || item.status === "PENDING");
+}
+
+function formatNameList(names) {
+  const cleanNames = [...new Set(names.filter(Boolean))];
+  if (!cleanNames.length) return "người chơi khác";
+  if (cleanNames.length <= 2) return cleanNames.join(", ");
+  return `${cleanNames.slice(0, 2).join(", ")} và ${cleanNames.length - 2} người khác`;
+}
+
+function getRegistrationPlayerText(registration) {
+  const player1 = asText(
+    registration?.Player1Name,
+    registration?.player1Name,
+    registration?.player1?.name,
+    registration?.Player1?.Name,
+  );
+  const player2 = asText(
+    registration?.Player2Name,
+    registration?.player2Name,
+    registration?.player2?.name,
+    registration?.Player2?.Name,
+  );
+
+  return [player1, player2].filter(Boolean).join(" - ");
+}
+
+function buildCannotRegisterMessage({ state, sentRequests = [], receivedRequests = [] }) {
+  const status = normalizeRegistrationState(state);
+  const lines = [];
+
+  if (status.hasSuccessfulPair) {
+    const players = getRegistrationPlayerText(status.registration);
+    lines.push(
+      players
+        ? `Bạn đã có đội trong giải này: ${players}.`
+        : "Bạn đã có đội/đã đăng ký thành công trong giải này.",
+    );
+  } else if (status.hasWaitingPair) {
+    lines.push("Bạn đang có đăng ký chờ ghép trong giải này.");
+  } else if (status.hasRegistration) {
+    const players = getRegistrationPlayerText(status.registration);
+    lines.push(
+      players
+        ? `Bạn đã có đăng ký trong giải này: ${players}.`
+        : "Bạn đã có đăng ký trong giải này.",
+    );
+  }
+
+  if (receivedRequests.length > 0) {
+    const names = receivedRequests.map((item) => item.requestedByUser?.fullName);
+    lines.push(`Bạn đang có lời mời ghép cặp từ ${formatNameList(names)}.`);
+  } else if (status.hasPendingReceived) {
+    lines.push("Bạn đang có lời mời ghép cặp cần phản hồi.");
+  }
+
+  if (sentRequests.length > 0) {
+    const names = sentRequests.map((item) => item.requestedToUser?.fullName);
+    lines.push(`Bạn đang chờ ${formatNameList(names)} phản hồi lời mời ghép cặp.`);
+  } else if (status.hasPendingSent) {
+    lines.push("Bạn đang có lời mời ghép cặp đã gửi và đang chờ phản hồi.");
+  }
+
+  if (status.reason && !lines.some((line) => line.includes(status.reason))) {
+    lines.push(status.reason);
+  }
+
+  if (!lines.length) {
+    lines.push("Bạn không thể đăng ký giải này lúc này.");
+  }
+
+  return lines.join("\n\n");
 }
 
 function AvatarCircle({ uri, name, size = 44 }) {
@@ -97,20 +295,28 @@ function AvatarCircle({ uri, name, size = 44 }) {
 }
 
 export default function RegistrationListScreen({ navigation, route }) {
-  const tournament = route?.params?.tournament;
-  const tournamentId = tournament?.tournamentId || route?.params?.tournamentId;
+  const routeTournament = route?.params?.tournament || route?.params?.preview;
+  const tournamentId = firstValue(
+    routeTournament?.tournamentId,
+    routeTournament?.TournamentId,
+    route?.params?.tournamentId,
+    route?.params?.TournamentId,
+  );
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [resp, setResp] = useState(null);
+  const [tournamentDetail, setTournamentDetail] = useState(null);
   const [openingZalo, setOpeningZalo] = useState(false);
   const [regState, setRegState] = useState(null);
   const [regStateLoading, setRegStateLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [showPendingPopup, setShowPendingPopup] = useState(false);
   const [popupDismissed, setPopupDismissed] = useState(false);
+  const [checkingRegisterBlock, setCheckingRegisterBlock] = useState(false);
+  const tournament = tournamentDetail || routeTournament;
 
   const fetchData = useCallback(async () => {
     try {
@@ -152,13 +358,29 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
+  const fetchTournamentDetail = useCallback(async () => {
+    if (!tournamentId) return;
+
+    try {
+      const detail = await publicGetTournamentDetail(tournamentId);
+      setTournamentDetail(detail);
+    } catch (e) {
+      console.log("Failed to load tournament detail:", e?.message);
+    }
+  }, [tournamentId]);
+
   // Check if we should show pending pair request popup
   const checkPendingPopup = useCallback(async (state) => {
     if (popupDismissed) return; // User already dismissed
 
     // Check if user has pending pair requests that block registration
-    const hasPendingPairRequest = state?.pendingPairRequests?.length > 0;
-    const reason = state?.reason || "";
+    const status = normalizeRegistrationState(state);
+    const hasPendingPairRequest =
+      asArray(state?.PendingPairRequests).length > 0 ||
+      asArray(state?.pendingPairRequests).length > 0 ||
+      status.hasPendingReceived ||
+      status.hasPendingSent;
+    const reason = status.reason;
 
     // Show popup if reason mentions pending pair request
     const shouldShow = hasPendingPairRequest || reason.toLowerCase().includes("lời mời ghép đôi");
@@ -173,15 +395,17 @@ export default function RegistrationListScreen({ navigation, route }) {
   useEffect(() => {
     fetchData();
     fetchRegState();
-  }, [fetchData, fetchRegState]);
+    fetchTournamentDetail();
+  }, [fetchData, fetchRegState, fetchTournamentDetail]);
 
   // Refresh regState when screen is focused (after navigation back)
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       fetchRegState();
+      fetchTournamentDetail();
     });
     return unsubscribe;
-  }, [navigation, fetchRegState]);
+  }, [navigation, fetchRegState, fetchTournamentDetail]);
 
   // Check popup when regState changes
   useEffect(() => {
@@ -213,6 +437,7 @@ export default function RegistrationListScreen({ navigation, route }) {
       const [res, stateData] = await Promise.all([
         publicListTournamentRegistrations(tournamentId, "ALL"),
         getMyTournamentRegistrationState(tournamentId).catch(() => null),
+        fetchTournamentDetail(),
       ]);
 
       setResp(res);
@@ -226,7 +451,75 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setRefreshing(false);
     }
+  }, [fetchTournamentDetail, tournamentId]);
+
+  const registrationStatus = useMemo(
+    () => normalizeRegistrationState(regState),
+    [regState],
+  );
+
+  const fetchBlockedPairRequests = useCallback(async () => {
+    const [sentData, receivedData] = await Promise.all([
+      getMyPairRequests(true).catch(() => []),
+      getMyPairRequests(false).catch(() => []),
+    ]);
+
+    return {
+      sentRequests: normalizePairRequestList(sentData, tournamentId),
+      receivedRequests: normalizePairRequestList(receivedData, tournamentId),
+    };
   }, [tournamentId]);
+
+  const handlePressRegister = useCallback(async () => {
+    if (regStateLoading) {
+      Alert.alert("Đang kiểm tra", "Hệ thống đang kiểm tra trạng thái đăng ký của bạn. Vui lòng thử lại sau vài giây.");
+      return;
+    }
+
+    if (registrationStatus.canRegister) {
+      navigation.navigate("TournamentRegister", {
+        tournamentId,
+      });
+      return;
+    }
+
+    try {
+      setCheckingRegisterBlock(true);
+      const { sentRequests, receivedRequests } = await fetchBlockedPairRequests();
+      const hasPairRequests =
+        sentRequests.length > 0 ||
+        receivedRequests.length > 0 ||
+        registrationStatus.hasPendingSent ||
+        registrationStatus.hasPendingReceived;
+
+      const message = buildCannotRegisterMessage({
+        state: regState,
+        sentRequests,
+        receivedRequests,
+      });
+
+      const buttons = hasPairRequests
+        ? [
+            { text: "Đóng", style: "cancel" },
+            {
+              text: "Xem lời mời",
+              onPress: () => navigation.navigate("PairRequestManagement", {}),
+            },
+          ]
+        : [{ text: "Đã hiểu" }];
+
+      Alert.alert("Không thể đăng ký", message, buttons);
+    } finally {
+      setCheckingRegisterBlock(false);
+    }
+  }, [
+    fetchBlockedPairRequests,
+    navigation,
+    regState,
+    regStateLoading,
+    registrationStatus,
+    tournamentId,
+  ]);
 
   const handleDismissPendingPopup = useCallback(async () => {
     setShowPendingPopup(false);
@@ -248,17 +541,16 @@ export default function RegistrationListScreen({ navigation, route }) {
     try {
       setOpeningZalo(true);
 
-      const zaloLink = await getZaloGroupLink();
+      let zaloLink = getTournamentZaloLink(tournament);
+
+      if (!zaloLink && tournamentId) {
+        const detail = await publicGetTournamentDetail(tournamentId);
+        setTournamentDetail(detail);
+        zaloLink = getTournamentZaloLink(detail);
+      }
 
       if (!zaloLink) {
         Alert.alert("Thông báo", "Hiện chưa có link nhóm Zalo.");
-        return;
-      }
-
-      const supported = await Linking.canOpenURL(zaloLink);
-
-      if (!supported) {
-        Alert.alert("Thông báo", "Không thể mở link nhóm Zalo.");
         return;
       }
 
@@ -268,7 +560,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setOpeningZalo(false);
     }
-  }, []);
+  }, [tournament, tournamentId]);
 
   const allItems = useMemo(() => {
     const successItems = resp?.successItems || [];
@@ -484,24 +776,17 @@ export default function RegistrationListScreen({ navigation, route }) {
           style={[
             styles.actionButton,
             styles.actionButtonPrimary,
-            (!regState?.canRegister || regStateLoading) && styles.actionButtonDisabled,
+            (!registrationStatus.canRegister ||
+              regStateLoading ||
+              checkingRegisterBlock) &&
+              styles.actionButtonDisabled,
           ]}
-          onPress={() => {
-            if (!regState?.canRegister) {
-              const reason = regState?.reason || "Bạn không thể đăng ký giải này lúc này.";
-              Alert.alert("Thông báo", reason);
-              return;
-            }
-            // Navigate to registration screen
-            navigation.navigate("TournamentRegister", {
-              tournamentId: tournamentId,
-            });
-          }}
-          disabled={!regState?.canRegister || regStateLoading}
+          onPress={handlePressRegister}
+          disabled={checkingRegisterBlock}
         >
           <Ionicons name="create-outline" size={14} color="#2563EB" style={styles.actionButtonIcon} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
-            {regStateLoading ? "Đang kiểm tra" : "Đăng ký"}
+            {regStateLoading || checkingRegisterBlock ? "Đang kiểm tra" : "Đăng ký"}
           </Text>
         </Pressable>
 
@@ -569,11 +854,16 @@ export default function RegistrationListScreen({ navigation, route }) {
       </View>
 
       {/* Lý do không thể đăng ký - chỉ hiển thị nếu không phải là pending pair request */}
-      {regState && !regState.canRegister && !regStateLoading && !showPendingPopup && regState.reason && !regState.reason.toLowerCase().includes("lời mời ghép đôi") && (
+      {regState &&
+        !registrationStatus.canRegister &&
+        !regStateLoading &&
+        !showPendingPopup &&
+        registrationStatus.reason &&
+        !registrationStatus.reason.toLowerCase().includes("lời mời ghép đôi") && (
         <View style={styles.reasonRow}>
           <Ionicons name="information-circle-outline" size={16} color="#DC2626" />
           <Text style={styles.reasonText}>
-            {regState.reason}
+            {registrationStatus.reason}
           </Text>
         </View>
       )}

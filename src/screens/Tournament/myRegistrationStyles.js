@@ -124,6 +124,15 @@ export const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
+  successDesc: {
+    fontSize: 14,
+    color: "#047857",
+    backgroundColor: "#D1FAE5",
+    padding: 10,
+    borderRadius: 8,
+    lineHeight: 20,
+  },
+
   regCardFooter: {
     marginTop: 12,
     paddingTop: 12,

@@ -31,6 +31,13 @@ export const styles = StyleSheet.create({
   metaText: { fontSize: 13, fontWeight: "400", color: "#1E2430" },
   metaStrong: { fontWeight: "700" },
   metaSpacer: { flex: 1 },
+  bracketIconBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+  },
 
   // Tabs
   tabsRow: {

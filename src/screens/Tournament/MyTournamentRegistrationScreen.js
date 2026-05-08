@@ -1,5 +1,5 @@
 // src/screens/Tournament/MyTournamentRegistrationScreen.js
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -37,6 +37,201 @@ function formatTime(value) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function getPairRequestKey(item, index) {
+  const id =
+    item?.pairRequestId ??
+    item?.PairRequestId ??
+    item?.notificationId ??
+    item?.NotificationId ??
+    item?.id ??
+    item?.requestedAt ??
+    "unknown";
+
+  return `pair-request-${id}-${index}`;
+}
+
+function firstValue(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function asText(...values) {
+  const found = firstValue(...values);
+  if (found === undefined) return "";
+  if (typeof found === "string") return found.trim();
+  if (typeof found === "number" || typeof found === "boolean") return String(found);
+  return "";
+}
+
+function normalizeSearchText(value) {
+  return asText(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
+}
+
+function reasonIndicatesRegistration(reason) {
+  const text = normalizeSearchText(reason);
+  return (
+    text.includes("da co dang ky") ||
+    text.includes("da dang ky") ||
+    text.includes("co dang ky trong giai") ||
+    text.includes("da co trong giai") ||
+    text.includes("da co doi")
+  );
+}
+
+function asBool(...values) {
+  const found = firstValue(...values);
+  if (found === undefined) return false;
+  if (typeof found === "boolean") return found;
+  if (typeof found === "string") return found.toLowerCase() === "true";
+  return Boolean(found);
+}
+
+function sameId(a, b) {
+  if (a === undefined || a === null || b === undefined || b === null) return false;
+  return String(a) === String(b);
+}
+
+function formatRating(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return number.toFixed(1);
+}
+
+function normalizeRegistration(registration) {
+  if (!registration) return null;
+
+  return {
+    raw: registration,
+    regCode: asText(registration.RegCode, registration.regCode, registration.Code, registration.code),
+    regTime: firstValue(registration.RegTime, registration.regTime, registration.CreatedAt, registration.createdAt),
+    points: firstValue(registration.Points, registration.points, registration.TotalPoint, registration.totalPoint),
+    success: asBool(registration.Success, registration.success),
+    status: asText(registration.Status, registration.status).toUpperCase(),
+    player1Name: asText(
+      registration.Player1Name,
+      registration.player1Name,
+      registration.Player1FullName,
+      registration.player1FullName,
+      registration.UserName,
+      registration.userName,
+    ),
+    player1Level: firstValue(
+      registration.Player1Level,
+      registration.player1Level,
+      registration.Player1Rating,
+      registration.player1Rating,
+      registration.UserLevel,
+      registration.userLevel,
+    ),
+    player2Name: asText(
+      registration.Player2Name,
+      registration.player2Name,
+      registration.Player2FullName,
+      registration.player2FullName,
+      registration.PartnerName,
+      registration.partnerName,
+    ),
+    player2Level: firstValue(
+      registration.Player2Level,
+      registration.player2Level,
+      registration.Player2Rating,
+      registration.player2Rating,
+      registration.PartnerLevel,
+      registration.partnerLevel,
+    ),
+  };
+}
+
+function normalizeTournament(tournament) {
+  if (!tournament) return {};
+
+  return {
+    title: asText(tournament.Title, tournament.title, "Giải đấu"),
+    gameType: firstValue(tournament.GameType, tournament.gameType),
+    singleLimit: firstValue(tournament.SingleLimit, tournament.singleLimit),
+    doubleLimit: firstValue(tournament.DoubleLimit, tournament.doubleLimit),
+  };
+}
+
+function normalizeRegistrationState(state) {
+  const reason = asText(
+    state?.CannotRegisterReason,
+    state?.cannotRegisterReason,
+    state?.Reason,
+    state?.reason,
+  );
+  const hasRegistrationFromReason = reasonIndicatesRegistration(reason);
+  const registration = normalizeRegistration(
+    firstValue(state?.Registration, state?.registration, state?.Team, state?.team),
+  );
+  const status = registration?.status || "";
+  const hasWaitingStatus = ["WAITING", "WAITING_PAIR", "PENDING_PAIR"].includes(status);
+  const hasSuccessStatus = ["SUCCESS", "SUCCESSFUL", "CONFIRMED", "APPROVED", "ACTIVE"].includes(status);
+
+  return {
+    canRegister: asBool(
+      state?.CanCreateRegistration,
+      state?.canCreateRegistration,
+      state?.CanRegister,
+      state?.canRegister,
+    ),
+    hasRegistration:
+      asBool(state?.HasRegistration, state?.hasRegistration) ||
+      Boolean(registration) ||
+      hasRegistrationFromReason,
+    hasSuccessfulPair:
+      asBool(state?.HasSuccessfulPair, state?.hasSuccessfulPair) ||
+      registration?.success ||
+      hasSuccessStatus,
+    hasWaitingPair:
+      asBool(state?.HasWaitingPair, state?.hasWaitingPair) || hasWaitingStatus,
+    hasPendingSent: asBool(
+      state?.HasPendingSentPairRequest,
+      state?.hasPendingSentPairRequest,
+    ),
+    hasPendingReceived: asBool(
+      state?.HasPendingReceivedPairRequest,
+      state?.hasPendingReceivedPairRequest,
+    ),
+    reason,
+    registration,
+    tournament: normalizeTournament(firstValue(state?.Tournament, state?.tournament)),
+  };
+}
+
+function normalizePairRequest(item) {
+  const requestedBy =
+    firstValue(item?.requestedBy, item?.RequestedBy, item?.requestedByUser, item?.RequestedByUser) || {};
+
+  return {
+    ...item,
+    pairRequestId: firstValue(item?.pairRequestId, item?.PairRequestId, item?.id, item?.Id),
+    tournamentId: firstValue(item?.tournamentId, item?.TournamentId),
+    status: asText(item?.status, item?.Status, "PENDING").toUpperCase(),
+    message: asText(item?.message, item?.Message, item?.note, item?.Note),
+    requestedAt: firstValue(item?.requestedAt, item?.RequestedAt, item?.createdAt, item?.CreatedAt),
+    requestedBy: {
+      ...requestedBy,
+      fullName: asText(
+        requestedBy.fullName,
+        requestedBy.FullName,
+        requestedBy.name,
+        requestedBy.Name,
+        item?.requestedByName,
+        item?.RequestedByName,
+      ),
+    },
+  };
+}
+
+function isPendingPairRequest(item) {
+  const status = asText(item?.status, item?.Status).toUpperCase();
+  return !status || ["PENDING", "WAITING", "WAITING_RESPONSE"].includes(status);
+}
+
 export default function MyTournamentRegistrationScreen({ navigation, route }) {
   const { tournamentId } = route.params;
 
@@ -59,7 +254,9 @@ export default function MyTournamentRegistrationScreen({ navigation, route }) {
 
       // Get pair requests (received only from notifications endpoint)
       const notifRes = await getPairRequestNotifications();
-      const allReceived = (notifRes.items || []).filter(item => item.tournamentId === tournamentId);
+      const allReceived = (notifRes.items || [])
+        .map(normalizePairRequest)
+        .filter((item) => sameId(item.tournamentId, tournamentId));
       setSentRequests([]); // No endpoint for sent yet
       setReceivedRequests(allReceived);
     } catch (e) {
@@ -138,6 +335,26 @@ export default function MyTournamentRegistrationScreen({ navigation, route }) {
       ]
     );
   };
+
+  const registrationStatus = useMemo(
+    () => normalizeRegistrationState(state),
+    [state],
+  );
+  const activeReceivedRequests = useMemo(
+    () => receivedRequests.filter(isPendingPairRequest),
+    [receivedRequests],
+  );
+  const hasReceivedRequests = activeReceivedRequests.length > 0;
+  const hasPendingPairContext =
+    hasReceivedRequests ||
+    registrationStatus.hasPendingReceived ||
+    registrationStatus.hasPendingSent;
+  const canRegister = registrationStatus.canRegister;
+  const showCannotRegisterReason =
+    !canRegister &&
+    Boolean(registrationStatus.reason) &&
+    !registrationStatus.hasRegistration &&
+    !hasPendingPairContext;
 
   const renderRegistrationCard = () => {
     if (!state) return null;
@@ -263,6 +480,132 @@ export default function MyTournamentRegistrationScreen({ navigation, route }) {
     return null;
   };
 
+  const renderRegistrationStatusCard = () => {
+    if (!state) return null;
+
+    const status = registrationStatus;
+    const team = status.registration;
+
+    const renderPlayerRow = (label, name, level) => (
+      <View style={styles.teamSection}>
+        <Text style={styles.teamLabel}>{label}</Text>
+        <View style={styles.playerRow}>
+          <View style={styles.playerAvatar}>
+            <Text style={styles.playerAvatarText}>{name?.[0] || "?"}</Text>
+          </View>
+          <View style={styles.playerInfo}>
+            <Text style={styles.playerName}>{name || "-"}</Text>
+            <Text style={styles.playerRating}>Rating: {formatRating(level)}</Text>
+          </View>
+        </View>
+      </View>
+    );
+
+    if (!status.hasRegistration) {
+      if (hasReceivedRequests || status.hasPendingReceived) {
+        return (
+          <View style={[styles.regCard, styles.regCardWaiting]}>
+            <View style={styles.regCardHeader}>
+              <Ionicons name="mail-unread-outline" size={24} color="#F59E0B" />
+              <Text style={styles.regCardTitle}>Bạn đang có lời mời ghép cặp</Text>
+            </View>
+            <Text style={styles.waitingDesc}>
+              Vui lòng kiểm tra lời mời bên dưới để chấp nhận hoặc từ chối trước khi đăng ký mới.
+            </Text>
+          </View>
+        );
+      }
+
+      if (status.hasPendingSent) {
+        return (
+          <View style={[styles.regCard, styles.regCardWaiting]}>
+            <View style={styles.regCardHeader}>
+              <Ionicons name="paper-plane-outline" size={24} color="#F59E0B" />
+              <Text style={styles.regCardTitle}>Đang chờ đối tác phản hồi</Text>
+            </View>
+            <Text style={styles.waitingDesc}>
+              Bạn đã gửi lời mời ghép cặp. Hãy chờ đối tác phản hồi hoặc hủy lời mời trước khi đăng ký mới.
+            </Text>
+          </View>
+        );
+      }
+
+      return (
+        <View style={styles.emptyStateCard}>
+          <Ionicons name="person-add-outline" size={48} color="#6B7280" />
+          <Text style={styles.emptyStateTitle}>Bạn chưa đăng ký giải này</Text>
+          <Text style={styles.emptyStateDesc}>
+            Hãy đăng ký để tham gia giải đấu
+          </Text>
+          <Pressable
+            style={styles.primaryBtn}
+            onPress={() =>
+              navigation.navigate("TournamentRegistration", {
+                tournament: {
+                  tournamentId,
+                  title: status.tournament.title,
+                  gameType: status.tournament.gameType,
+                  singleLimit: status.tournament.singleLimit,
+                  doubleLimit: status.tournament.doubleLimit,
+                },
+              })
+            }
+          >
+            <Text style={styles.primaryBtnText}>Đăng ký ngay</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (status.hasWaitingPair) {
+      return (
+        <View style={[styles.regCard, styles.regCardWaiting]}>
+          <View style={styles.regCardHeader}>
+            <Ionicons name="time" size={24} color="#F59E0B" />
+            <Text style={styles.regCardTitle}>Đang chờ ghép cặp</Text>
+          </View>
+          {renderPlayerRow("Bạn", team?.player1Name, team?.player1Level)}
+          <Text style={styles.waitingDesc}>
+            Bạn đã đăng ký chờ ghép cặp. Hãy tìm đối tác bằng cách gửi lời mời.
+          </Text>
+          <View style={styles.regCardFooter}>
+            <Text style={styles.regCode}>Mã đăng ký: {team?.regCode || "-"}</Text>
+            <Text style={styles.regTime}>Ngày đăng ký: {formatDate(team?.regTime)}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.regCard, styles.regCardSuccess]}>
+        <View style={styles.regCardHeader}>
+          <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+          <Text style={styles.regCardTitle}>
+            {status.hasSuccessfulPair ? "Đã đăng ký thành công" : "Bạn đã có đăng ký trong giải"}
+          </Text>
+        </View>
+        {!!team?.player1Name && renderPlayerRow("VĐV 1", team.player1Name, team.player1Level)}
+        {!!team?.player2Name && renderPlayerRow("VĐV 2", team.player2Name, team.player2Level)}
+        {!team?.player1Name && !team?.player2Name && (
+          <Text style={styles.successDesc}>
+            {status.reason || "Bạn đã có đăng ký trong giải này."}
+          </Text>
+        )}
+        {!!team && (
+          <View style={styles.regCardFooter}>
+            <Text style={styles.regCode}>Mã đăng ký: {team.regCode || "-"}</Text>
+            <Text style={styles.regTime}>Ngày đăng ký: {formatDate(team.regTime)}</Text>
+            {team.points !== undefined && team.points !== null && (
+              <View style={[styles.badge, styles.badgeSuccess]}>
+                <Text style={styles.badgeText}>Tổng điểm: {formatRating(team.points)}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   const renderPairRequestItem = (item) => {
     const isReceived = true; // All from notifications are received
     const isPending = item.status === "PENDING";
@@ -315,8 +658,6 @@ export default function MyTournamentRegistrationScreen({ navigation, route }) {
     );
   };
 
-  const canRegister = state?.CanCreateRegistration === true;
-
   return (
     <View style={styles.safe}>
       <SafeAreaView style={{ backgroundColor: "#fff" }} edges={["top"]} />
@@ -356,13 +697,13 @@ export default function MyTournamentRegistrationScreen({ navigation, route }) {
         ) : (
           <>
             {/* Registration Card */}
-            {renderRegistrationCard()}
+            {renderRegistrationStatusCard()}
 
             {/* Registration Reason */}
-            {!canRegister && state?.CannotRegisterReason && (
+            {showCannotRegisterReason && (
               <View style={styles.warningCard}>
                 <Ionicons name="warning-outline" size={24} color="#DC2626" />
-                <Text style={styles.warningText}>{state.CannotRegisterReason}</Text>
+                <Text style={styles.warningText}>{registrationStatus.reason}</Text>
               </View>
             )}
 
@@ -373,21 +714,25 @@ export default function MyTournamentRegistrationScreen({ navigation, route }) {
 
                 <View style={styles.subsection}>
                   <Text style={styles.subsectionTitle}>Đã nhận ({receivedRequests.length})</Text>
-                  {receivedRequests.map((item) =>
-                    renderPairRequestItem(item)
-                  )}
+                  {receivedRequests.map((item, index) => (
+                    <React.Fragment key={getPairRequestKey(item, index)}>
+                      {renderPairRequestItem(item)}
+                    </React.Fragment>
+                  ))}
                 </View>
               </View>
             )}
 
             {/* Action Buttons */}
-            {state?.HasRegistration && !state?.HasSuccessfulPair && (
+            {registrationStatus.hasRegistration &&
+              !registrationStatus.hasSuccessfulPair &&
+              (registrationStatus.hasWaitingPair || hasPendingPairContext) && (
               <Pressable
                 style={styles.secondaryBtn}
                 onPress={() =>
                   navigation.navigate("PairRequestInbox", {
                     tournamentId,
-                    tournamentTitle: state.Tournament?.Title,
+                    tournamentTitle: registrationStatus.tournament.title,
                   })
                 }
               >

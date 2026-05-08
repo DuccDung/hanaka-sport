@@ -144,23 +144,41 @@ export function connectRealtime(token) {
       if (data.type === "tournament.notification") {
         console.log("✅ Processing tournament notification");
         const payload = data.payload;
-        const { NotificationType, Title, Body, PairRequestId, TournamentId, Details } = payload;
-        console.log("NotificationType:", NotificationType);
+        console.log("Payload keys:", Object.keys(payload || {}));
+
+        // Support both camelCase (backend default) and PascalCase (fallback)
+        const notificationType = payload.notificationType ?? payload.NotificationType;
+        const title = payload.title ?? payload.Title;
+        const body = payload.body ?? payload.Body;
+        const pairRequestId = payload.pairRequestId ?? payload.PairRequestId;
+        const tournamentId = payload.tournamentId ?? payload.TournamentId;
+        const details = payload.details ?? payload.Details;
+        const notificationId = payload.notificationId ?? payload.NotificationId;
+
+        console.log("notificationType:", notificationType, "pairRequestId:", pairRequestId);
 
         // Increment unread count
         tournamentUnreadCount++;
         saveUnreadCount();
 
         // If it's a PAIR_REQUEST or related, store it and emit specific event for popup
-        if (["PAIR_REQUEST", "PAIR_ACCEPTED", "PAIR_REJECTED", "PAIR_CANCELED", "PAIR_EXPIRED"].includes(NotificationType)) {
+        if (
+          [
+            "PAIR_REQUEST",
+            "PAIR_ACCEPTED",
+            "PAIR_REJECTED",
+            "PAIR_CANCELED",
+            "PAIR_EXPIRED",
+          ].includes(notificationType)
+        ) {
           const notification = {
-            NotificationId: payload.NotificationId,
-            PairRequestId: PairRequestId,
-            TournamentId: TournamentId,
-            Title: Title,
-            Body: Body,
-            Details: Details,
-            NotificationType: NotificationType,
+            NotificationId: notificationId,
+            PairRequestId: pairRequestId,
+            TournamentId: tournamentId,
+            Title: title,
+            Body: body,
+            Details: details,
+            NotificationType: notificationType,
             ReceivedAt: new Date().toISOString(),
             shown: false,
           };
@@ -176,12 +194,12 @@ export function connectRealtime(token) {
         // Emit general tournament notification event
         emit({
           type: "tournament_notification",
-          notificationType: NotificationType,
-          title: Title,
-          body: Body,
-          pairRequestId: PairRequestId,
-          tournamentId: TournamentId,
-          payload,
+          notificationType: notificationType,
+          title: title,
+          body: body,
+          pairRequestId: pairRequestId,
+          tournamentId: tournamentId,
+          payload: payload,
         });
       }
 

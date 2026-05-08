@@ -1,5 +1,5 @@
 // src/components/PairRequestNotificationPopup.js
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,30 +9,229 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
+  ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import {
   dismissPairRequestNotification,
   removePairRequestNotification,
-  isPairRequestNotificationDismissed,
 } from "../services/realtimeService";
 import { acceptPairRequest, getPairRequestDetail, rejectPairRequest } from "../services/tournamentService";
-import { useAuth } from "../context/AuthContext";
+
+const PAIR_STATUS_LABELS = {
+  PAIR_REQUEST: "Lời mời mới",
+  PAIR_ACCEPTED: "Đã chấp nhận",
+  PAIR_REJECTED: "Đã từ chối",
+  PAIR_CANCELED: "Đã hủy",
+  PAIR_EXPIRED: "Đã hết hạn",
+};
+
+function firstValue(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function asText(...values) {
+  const found = firstValue(...values);
+  if (found === undefined) return "";
+  if (typeof found === "string") return found.trim();
+  if (typeof found === "number" || typeof found === "boolean") return String(found);
+  return "";
+}
+
+function asNumber(value) {
+  const found = firstValue(value);
+  if (found === undefined) return null;
+  const num = Number(found);
+  return Number.isFinite(num) ? num : null;
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+function inferNameFromMessage(message) {
+  const text = asText(message);
+  const match = text.match(/^(.+?)\s+mời\s+bạn/i);
+  return match?.[1]?.trim() || "";
+}
+
+function inferTournamentFromMessage(message) {
+  const text = asText(message);
+  const match = text.match(/tại\s+giải\s+(.+?)(?:\.|$)/i);
+  return match?.[1]?.trim() || "";
+}
+
+function normalizeUser(user, fallbackName = "") {
+  if (!user) {
+    return fallbackName ? { fullName: fallbackName } : null;
+  }
+
+  const fullName = asText(
+    user.FullName,
+    user.fullName,
+    user.Name,
+    user.name,
+    user.DisplayName,
+    user.displayName,
+    fallbackName,
+  );
+
+  return {
+    userId: firstValue(user.UserId, user.userId, user.Id, user.id),
+    fullName,
+    avatarUrl: asText(user.AvatarUrl, user.avatarUrl, user.Avatar, user.avatar),
+    ratingDouble: asNumber(user.RatingDouble ?? user.ratingDouble ?? user.DoubleRating ?? user.doubleRating),
+    ratingSingle: asNumber(user.RatingSingle ?? user.ratingSingle ?? user.SingleRating ?? user.singleRating),
+    city: asText(user.City, user.city, user.Address, user.address),
+    verified: Boolean(firstValue(user.Verified, user.verified, user.IsVerified, user.isVerified)),
+  };
+}
+
+function normalizePairRequestInfo(notification, detail) {
+  const details = notification?.Details ?? notification?.details ?? {};
+  const body = asText(
+    notification?.Body,
+    notification?.body,
+    detail?.Body,
+    detail?.body,
+    detail?.Message,
+    detail?.message,
+    details?.Body,
+    details?.body,
+    details?.Message,
+    details?.message,
+  );
+
+  const title = asText(notification?.Title, notification?.title, detail?.Title, detail?.title);
+  const inferredRequester = inferNameFromMessage(body);
+  const inferredTournament = inferTournamentFromMessage(body);
+
+  const requestedBy = normalizeUser(
+    firstValue(
+      detail?.RequestedByUser,
+      detail?.requestedByUser,
+      detail?.RequestedBy,
+      detail?.requestedBy,
+      notification?.RequestedByUser,
+      notification?.requestedByUser,
+      notification?.RequestedBy,
+      notification?.requestedBy,
+      details?.RequestedByUser,
+      details?.requestedByUser,
+      details?.RequestedBy,
+      details?.requestedBy,
+    ),
+    inferredRequester,
+  );
+
+  const requestedTo = normalizeUser(
+    firstValue(
+      detail?.RequestedToUser,
+      detail?.requestedToUser,
+      detail?.RequestedTo,
+      detail?.requestedTo,
+      notification?.RequestedToUser,
+      notification?.requestedToUser,
+      notification?.RequestedTo,
+      notification?.requestedTo,
+      details?.RequestedToUser,
+      details?.requestedToUser,
+      details?.RequestedTo,
+      details?.requestedTo,
+    ),
+  );
+
+  const tournamentTitle = asText(
+    detail?.TournamentTitle,
+    detail?.tournamentTitle,
+    detail?.Tournament?.Title,
+    detail?.tournament?.title,
+    details?.TournamentTitle,
+    details?.tournamentTitle,
+    details?.Tournament?.Title,
+    details?.tournament?.title,
+    notification?.TournamentTitle,
+    notification?.tournamentTitle,
+    inferredTournament,
+    "Chưa rõ tên giải",
+  );
+
+  const requestedAt = firstValue(
+    detail?.RequestedAt,
+    detail?.requestedAt,
+    notification?.RequestedAt,
+    notification?.requestedAt,
+    details?.RequestedAt,
+    details?.requestedAt,
+    notification?.ReceivedAt,
+    notification?.receivedAt,
+  );
+
+  const expiresAt = firstValue(
+    detail?.ExpiresAt,
+    detail?.expiresAt,
+    notification?.ExpiresAt,
+    notification?.expiresAt,
+    details?.ExpiresAt,
+    details?.expiresAt,
+  );
+
+  const pairRequestId = firstValue(
+    notification?.PairRequestId,
+    notification?.pairRequestId,
+    detail?.PairRequestId,
+    detail?.pairRequestId,
+    details?.PairRequestId,
+    details?.pairRequestId,
+  );
+
+  const message =
+    body ||
+    (requestedBy?.fullName && tournamentTitle !== "Chưa rõ tên giải"
+      ? `${requestedBy.fullName} mời bạn ghép cặp tại giải ${tournamentTitle}.`
+      : title);
+
+  return {
+    pairRequestId,
+    tournamentTitle,
+    requestedBy,
+    requestedTo,
+    message,
+    note: asText(detail?.ResponseNote, detail?.responseNote, detail?.Note, detail?.note),
+    requestedAtText: formatDateTime(requestedAt),
+    expiresAtText: formatDateTime(expiresAt),
+  };
+}
 
 const PairRequestNotificationPopup = ({ visible, notification, onClose, onNavigate }) => {
-  const { session } = useAuth();
   const [processing, setProcessing] = useState(false);
   const [detail, setDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const pairRequestId = notification?.PairRequestId;
-  const notificationId = notification?.NotificationId;
+  const notificationId = firstValue(
+    notification?.NotificationId,
+    notification?.notificationId,
+    notification?.id,
+    notification?.PairRequestId,
+    notification?.pairRequestId,
+  );
 
   // Determine notification type and UI
-  const notificationType = notification?.NotificationType || "PAIR_REQUEST";
+  const notificationType =
+    firstValue(notification?.NotificationType, notification?.notificationType) ||
+    "PAIR_REQUEST";
   let headerTitle = "Thông báo";
-  let messageContent = notification.Body || notification.Title;
+  let messageContent = notification?.Body || notification?.body || notification?.Title || notification?.title;
   let showActions = false;
 
   switch (notificationType) {
@@ -42,11 +241,11 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
       break;
     case "PAIR_ACCEPTED":
       headerTitle = "Được chấp nhận";
-      messageContent = notification.Body || "Lời mời ghép cặp của bạn đã được chấp nhận.";
+      messageContent = notification?.Body || notification?.body || "Lời mời ghép cặp của bạn đã được chấp nhận.";
       break;
     case "PAIR_REJECTED":
       headerTitle = "Bị từ chối";
-      messageContent = notification.Body || "Lời mời ghép cặp của bạn đã bị từ chối.";
+      messageContent = notification?.Body || notification?.body || "Lời mời ghép cặp của bạn đã bị từ chối.";
       break;
     case "PAIR_CANCELED":
       headerTitle = "Lời mời bị hủy";
@@ -60,6 +259,33 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
       headerTitle = "Thông báo";
       showActions = false;
   }
+
+  const info = useMemo(
+    () => normalizePairRequestInfo(notification, detail),
+    [notification, detail],
+  );
+
+  const pairRequestId = info.pairRequestId;
+  const displayUser =
+    notificationType === "PAIR_REQUEST"
+      ? info.requestedBy
+      : info.requestedTo || info.requestedBy;
+  const userLabel =
+    notificationType === "PAIR_REQUEST"
+      ? "Người mời"
+      : notificationType === "PAIR_ACCEPTED" || notificationType === "PAIR_REJECTED"
+        ? "Người phản hồi"
+        : "Người liên quan";
+
+  showActions = notificationType === "PAIR_REQUEST";
+  headerTitle =
+    notificationType === "PAIR_REQUEST"
+      ? "Lời mời ghép cặp"
+      : PAIR_STATUS_LABELS[notificationType] || "Thông báo";
+
+  useEffect(() => {
+    setDetail(null);
+  }, [notificationId, notification?.PairRequestId, notification?.pairRequestId]);
 
   useEffect(() => {
     if (visible && pairRequestId) {
@@ -88,6 +314,11 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
   }, [notificationId, onClose]);
 
   const handleViewDetail = useCallback(() => {
+    if (!pairRequestId) {
+      Alert.alert("Thông báo", "Chưa có mã lời mời để mở chi tiết.");
+      return;
+    }
+
     onClose(notificationId);
     onNavigate?.(pairRequestId);
   }, [notificationId, pairRequestId, onClose, onNavigate]);
@@ -136,8 +367,28 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
 
   if (!visible || !notification) return null;
 
-  const otherUser = detail?.requestedByUser || detail?.requestedToUser || notification.Details?.requestedBy || notification.Details?.requestedTo;
-  const tournament = detail || notification.Details;
+  const userName = displayUser?.fullName || "Chưa rõ người mời";
+  const userInitial = userName?.[0]?.toUpperCase() || "?";
+  const hasUserAvatar =
+    displayUser?.avatarUrl &&
+    (displayUser.avatarUrl.startsWith("http://") || displayUser.avatarUrl.startsWith("https://"));
+  const ratingLines = [
+    displayUser?.ratingDouble != null
+      ? `Rating đôi: ${displayUser.ratingDouble.toFixed(1)}`
+      : "",
+    displayUser?.ratingSingle != null
+      ? `Rating đơn: ${displayUser.ratingSingle.toFixed(1)}`
+      : "",
+    displayUser?.city || "",
+  ].filter(Boolean);
+  const statusLabel = PAIR_STATUS_LABELS[notificationType] || "Thông báo";
+  messageContent = info.message || messageContent;
+  const tournament = { TournamentTitle: info.tournamentTitle };
+  const otherUser = {
+    AvatarUrl: displayUser?.avatarUrl,
+    FullName: displayUser?.fullName || userName,
+    RatingDouble: displayUser?.ratingDouble,
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleDismiss}>
@@ -150,14 +401,12 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
             </Pressable>
           </View>
 
-          <View style={styles.body}>
-            {loadingDetail ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#2563EB" />
-                <Text style={styles.loadingText}>Đang tải...</Text>
-              </View>
-            ) : (
-              <>
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <>
                 {/* Tournament info */}
                 <View style={styles.tournamentInfo}>
                   <Text style={styles.tournamentName} numberOfLines={2}>
@@ -166,29 +415,66 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
                   <Text style={styles.message}>{messageContent}</Text>
                 </View>
 
-                {/* User info */}
+                {/* User info - Show who sent the invitation */}
                 {otherUser && (
                   <View style={styles.userSection}>
-                    <Text style={styles.sectionLabel}>Người được mời:</Text>
+                    <Text style={styles.sectionLabel}>{userLabel}:</Text>
                     <View style={styles.userRow}>
-                      {otherUser.AvatarUrl ? (
-                        <Image source={{ uri: otherUser.AvatarUrl }} style={styles.avatar} />
+                      {hasUserAvatar ? (
+                        <Image source={{ uri: displayUser.avatarUrl }} style={styles.avatar} />
                       ) : (
                         <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                          <Text style={styles.avatarInitial}>
-                            {otherUser.FullName?.[0]?.toUpperCase() || "?"}
-                          </Text>
+                          <Text style={styles.avatarInitial}>{userInitial}</Text>
                         </View>
                       )}
                       <View style={styles.userInfo}>
-                        <Text style={styles.userName}>{otherUser.FullName || "Người chơi"}</Text>
-                        {otherUser.RatingDouble !== undefined && (
+                        <Text style={styles.userName}>{userName}</Text>
+                        {otherUser.RatingDouble != null && (
                           <Text style={styles.userRating}>Rating đôi: {Number(otherUser.RatingDouble).toFixed(1)}</Text>
                         )}
                       </View>
                     </View>
                   </View>
                 )}
+
+                <View style={styles.detailSummary}>
+                  <View style={styles.detailSummaryRow}>
+                    <Text style={styles.detailSummaryLabel}>Trạng thái</Text>
+                    <Text style={styles.detailSummaryValue}>{statusLabel}</Text>
+                  </View>
+                  {info.requestedAtText ? (
+                    <View style={styles.detailSummaryRow}>
+                      <Text style={styles.detailSummaryLabel}>Gửi lúc</Text>
+                      <Text style={styles.detailSummaryValue}>{info.requestedAtText}</Text>
+                    </View>
+                  ) : null}
+                  {info.expiresAtText ? (
+                    <View style={styles.detailSummaryRow}>
+                      <Text style={styles.detailSummaryLabel}>Hết hạn</Text>
+                      <Text style={styles.detailSummaryValue}>{info.expiresAtText}</Text>
+                    </View>
+                  ) : null}
+                  {ratingLines.length > 0 ? (
+                    <View style={styles.detailSummaryRow}>
+                      <Text style={styles.detailSummaryLabel}>Thông tin</Text>
+                      <Text style={styles.detailSummaryValue}>{ratingLines.join(" • ")}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                {loadingDetail ? (
+                  <View style={styles.inlineLoading}>
+                    <ActivityIndicator size="small" color="#2563EB" />
+                    <Text style={styles.inlineLoadingText}>Đang cập nhật chi tiết...</Text>
+                  </View>
+                ) : null}
+
+                {info.note ? (
+                  <View style={styles.noteBox}>
+                    <Text style={styles.sectionLabel}>Ghi chú:</Text>
+                    <Text style={styles.noteText}>{info.note}</Text>
+                  </View>
+                ) : null}
 
                 {/* Actions */}
                 {showActions && (
@@ -228,9 +514,8 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
                 <Pressable style={styles.detailBtn} onPress={handleViewDetail}>
                   <Text style={styles.detailBtnText}>Xem chi tiết</Text>
                 </Pressable>
-              </>
-            )}
-          </View>
+            </>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -251,6 +536,7 @@ const styles = StyleSheet.create({
     padding: 20,
     width: "100%",
     maxWidth: 360,
+    maxHeight: "82%",
   },
   header: {
     flexDirection: "row",
@@ -264,7 +550,10 @@ const styles = StyleSheet.create({
     color: "#1E2430",
   },
   body: {
-    // flex: 1,
+    maxHeight: 520,
+  },
+  bodyContent: {
+    paddingBottom: 2,
   },
   loadingContainer: {
     alignItems: "center",
@@ -287,9 +576,10 @@ const styles = StyleSheet.create({
   message: {
     fontSize: 14,
     color: "#6B7280",
+    lineHeight: 20,
   },
   userSection: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   sectionLabel: {
     fontSize: 12,
@@ -330,6 +620,53 @@ const styles = StyleSheet.create({
   userRating: {
     fontSize: 12,
     color: "#6B7280",
+  },
+  detailSummary: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    gap: 8,
+  },
+  detailSummaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  detailSummaryLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "600",
+  },
+  detailSummaryValue: {
+    flex: 1,
+    fontSize: 12,
+    color: "#1E2430",
+    fontWeight: "600",
+    textAlign: "right",
+    lineHeight: 17,
+  },
+  inlineLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  inlineLoadingText: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  noteBox: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  noteText: {
+    fontSize: 13,
+    color: "#374151",
+    lineHeight: 19,
   },
   actions: {
     flexDirection: "row",
