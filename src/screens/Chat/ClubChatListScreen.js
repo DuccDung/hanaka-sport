@@ -19,7 +19,6 @@ import { getMyClubChatRooms } from "../../services/chatService";
 import {
   acceptCommunityTerms,
   getBlockedUsers,
-  getCommunityReports,
   getCommunityTermsState,
   getSafeCommunityText,
 } from "../../services/communitySafetyService";
@@ -98,37 +97,6 @@ function ChatRoomItem({ item, onPress }) {
   );
 }
 
-function ReviewHelperCard({ reportCount, onOpenDemoChat, onManageBlocks }) {
-  return (
-    <View style={styles.reviewHelperCard}>
-      <View style={styles.reviewHelperTop}>
-        <View style={styles.reviewHelperBadge}>
-          <Ionicons name="shield-checkmark" size={15} color={COLORS.BLUE} />
-          <Text style={styles.reviewHelperBadgeText}>Công cụ an toàn</Text>
-        </View>
-
-        <Text style={styles.reviewHelperCount}>
-          Báo cáo gần đây: {reportCount}
-        </Text>
-      </View>
-
-      <Text style={styles.reviewHelperTitle}>
-        Báo cáo vi phạm và quản lý chặn ngay trong chat CLB.
-      </Text>
-
-      <View style={styles.reviewHelperActions}>
-        <Pressable style={styles.demoActionBtn} onPress={onOpenDemoChat}>
-          <Text style={styles.demoActionText}>Mở chat mẫu</Text>
-        </Pressable>
-
-        <Pressable style={styles.reviewOutlineBtn} onPress={onManageBlocks}>
-          <Text style={styles.reviewOutlineBtnText}>Quản lý chặn</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
 export default function ClubChatListScreen({ navigation }) {
   const { session } = useAuth();
   const [items, setItems] = useState([]);
@@ -140,22 +108,19 @@ export default function ClubChatListScreen({ navigation }) {
     acceptedAt: null,
   });
   const [blockedUsers, setBlockedUsers] = useState([]);
-  const [reportCount, setReportCount] = useState(0);
   const safetyScopeKey = `${session?.accessToken || "guest"}:${session?.user?.userId || "guest"}`;
 
   const loadSafetyState = useCallback(async () => {
     setTermsLoading(true);
 
     try {
-      const [nextTermsState, nextBlockedUsers, reports] = await Promise.all([
+      const [nextTermsState, nextBlockedUsers] = await Promise.all([
         getCommunityTermsState(),
         getBlockedUsers(),
-        getCommunityReports({ limit: 20 }),
       ]);
 
       setTermsState(nextTermsState);
       setBlockedUsers(Array.isArray(nextBlockedUsers) ? nextBlockedUsers : []);
-      setReportCount(reports.length);
     } finally {
       setTermsLoading(false);
     }
@@ -171,7 +136,6 @@ export default function ClubChatListScreen({ navigation }) {
       acceptedAt: null,
     });
     setBlockedUsers([]);
-    setReportCount(0);
   }, [safetyScopeKey]);
 
   const fetchRooms = useCallback(async ({ isRefresh = false } = {}) => {
@@ -279,18 +243,6 @@ export default function ClubChatListScreen({ navigation }) {
     });
   }, [blockedUsers, items]);
 
-  const listHeader = useMemo(() => {
-    if (!termsState.accepted) return null;
-
-    return (
-      <ReviewHelperCard
-        reportCount={reportCount}
-        onOpenDemoChat={openDemoChat}
-        onManageBlocks={openBlockManager}
-      />
-    );
-  }, [openDemoChat, openBlockManager, reportCount, termsState.accepted]);
-
   if (termsLoading) {
     return (
       <View style={styles.safe}>
@@ -391,7 +343,6 @@ export default function ClubChatListScreen({ navigation }) {
               tintColor={COLORS.BLUE}
             />
           }
-          ListHeaderComponent={listHeader}
           ListEmptyComponent={
             <View style={styles.centerState}>
               <Ionicons name="chatbubbles-outline" size={32} color="#9CA3AF" />
