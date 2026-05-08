@@ -3,6 +3,8 @@ import { StyleSheet, Dimensions } from "react-native";
 import { COLORS } from "../../constants/colors";
 
 const { width } = Dimensions.get("window");
+const ACTION_GAP = 10;
+const ACTION_COLUMN_WIDTH = (width - 24 - ACTION_GAP) / 2;
 
 export const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
@@ -74,32 +76,41 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Web-like action buttons (horizontal layout)
   actionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: ACTION_GAP,
     marginTop: 8,
   },
   actionButton: {
+    width: ACTION_COLUMN_WIDTH,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    minHeight: 38,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+  },
+  actionButtonFull: {
+    width: "100%",
+    marginTop: ACTION_GAP,
   },
   actionButtonIcon: {
-    fontSize: 16,
+    width: 20,
+    textAlign: "center",
     color: "#1E2430",
   },
   actionButtonText: {
-    fontSize: 14,
-    fontWeight: "400",
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "600",
     color: "#1E2430",
+    textAlign: "center",
   },
 
   // Legacy circle buttons (keep for reference, can remove)

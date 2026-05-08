@@ -75,6 +75,12 @@ function mapDtoToUi(dto) {
     stateText: dto?.stateText ?? "-",
     organizer: dto?.organizer ?? "-",
     creator: dto?.creatorName ?? "-",
+    zaloLink:
+      dto?.zaloLink ??
+      dto?.ZaloLink ??
+      dto?.zaloGroupLink ??
+      dto?.ZaloGroupLink ??
+      "",
     registeredCount: dto?.registeredCount ?? null,
     pairedCount: dto?.pairedCount ?? null,
     content: dto?.content ?? "",
@@ -161,6 +167,7 @@ export default function TournamentDetailScreen({ navigation, route }) {
       stateText: "-",
       organizer: "-",
       creator: "-",
+      zaloLink: "",
       registeredCount: 0,
       pairedCount: 0,
       content: "",
@@ -415,11 +422,19 @@ export default function TournamentDetailScreen({ navigation, route }) {
               onPress={() =>
                 navigation.navigate("TournamentRegistration", {
                   tournamentId: t.tournamentId,
+                  tournament: t,
                 })
               }
             >
               <Ionicons name="list" size={16} color="#1E2430" style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>Danh sách đăng ký</Text>
+              <Text
+                style={styles.actionButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                Danh sách đăng ký
+              </Text>
             </Pressable>
 
             {/* Thể lệ giải */}
@@ -433,7 +448,14 @@ export default function TournamentDetailScreen({ navigation, route }) {
               }
             >
               <Ionicons name="hammer" size={16} color="#1E2430" style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>Thể lệ giải</Text>
+              <Text
+                style={styles.actionButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                Thể lệ giải
+              </Text>
             </Pressable>
 
             {/* Lịch thi đấu */}
@@ -444,7 +466,14 @@ export default function TournamentDetailScreen({ navigation, route }) {
               }
             >
               <Ionicons name="calendar" size={16} color="#1E2430" style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>Lịch thi đấu</Text>
+              <Text
+                style={styles.actionButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                Lịch thi đấu
+              </Text>
             </Pressable>
 
             {/* Bảng xếp hạng */}
@@ -455,14 +484,20 @@ export default function TournamentDetailScreen({ navigation, route }) {
               }
             >
               <Ionicons name="stats-chart" size={16} color="#1E2430" style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>Bảng xếp hạng</Text>
+              <Text
+                style={styles.actionButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                Bảng xếp hạng
+              </Text>
             </Pressable>
           </View>
 
-          {/* Nút Trạng thái của tôi - full width */}
           {regState && (
             <Pressable
-              style={[styles.actionButton, { width: '100%', marginTop: 10 }]}
+              style={[styles.actionButton, styles.actionButtonFull]}
               onPress={() =>
                 navigation.navigate("MyTournamentRegistration", {
                   tournamentId: t.tournamentId,
@@ -470,7 +505,12 @@ export default function TournamentDetailScreen({ navigation, route }) {
               }
             >
               <Ionicons name="person" size={16} color="#1E2430" style={styles.actionButtonIcon} />
-              <Text style={styles.actionButtonText}>
+              <Text
+                style={styles.actionButtonText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
                 {registrationInfo?.hasRegistration ? "Quản lý đăng ký" : "Trạng thái của tôi"}
               </Text>
             </Pressable>

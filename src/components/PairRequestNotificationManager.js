@@ -1,6 +1,6 @@
 // src/components/PairRequestNotificationManager.js
 import React, { useEffect, useState, useCallback } from "react";
-import { View, AppState, AppStateStatus } from "react-native";
+import { View, AppState } from "react-native";
 import PairRequestNotificationPopup from "./PairRequestNotificationPopup";
 import {
   addRealtimeListener,
@@ -11,6 +11,39 @@ import {
 } from "../services/realtimeService";
 import { useAuth } from "../context/AuthContext";
 import { fetchPendingPairRequests } from "../services/tournamentService";
+
+function firstValue(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function normalizePairNotification(raw = {}) {
+  const details = raw.Details ?? raw.details ?? {};
+  const pairRequestId = firstValue(
+    raw.PairRequestId,
+    raw.pairRequestId,
+    details.PairRequestId,
+    details.pairRequestId,
+  );
+
+  return {
+    ...raw,
+    NotificationId: firstValue(raw.NotificationId, raw.notificationId, raw.id, pairRequestId),
+    PairRequestId: pairRequestId,
+    TournamentId: firstValue(
+      raw.TournamentId,
+      raw.tournamentId,
+      details.TournamentId,
+      details.tournamentId,
+    ),
+    Title: firstValue(raw.Title, raw.title),
+    Body: firstValue(raw.Body, raw.body, raw.message),
+    Details: details,
+    NotificationType:
+      firstValue(raw.NotificationType, raw.notificationType, raw.type) ||
+      "PAIR_REQUEST",
+    ReceivedAt: firstValue(raw.ReceivedAt, raw.receivedAt, raw.createdAt, new Date().toISOString()),
+  };
+}
 
 export default function PairRequestNotificationManager({ navigation }) {
   const { session } = useAuth();
@@ -25,7 +58,7 @@ export default function PairRequestNotificationManager({ navigation }) {
     try {
       console.log("Checking pending notifications...");
       // Sync with server to get latest pending notifications
-      const serverNotifications = await fetchPendingPairRequests();
+      const serverNotifications = (await fetchPendingPairRequests()).map(normalizePairNotification);
       console.log("Fetched pending pair requests from server:", serverNotifications);
       // Save to local storage
       await savePairRequestNotifications(serverNotifications);
@@ -64,7 +97,7 @@ export default function PairRequestNotificationManager({ navigation }) {
       console.log("Realtime event received in manager:", event.type, event.notification);
       if (event.type === "new_pair_request" && session?.accessToken) {
         // A new pair request arrived via WS
-        const notification = event.notification;
+        const notification = normalizePairNotification(event.notification);
         console.log("Processing new_pair_request:", notification.NotificationId, notification.PairRequestId);
 
         // Check if this notification is dismissed before showing
@@ -105,7 +138,7 @@ export default function PairRequestNotificationManager({ navigation }) {
   useEffect(() => {
     checkPendingNotifications();
 
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = (nextAppState) => {
       setAppState(nextAppState);
       if (nextAppState === "active" && session?.accessToken) {
         // App came to foreground - check for pending notifications
@@ -132,7 +165,17 @@ export default function PairRequestNotificationManager({ navigation }) {
 
   const handleNavigateToDetail = useCallback((pairRequestId) => {
     setCurrentPopup(null);
-    navigation.navigate("PairRequestDetail", { pairRequestId });
+
+    const routeNames = navigation?.getState?.()?.routeNames || [];
+    if (routeNames.includes("PairRequestDetail")) {
+      navigation.navigate("PairRequestDetail", { pairRequestId });
+      return;
+    }
+
+    navigation.navigate("Home", {
+      screen: "PairRequestDetail",
+      params: { pairRequestId },
+    });
   }, [navigation]);
 
   return (

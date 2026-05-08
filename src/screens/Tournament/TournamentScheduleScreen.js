@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./scheduleStyles";
 import { getTournamentRoundsWithMatches } from "../../services/tournamentService";
+import { API_BASE_URL } from "../../constants/config";
 
 // Enable LayoutAnimation on Android
 if (
@@ -48,6 +49,23 @@ function normalizeUrl(url) {
   if (!raw) return "";
   if (/^https?:\/\//i.test(raw)) return raw;
   return `https://${raw}`;
+}
+
+function getApiOrigin() {
+  const raw = String(API_BASE_URL || "").trim().replace(/\/+$/, "");
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return raw.replace(/\/api$/i, "");
+  }
+}
+
+function buildTournamentBracketUrl(tournamentId) {
+  const baseUrl = getApiOrigin();
+  return `${baseUrl}/PickleballWeb/Tournament/${encodeURIComponent(
+    tournamentId,
+  )}/Bracket`;
 }
 
 function isYoutubeUrl(url) {
@@ -317,6 +335,18 @@ export default function TournamentScheduleScreen({ navigation, route }) {
     } catch (e) {}
   };
 
+  const openBracketWebView = useCallback(() => {
+    if (!tournamentId) {
+      Alert.alert("Thông báo", "Không tìm thấy mã giải đấu để mở sơ đồ.");
+      return;
+    }
+
+    navigation.navigate("AppWebView", {
+      title: "Sơ đồ trận đấu",
+      url: buildTournamentBracketUrl(tournamentId),
+    });
+  }, [navigation, tournamentId]);
+
   const toggleTable = useCallback((tableNo) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpenMap((prev) => ({
@@ -533,7 +563,15 @@ export default function TournamentScheduleScreen({ navigation, route }) {
             </Text>
           </View>
 
-          <Ionicons name="git-branch-outline" size={18} color="#1E2430" />
+          <Pressable
+            onPress={openBracketWebView}
+            style={styles.bracketIconBtn}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Mở sơ đồ trận đấu"
+          >
+            <Ionicons name="git-branch-outline" size={18} color="#1E2430" />
+          </Pressable>
         </View>
 
         <View style={styles.tabsRow}>

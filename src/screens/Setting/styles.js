@@ -110,4 +110,129 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     color: "#64748B",
   },
+
+  webViewSafe: {
+    flex: 1,
+    backgroundColor: COLORS.WHITE,
+  },
+
+  webViewHeader: {
+    height: 56,
+    backgroundColor: COLORS.WHITE,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+
+  webViewBackBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+
+  webViewHeaderTitle: {
+    flex: 1,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "700",
+    color: "#1E2430",
+    textAlign: "center",
+  },
+
+  webViewHeaderRight: {
+    width: 32,
+  },
+
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: COLORS.WHITE,
+  },
+
+  webView: {
+    flex: 1,
+  },
+
+  webViewLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.WHITE,
+  },
+
+  webViewError: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    backgroundColor: COLORS.WHITE,
+  },
+
+  webViewErrorTitle: {
+    marginTop: 12,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "800",
+    color: "#1E2430",
+    textAlign: "center",
+  },
+
+  webViewErrorMessage: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.TEXT_SOFT,
+    textAlign: "center",
+  },
+
+  webViewErrorUrl: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#94A3B8",
+    textAlign: "center",
+  },
+
+  webViewErrorActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 18,
+  },
+
+  webViewRetryBtn: {
+    minWidth: 96,
+    height: 42,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.PRIMARY,
+    paddingHorizontal: 14,
+  },
+
+  webViewRetryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.WHITE,
+  },
+
+  webViewOpenBtn: {
+    minWidth: 118,
+    height: 42,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: COLORS.WHITE,
+    paddingHorizontal: 14,
+  },
+
+  webViewOpenText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E2430",
+  },
 });
