@@ -131,53 +131,6 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  reviewHelperCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#DCE7F5",
-    padding: 14,
-    marginBottom: 14,
-  },
-  reviewHelperTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  reviewHelperBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  reviewHelperBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: COLORS.BLUE,
-  },
-  reviewHelperCount: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  reviewHelperTitle: {
-    marginTop: 12,
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  reviewHelperActions: {
-    marginTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 10,
-  },
   reviewOutlineBtn: {
     paddingHorizontal: 16,
     height: 42,
