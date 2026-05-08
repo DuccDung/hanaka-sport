@@ -492,3 +492,16 @@ export async function getPairRequestDetail(pairRequestId) {
   const res = await apiClient.get(`/tournament-registrations/pair-requests/${pairRequestId}`);
   return res.data;
 }
+
+// Fetch pending pair request notifications from server
+export async function fetchPendingPairRequests() {
+  const res = await apiClient.get(`/notifications/pair-requests`);
+  // Backend trả về { items: [], total: 0 } hoặc array trực tiếp
+  const data = res.data;
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data && Array.isArray(data.items)) {
+    return data.items;
+  }
+  return [];
+}

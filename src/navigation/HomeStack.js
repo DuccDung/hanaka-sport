@@ -35,16 +35,20 @@ import PairRequestInboxScreen from "../screens/Tournament/PairRequestInboxScreen
 import PairRequestDetailScreen from "../screens/Tournament/PairRequestDetailScreen";
 import MyTournamentRegistrationScreen from "../screens/Tournament/MyTournamentRegistrationScreen";
 import HanakaRatingInfoScreen from "../screens/Members/HanakaRatingInfoScreen";
+import PairRequestNotificationManager from "../components/PairRequestNotificationManager";
+
 const Stack = createNativeStackNavigator();
 
-export default function HomeStack() {
+export default function HomeStack({ navigation }) {
   return (
-    <Stack.Navigator>
-      <Stack.Screen
-        name="HomeMain"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
+    <>
+      <PairRequestNotificationManager navigation={navigation} />
+      <Stack.Navigator>
+        <Stack.Screen
+          name="HomeMain"
+          component={HomeScreen}
+          options={{ headerShown: false }}
+        />
 
       <Stack.Screen
         name="Rules"
@@ -215,5 +219,6 @@ export default function HomeStack() {
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
+    </>
   );
 }
