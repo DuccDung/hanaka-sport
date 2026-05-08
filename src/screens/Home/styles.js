@@ -61,18 +61,60 @@ export const styles = StyleSheet.create({
   },
 
   /* MENU */
-  menuItemOuter: {
-    marginBottom: 16,
+  radialMenu: {
+    alignSelf: "center",
+    marginTop: 8,
+    marginBottom: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  menuItemInner: {
-    borderRadius: 5,
+  radialRing: {
+    position: "absolute",
+    top: "9%",
+    right: "9%",
+    bottom: "9%",
+    left: "9%",
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: "rgba(10,102,194,0.18)",
+    backgroundColor: "rgba(255,255,255,0.42)",
+  },
+
+  radialCenter: {
+    width: 148,
+    height: 148,
+    borderRadius: 74,
+    backgroundColor: COLORS.WHITE,
+    borderWidth: 3,
+    borderColor: "rgba(10,102,194,0.24)",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    shadowColor: "#0A3769",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+
+  radialLogo: {
+    width: 148,
+    height: 148,
+    borderRadius: 74,
+  },
+
+  radialButton: {
+    position: "absolute",
     backgroundColor: COLORS.PRIMARY,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    minHeight: 96,
+    paddingHorizontal: 6,
+    shadowColor: "#073B75",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 5,
   },
 
   menuItemPressed: {
@@ -80,22 +122,22 @@ export const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
 
-  menuIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.14)",
+  radialIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 8,
+    marginBottom: 3,
   },
 
-  menuLabel: {
+  radialLabel: {
     textAlign: "center",
     color: COLORS.WHITE,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
-    lineHeight: 14,
+    lineHeight: 11,
   },
 
   sectionTitle: {
