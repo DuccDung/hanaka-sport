@@ -40,14 +40,20 @@ export const styles = StyleSheet.create({
   },
 
   // Tabs
-  tabsRow: {
+  tabsScroller: {
     backgroundColor: "#fff",
-    flexDirection: "row",
-    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: "#EEF2F8",
   },
-  tabBtn: { paddingVertical: 12, paddingHorizontal: 16 },
+  tabsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 12,
+  },
+  tabBtn: {
+    flexShrink: 0,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
   tabText: { fontSize: 14, fontWeight: "400", color: "#1E2430" },
   tabTextActive: { fontWeight: "700" },
   tabUnderline: {

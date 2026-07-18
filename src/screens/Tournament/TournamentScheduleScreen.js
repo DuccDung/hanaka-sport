@@ -5,6 +5,7 @@ import {
   StatusBar,
   Pressable,
   FlatList,
+  ScrollView,
   Share,
   LayoutAnimation,
   Platform,
@@ -540,12 +541,16 @@ export default function TournamentScheduleScreen({ navigation, route }) {
         </View>
 
         <View style={styles.metaRow}>
-          <View style={styles.metaLeft}>
+          <Pressable
+            style={styles.metaLeft}
+            onPress={openBracketWebView}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Mở sơ đồ trận đấu"
+          >
             <Ionicons name="git-branch-outline" size={18} color="#1E2430" />
-            <Text style={styles.metaText}>
-              {apiTournament?.playoffType || "Chưa cập nhật"}
-            </Text>
-          </View>
+            <Text style={styles.metaText}>Sơ đồ</Text>
+          </Pressable>
 
           <View style={styles.metaSpacer} />
 
@@ -574,7 +579,14 @@ export default function TournamentScheduleScreen({ navigation, route }) {
           </Pressable>
         </View>
 
-        <View style={styles.tabsRow}>
+        <ScrollView
+          horizontal
+          bounces={false}
+          directionalLockEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsScroller}
+          contentContainerStyle={styles.tabsRow}
+        >
           {roundTabs.map((r) => {
             const active = r.key === roundKey;
             return (
@@ -590,7 +602,7 @@ export default function TournamentScheduleScreen({ navigation, route }) {
               </Pressable>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
 
       {loading ? (

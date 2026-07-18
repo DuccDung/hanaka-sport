@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../context/AuthContext";
@@ -28,10 +27,10 @@ import {
   updateMe,
   uploadAvatar,
   deleteMe,
+  getMyRatingHistory,
 } from "../../services/userService";
 import {
   evaluateCommunityContent,
-  getCommunityTermsState,
 } from "../../services/communitySafetyService";
 import { getAuthSession } from "../../services/authStorage";
 
@@ -48,6 +47,27 @@ function formatDateDDMMYYYY(date) {
   const yyyy = d.getFullYear();
 
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatDateTimeDDMMYYYY(date) {
+  if (!date) return "";
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+}
+
+function formatRatingScore(value) {
+  if (value === null || value === undefined || value === "") return "--";
+  const n = Number(value);
+  if (Number.isNaN(n)) return "--";
+  return n.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function toIsoDateOnly(date) {
@@ -131,9 +151,15 @@ export default function AccountScreen({ navigation }) {
   const [dobDate, setDobDate] = useState(
     userInSession?.birthOfDate ? new Date(userInSession.birthOfDate) : null,
   );
-  const [communityTermsAccepted, setCommunityTermsAccepted] = useState(false);
-  const [communityTermsAcceptedAt, setCommunityTermsAcceptedAt] =
-    useState(null);
+  const [ratingSingle, setRatingSingle] = useState(userInSession?.ratingSingle ?? null);
+  const [ratingDouble, setRatingDouble] = useState(userInSession?.ratingDouble ?? null);
+  const [ratingUpdatedAt, setRatingUpdatedAt] = useState(
+    userInSession?.ratingUpdatedAt ?? null,
+  );
+  const [ratingHistoryOpen, setRatingHistoryOpen] = useState(false);
+  const [ratingHistoryLoading, setRatingHistoryLoading] = useState(false);
+  const [ratingHistoryLoaded, setRatingHistoryLoaded] = useState(false);
+  const [ratingHistoryItems, setRatingHistoryItems] = useState([]);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [genderModal, setGenderModal] = useState(false);
@@ -155,6 +181,13 @@ export default function AccountScreen({ navigation }) {
     setProvince("");
     setBio("");
     setDobDate(null);
+    setRatingSingle(null);
+    setRatingDouble(null);
+    setRatingUpdatedAt(null);
+    setRatingHistoryOpen(false);
+    setRatingHistoryLoading(false);
+    setRatingHistoryLoaded(false);
+    setRatingHistoryItems([]);
   }, []);
 
   const hasLocalProfile = useMemo(() => {
@@ -171,26 +204,16 @@ export default function AccountScreen({ navigation }) {
 
   const canInteractWithProfile = !booting && (isLoggedIn || hasLocalProfile);
   const formEditable = !deletingAccount && !loading;
+  const isVerifiedAccount = !!(userInSession?.verified || userInSession?.Verified);
+  const profileEditable = formEditable && !isVerifiedAccount;
+  const canEditAvatar = profileEditable;
+  const canEditPhone = profileEditable;
 
   const verifiedText = useMemo(() => {
     if (booting) return "Đang tải";
     if (!canInteractWithProfile) return "Chưa đăng nhập";
-    return userInSession?.verified ? "Đã xác thực" : "Chờ xác thực";
-  }, [booting, canInteractWithProfile, userInSession?.verified]);
-
-  const communityText = useMemo(() => {
-    if (!communityTermsAccepted) {
-      return "Chưa đồng ý điều khoản cộng đồng";
-    }
-
-    if (!communityTermsAcceptedAt) {
-      return "Đã đồng ý điều khoản cộng đồng";
-    }
-
-    return `Đã đồng ý từ ${new Date(communityTermsAcceptedAt).toLocaleDateString(
-      "vi-VN",
-    )}`;
-  }, [communityTermsAccepted, communityTermsAcceptedAt]);
+    return isVerifiedAccount ? "Đã xác thực" : "Chờ xác thực";
+  }, [booting, canInteractWithProfile, isVerifiedAccount]);
 
   const requireLogin = useCallback(() => {
     if (canInteractWithProfile) return false;
@@ -224,7 +247,41 @@ export default function AccountScreen({ navigation }) {
     setProvince(user?.city ?? "");
     setBio(user?.bio ?? "");
     setDobDate(user?.birthOfDate ? new Date(user.birthOfDate) : null);
+    setRatingSingle(user?.ratingSingle ?? user?.RatingSingle ?? null);
+    setRatingDouble(user?.ratingDouble ?? user?.RatingDouble ?? null);
+    setRatingUpdatedAt(user?.ratingUpdatedAt ?? user?.RatingUpdatedAt ?? null);
   }, []);
+
+  const loadRatingHistory = useCallback(async () => {
+    if (!accessToken || ratingHistoryLoading) return;
+
+    try {
+      setRatingHistoryLoading(true);
+      const payload = await getMyRatingHistory();
+      setRatingHistoryItems(Array.isArray(payload?.items) ? payload.items : []);
+      setRatingHistoryLoaded(true);
+    } catch (error) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        "Không lấy được lịch sử điểm trình.";
+      Alert.alert("Lỗi", String(msg));
+    } finally {
+      setRatingHistoryLoading(false);
+    }
+  }, [accessToken, ratingHistoryLoading]);
+
+  const toggleRatingHistory = useCallback(() => {
+    if (requireLogin()) return;
+
+    const nextOpen = !ratingHistoryOpen;
+    setRatingHistoryOpen(nextOpen);
+
+    if (nextOpen && !ratingHistoryLoaded) {
+      void loadRatingHistory();
+    }
+  }, [loadRatingHistory, ratingHistoryLoaded, ratingHistoryOpen, requireLogin]);
 
   useEffect(() => {
     if (userInSession) {
@@ -345,12 +402,6 @@ export default function AccountScreen({ navigation }) {
     syncUserToState,
   ]);
 
-  const loadCommunityTerms = useCallback(async () => {
-    const state = await getCommunityTermsState();
-    setCommunityTermsAccepted(!!state?.accepted);
-    setCommunityTermsAcceptedAt(state?.acceptedAt || null);
-  }, []);
-
   const ensureActiveSession = useCallback(async () => {
     if (accessToken) {
       return {
@@ -387,14 +438,16 @@ export default function AccountScreen({ navigation }) {
     refreshProfile();
   }, [accessToken, refreshProfile]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadCommunityTerms();
-    }, [loadCommunityTerms]),
-  );
-
   const onPickAvatar = async () => {
     if (requireLogin()) return;
+
+    if (isVerifiedAccount) {
+      Alert.alert(
+        "Không thể cập nhật",
+        "Tài khoản đã xác thực nên không thể đổi ảnh đại diện.",
+      );
+      return;
+    }
 
     try {
       const activeSession = await ensureActiveSession();
@@ -464,6 +517,14 @@ export default function AccountScreen({ navigation }) {
   const onUpdate = async () => {
     if (requireLogin()) return;
 
+    if (isVerifiedAccount) {
+      Alert.alert(
+        "Không thể cập nhật",
+        "Tài khoản đã xác thực nên không thể sửa thông tin hồ sơ.",
+      );
+      return;
+    }
+
     const fullNameModeration = evaluateCommunityContent(fullName);
     if (fullName?.trim() && fullNameModeration.blocked) {
       Alert.alert(
@@ -490,12 +551,16 @@ export default function AccountScreen({ navigation }) {
 
       const payload = {
         fullName: fullName?.trim() || "",
-        phone: phone?.trim() || "",
+        phone: isVerifiedAccount
+          ? String(userInSession?.phone ?? phone ?? "").trim()
+          : phone?.trim() || "",
         gender: gender || null,
         city: province || null,
         bio: bio?.trim() || null,
         birthOfDate: dobDate ? toIsoDateOnly(dobDate) : null,
-        avatarUrl: avatarUrl || null,
+        avatarUrl: isVerifiedAccount
+          ? normalizeAvatarUrl(userInSession?.avatarUrl) || avatarUrl || null
+          : avatarUrl || null,
       };
 
       const updated = await updateMe(payload);
@@ -575,6 +640,11 @@ export default function AccountScreen({ navigation }) {
   };
 
   const onChangeDate = (event, selectedDate) => {
+    if (isVerifiedAccount) {
+      setShowDatePicker(false);
+      return;
+    }
+
     if (Platform.OS !== "ios") {
       setShowDatePicker(false);
     }
@@ -622,6 +692,7 @@ export default function AccountScreen({ navigation }) {
             disabled={!formEditable || avatarUploading}
             style={({ pressed }) => [
               styles.avatarPressable,
+              (!canEditAvatar || avatarUploading) && styles.inputDisabled,
               pressed && formEditable ? styles.pressed : null,
             ]}
           >
@@ -640,6 +711,8 @@ export default function AccountScreen({ navigation }) {
             <View style={styles.cameraBadge}>
               {avatarUploading ? (
                 <ActivityIndicator size="small" color="#fff" />
+              ) : isVerifiedAccount ? (
+                <Ionicons name="lock-closed" size={15} color="#fff" />
               ) : (
                 <Ionicons name="camera" size={16} color="#fff" />
               )}
@@ -649,6 +722,8 @@ export default function AccountScreen({ navigation }) {
           <Text style={styles.avatarHint}>
             {!canInteractWithProfile
               ? "Đăng nhập để cập nhật ảnh"
+              : isVerifiedAccount
+                ? "Tài khoản đã xác thực, không thể đổi ảnh đại diện"
               : "Chạm để đổi ảnh đại diện"}
           </Text>
         </View>
@@ -656,9 +731,121 @@ export default function AccountScreen({ navigation }) {
         <Text style={styles.statusText}>
           Thành viên: <Text style={styles.statusBold}>{verifiedText}</Text>
         </Text>
-        <Text style={styles.statusSubText}>
-          Cộng đồng: <Text style={styles.statusBold}>{communityText}</Text>
-        </Text>
+
+        <View style={styles.ratingCard}>
+          <View style={styles.ratingHeader}>
+            <View style={styles.ratingHeaderText}>
+              <Text style={styles.ratingTitle}>Điểm trình</Text>
+              <Text style={styles.ratingUpdatedText}>
+                {canInteractWithProfile
+                  ? ratingUpdatedAt
+                    ? `Cập nhật ${formatDateTimeDDMMYYYY(ratingUpdatedAt)}`
+                    : "Chưa có lịch sử điểm trình"
+                  : "Đăng nhập để xem điểm trình"}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={toggleRatingHistory}
+              disabled={!canInteractWithProfile || booting}
+              style={[
+                styles.ratingToggle,
+                (!canInteractWithProfile || booting) && styles.btnDisabled,
+              ]}
+            >
+              <Text style={styles.ratingToggleText}>
+                {ratingHistoryOpen ? "Ẩn lịch sử" : "Xem lịch sử"}
+              </Text>
+              <Ionicons
+                name={ratingHistoryOpen ? "chevron-up" : "chevron-down"}
+                size={16}
+                color="#166534"
+              />
+            </Pressable>
+          </View>
+
+          <View style={styles.ratingSummary}>
+            <View style={styles.ratingSummaryItem}>
+              <View style={styles.ratingSummaryLabelRow}>
+                <View style={styles.ratingSummaryIcon}>
+                  <Ionicons name="person-outline" size={15} color="#166534" />
+                </View>
+                <Text style={styles.ratingSummaryLabel}>Trình đơn</Text>
+              </View>
+              <Text style={styles.ratingSummaryValue}>
+                {formatRatingScore(ratingSingle)}
+              </Text>
+            </View>
+            <View style={styles.ratingSummaryItem}>
+              <View style={styles.ratingSummaryLabelRow}>
+                <View style={styles.ratingSummaryIcon}>
+                  <Ionicons name="people-outline" size={15} color="#166534" />
+                </View>
+                <Text style={styles.ratingSummaryLabel}>Trình đôi</Text>
+              </View>
+              <Text style={styles.ratingSummaryValue}>
+                {formatRatingScore(ratingDouble)}
+              </Text>
+            </View>
+          </View>
+
+          {ratingHistoryOpen ? (
+            <View style={styles.ratingHistory}>
+              {ratingHistoryLoading ? (
+                <View style={styles.ratingHistoryLoading}>
+                  <ActivityIndicator size="small" color="#16A34A" />
+                  <Text style={styles.ratingHistoryEmpty}>
+                    Đang tải lịch sử điểm trình...
+                  </Text>
+                </View>
+              ) : ratingHistoryItems.length ? (
+                ratingHistoryItems.map((item) => {
+                  const key =
+                    item?.ratingHistoryId ||
+                    item?.RatingHistoryId ||
+                    `${item?.ratedAt || item?.RatedAt}-${item?.ratingSingle || item?.RatingSingle}`;
+                  const ratedBy =
+                    item?.ratedByName ||
+                    item?.RatedByName ||
+                    (item?.ratedByUserId || item?.RatedByUserId
+                      ? `User #${item?.ratedByUserId || item?.RatedByUserId}`
+                      : "Hệ thống");
+
+                  return (
+                    <View key={String(key)} style={styles.ratingHistoryItem}>
+                      <View style={styles.ratingHistoryScores}>
+                        <Text style={styles.ratingHistoryScoreText}>
+                          Đơn{" "}
+                          <Text style={styles.ratingHistoryScoreValue}>
+                            {formatRatingScore(item?.ratingSingle ?? item?.RatingSingle)}
+                          </Text>
+                        </Text>
+                        <Text style={styles.ratingHistoryScoreText}>
+                          Đôi{" "}
+                          <Text style={styles.ratingHistoryScoreValue}>
+                            {formatRatingScore(item?.ratingDouble ?? item?.RatingDouble)}
+                          </Text>
+                        </Text>
+                      </View>
+                      <Text style={styles.ratingHistoryMeta}>
+                        {formatDateTimeDDMMYYYY(item?.ratedAt || item?.RatedAt) || "--"} · {ratedBy}
+                      </Text>
+                      {item?.note || item?.Note ? (
+                        <Text style={styles.ratingHistoryNote}>
+                          {item?.note || item?.Note}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={styles.ratingHistoryEmpty}>
+                  Chưa có lịch sử điểm trình.
+                </Text>
+              )}
+            </View>
+          ) : null}
+        </View>
 
         <View style={styles.card}>
           <Label text="User ID" />
@@ -672,39 +859,52 @@ export default function AccountScreen({ navigation }) {
 
           <Label text="Họ tên" required style={styles.labelSpacing} />
           <Pressable
-            onPress={() => fullNameInputRef.current?.focus?.()}
-            style={styles.inputShell}
+            onPress={() => {
+              if (!profileEditable) return;
+              fullNameInputRef.current?.focus?.();
+            }}
+            style={[styles.inputShell, !profileEditable && styles.inputDisabled]}
           >
             <TextInput
               ref={fullNameInputRef}
               value={fullName}
               onChangeText={setFullName}
               style={styles.inputText}
-              editable={formEditable}
+              editable={profileEditable}
               placeholder="Nhập họ tên"
               placeholderTextColor="#9CA3AF"
               autoCapitalize="words"
               autoCorrect={false}
-              showSoftInputOnFocus
+              showSoftInputOnFocus={profileEditable}
             />
           </Pressable>
 
           <Label text="Số điện thoại" required style={styles.labelSpacing} />
           <Pressable
-            onPress={() => phoneInputRef.current?.focus?.()}
-            style={styles.inputShell}
+            onPress={() => {
+              if (isVerifiedAccount) {
+                Alert.alert(
+                  "Không thể cập nhật",
+                  "Tài khoản đã xác thực nên không thể sửa số điện thoại.",
+                );
+                return;
+              }
+
+              phoneInputRef.current?.focus?.();
+            }}
+            style={[styles.inputShell, !canEditPhone && styles.inputDisabled]}
           >
             <TextInput
               ref={phoneInputRef}
               value={phone}
               onChangeText={setPhone}
               style={styles.inputText}
-              editable={formEditable}
+              editable={canEditPhone}
               keyboardType="phone-pad"
               placeholder="Ví dụ: 096..."
               placeholderTextColor="#9CA3AF"
               autoCorrect={false}
-              showSoftInputOnFocus
+              showSoftInputOnFocus={canEditPhone}
             />
           </Pressable>
 
@@ -720,10 +920,10 @@ export default function AccountScreen({ navigation }) {
           <Label text="Ngày sinh" style={styles.labelSpacing} />
           <Pressable
             onPress={() => {
-              if (requireLogin()) return;
+              if (requireLogin() || !profileEditable) return;
               setShowDatePicker(true);
             }}
-            style={[styles.select, !formEditable && styles.selectDisabled]}
+            style={[styles.select, !profileEditable && styles.selectDisabled]}
           >
             <Text style={dobDate ? styles.selectText : styles.placeholderText}>
               {dobDate ? formatDateDDMMYYYY(dobDate) : "Chọn ngày sinh"}
@@ -744,10 +944,10 @@ export default function AccountScreen({ navigation }) {
           <Label text="Giới tính" style={styles.labelSpacing} />
           <Pressable
             onPress={() => {
-              if (requireLogin()) return;
+              if (requireLogin() || !profileEditable) return;
               setGenderModal(true);
             }}
-            style={[styles.select, !formEditable && styles.selectDisabled]}
+            style={[styles.select, !profileEditable && styles.selectDisabled]}
           >
             <Text style={gender ? styles.selectText : styles.placeholderText}>
               {gender || "Chọn giới tính"}
@@ -758,10 +958,10 @@ export default function AccountScreen({ navigation }) {
           <Label text="Tỉnh/Thành" style={styles.labelSpacing} />
           <Pressable
             onPress={() => {
-              if (requireLogin()) return;
+              if (requireLogin() || !profileEditable) return;
               setProvinceModal(true);
             }}
-            style={[styles.select, !formEditable && styles.selectDisabled]}
+            style={[styles.select, !profileEditable && styles.selectDisabled]}
           >
             <Text style={province ? styles.selectText : styles.placeholderText}>
               {province || "Chọn tỉnh/thành"}
@@ -771,21 +971,24 @@ export default function AccountScreen({ navigation }) {
 
           <Label text="Giới thiệu" style={styles.labelSpacing} />
           <Pressable
-            onPress={() => bioInputRef.current?.focus?.()}
-            style={styles.textareaShell}
+            onPress={() => {
+              if (!profileEditable) return;
+              bioInputRef.current?.focus?.();
+            }}
+            style={[styles.textareaShell, !profileEditable && styles.inputDisabled]}
           >
             <TextInput
               ref={bioInputRef}
               value={bio}
               onChangeText={setBio}
               style={styles.textareaInput}
-              editable={formEditable}
+              editable={profileEditable}
               multiline
               placeholder="Viết vài dòng giới thiệu..."
               placeholderTextColor="#9CA3AF"
               autoCorrect={false}
               textAlignVertical="top"
-              showSoftInputOnFocus
+              showSoftInputOnFocus={profileEditable}
             />
           </Pressable>
 
@@ -794,9 +997,9 @@ export default function AccountScreen({ navigation }) {
             style={[
               styles.btn,
               styles.btnPrimary,
-              (!canInteractWithProfile || loading) && styles.btnDisabled,
+              (!canInteractWithProfile || loading || isVerifiedAccount) && styles.btnDisabled,
             ]}
-            disabled={!canInteractWithProfile || loading}
+            disabled={!canInteractWithProfile || loading || isVerifiedAccount}
           >
             <Text style={styles.btnPrimaryText}>
               {loading ? "Đang lưu..." : "Cập nhật thông tin"}
@@ -870,6 +1073,11 @@ export default function AccountScreen({ navigation }) {
         selected={gender}
         onClose={() => setGenderModal(false)}
         onSelect={(value) => {
+          if (isVerifiedAccount) {
+            setGenderModal(false);
+            return;
+          }
+
           setGender(value);
           setGenderModal(false);
         }}
@@ -882,6 +1090,11 @@ export default function AccountScreen({ navigation }) {
         selected={province}
         onClose={() => setProvinceModal(false)}
         onSelect={(value) => {
+          if (isVerifiedAccount) {
+            setProvinceModal(false);
+            return;
+          }
+
           setProvince(value);
           setProvinceModal(false);
         }}

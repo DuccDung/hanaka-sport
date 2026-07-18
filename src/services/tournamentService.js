@@ -210,6 +210,14 @@ export async function publicListTournamentRegistrations(
   return res.data;
 }
 
+export async function createTournamentRegistrationPaymentCheckout(registrationId) {
+  if (!registrationId) throw new Error("registrationId is required");
+  const res = await apiClient.post(
+    `/tournament-registration-payments/registrations/${registrationId}/checkout`,
+  );
+  return res.data;
+}
+
 /**
  * GET: /api/tournaments/:id
  * Nếu sau này bạn cần lấy detail giải riêng
@@ -426,7 +434,15 @@ export async function createPairRequest(tournamentId, { requestedToUserId, reque
  * Get pending pair request notifications (received only)
  */
 export async function getPairRequestNotifications() {
-  const res = await apiClient.get("/notifications/pair-requests");
+  const res = await apiClient.get("/notifications/pair-requests", {
+    params: { includeResponses: true },
+  });
+  return res.data;
+}
+
+export async function markNotificationRead(notificationId) {
+  if (!notificationId) throw new Error("notificationId is required");
+  const res = await apiClient.post(`/notifications/inbox/${notificationId}/read`);
   return res.data;
 }
 
@@ -495,7 +511,9 @@ export async function getPairRequestDetail(pairRequestId) {
 
 // Fetch pending pair request notifications from server
 export async function fetchPendingPairRequests() {
-  const res = await apiClient.get(`/notifications/pair-requests`);
+  const res = await apiClient.get(`/notifications/pair-requests`, {
+    params: { includeResponses: true },
+  });
   // Backend trả về { items: [], total: 0 } hoặc array trực tiếp
   const data = res.data;
   if (Array.isArray(data)) {

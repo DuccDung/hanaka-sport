@@ -1,5 +1,5 @@
 // src/screens/Tournament/RegistrationListScreen.js
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -13,20 +13,17 @@ import {
   RefreshControl,
   Linking,
   Alert,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./registrationListStyles";
 import {
-  getMyPairRequests,
   getMyTournamentRegistrationState,
   publicGetTournamentDetail,
   publicListTournamentRegistrations,
 } from "../../services/tournamentService";
-import { getAuthSession } from "../../services/authStorage";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../../constants/config";
 
 function normalize(str = "") {
   return String(str)
@@ -81,6 +78,14 @@ function normalizeExternalLink(link) {
   return `https://${raw}`;
 }
 
+function buildTournamentPaymentWebUrl(tournamentId, registrationId) {
+  const baseUrl = String(API_BASE_URL || "").replace(/\/+$/, "");
+  const path = `/PickleballWeb/App/Tournament/${encodeURIComponent(
+    tournamentId,
+  )}/Registration/${encodeURIComponent(registrationId)}/Payment`;
+  return `${baseUrl}${path}`;
+}
+
 function getTournamentZaloLink(tournament) {
   return normalizeExternalLink(
     firstValue(
@@ -100,6 +105,17 @@ function asBool(...values) {
   return Boolean(found);
 }
 
+function isSingleTournament(tournament) {
+  const value = asText(
+    tournament?.tournamentTypeCode,
+    tournament?.TournamentTypeCode,
+    tournament?.gameType,
+    tournament?.GameType,
+  ).toUpperCase();
+
+  return value === "SINGLE" || value.includes("SINGLE");
+}
+
 function asArray(value) {
   if (Array.isArray(value)) return value;
   if (Array.isArray(value?.items)) return value.items;
@@ -112,6 +128,20 @@ function sameId(a, b) {
   return String(a) === String(b);
 }
 
+function getRegistrationId(registration) {
+  return firstValue(
+    registration?.RegistrationId,
+    registration?.registrationId,
+    registration?.Id,
+    registration?.id,
+  );
+}
+
+function getViewerUserIdFromState(state) {
+  const me = firstValue(state?.Me, state?.me, state?.User, state?.user);
+  return firstValue(me?.UserId, me?.userId, me?.Id, me?.id);
+}
+
 function getStateReason(state) {
   return asText(
     state?.CannotRegisterReason,
@@ -122,6 +152,12 @@ function getStateReason(state) {
 }
 
 function normalizeRegistrationState(state) {
+  const registration = firstValue(
+    state?.ExistingRegistration,
+    state?.existingRegistration,
+    state?.Registration,
+    state?.registration,
+  );
   const canRegister = firstValue(
     state?.CanCreateRegistration,
     state?.canCreateRegistration,
@@ -131,7 +167,8 @@ function normalizeRegistrationState(state) {
 
   return {
     canRegister: asBool(canRegister),
-    hasRegistration: asBool(state?.HasRegistration, state?.hasRegistration),
+    hasRegistration:
+      asBool(state?.HasRegistration, state?.hasRegistration) || !!registration,
     hasSuccessfulPair: asBool(state?.HasSuccessfulPair, state?.hasSuccessfulPair),
     hasWaitingPair: asBool(state?.HasWaitingPair, state?.hasWaitingPair),
     hasPendingSent: asBool(
@@ -143,8 +180,30 @@ function normalizeRegistrationState(state) {
       state?.hasPendingReceivedPairRequest,
     ),
     reason: getStateReason(state),
-    registration: firstValue(state?.Registration, state?.registration),
+    registration,
   };
+}
+
+function findRegistrationItemIdForState(state, items = []) {
+  const status = normalizeRegistrationState(state);
+  const directRegistrationId = getRegistrationId(status.registration);
+
+  if (directRegistrationId) {
+    return String(directRegistrationId);
+  }
+
+  const viewerUserId = getViewerUserIdFromState(state);
+  if (!viewerUserId) {
+    return "";
+  }
+
+  const match = items.find(
+    (item) =>
+      sameId(item?.vdv1?.userId, viewerUserId) ||
+      sameId(item?.vdv2?.userId, viewerUserId),
+  );
+
+  return match?.id ? String(match.id) : "";
 }
 
 function normalizeUserBrief(user) {
@@ -295,6 +354,9 @@ function AvatarCircle({ uri, name, size = 44 }) {
 }
 
 export default function RegistrationListScreen({ navigation, route }) {
+  const listRef = useRef(null);
+  const scrollTargetRef = useRef("");
+  const scrollRetryCountRef = useRef(0);
   const routeTournament = route?.params?.tournament || route?.params?.preview;
   const tournamentId = firstValue(
     routeTournament?.tournamentId,
@@ -309,14 +371,13 @@ export default function RegistrationListScreen({ navigation, route }) {
   const [errorMsg, setErrorMsg] = useState("");
   const [resp, setResp] = useState(null);
   const [tournamentDetail, setTournamentDetail] = useState(null);
+  const [registrationState, setRegistrationState] = useState(null);
+  const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [pendingScrollRegistrationId, setPendingScrollRegistrationId] = useState("");
   const [openingZalo, setOpeningZalo] = useState(false);
-  const [regState, setRegState] = useState(null);
-  const [regStateLoading, setRegStateLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [showPendingPopup, setShowPendingPopup] = useState(false);
-  const [popupDismissed, setPopupDismissed] = useState(false);
-  const [checkingRegisterBlock, setCheckingRegisterBlock] = useState(false);
+  const [payingRegistrationId, setPayingRegistrationId] = useState(null);
   const tournament = tournamentDetail || routeTournament;
+  const isSingle = isSingleTournament(resp?.tournament || tournament);
 
   const fetchData = useCallback(async () => {
     try {
@@ -337,27 +398,6 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
-  const fetchRegState = useCallback(async () => {
-    if (!tournamentId) return;
-    try {
-      setRegStateLoading(true);
-
-      const [stateData, session] = await Promise.all([
-        getMyTournamentRegistrationState(tournamentId).catch(() => null),
-        getAuthSession(),
-      ]);
-
-      setRegState(stateData);
-      if (session?.user?.userId) {
-        setCurrentUserId(session.user.userId);
-      }
-    } catch (e) {
-      console.log("Failed to load registration state:", e?.message);
-    } finally {
-      setRegStateLoading(false);
-    }
-  }, [tournamentId]);
-
   const fetchTournamentDetail = useCallback(async () => {
     if (!tournamentId) return;
 
@@ -369,79 +409,53 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournamentId]);
 
-  // Check if we should show pending pair request popup
-  const checkPendingPopup = useCallback(async (state) => {
-    if (popupDismissed) return; // User already dismissed
-
-    // Check if user has pending pair requests that block registration
-    const status = normalizeRegistrationState(state);
-    const hasPendingPairRequest =
-      asArray(state?.PendingPairRequests).length > 0 ||
-      asArray(state?.pendingPairRequests).length > 0 ||
-      status.hasPendingReceived ||
-      status.hasPendingSent;
-    const reason = status.reason;
-
-    // Show popup if reason mentions pending pair request
-    const shouldShow = hasPendingPairRequest || reason.toLowerCase().includes("lời mời ghép đôi");
-
-    if (shouldShow) {
-      setShowPendingPopup(true);
-    } else {
-      setShowPendingPopup(false);
+  const fetchRegistrationState = useCallback(async () => {
+    if (!tournamentId) {
+      setRegistrationState(null);
+      return null;
     }
-  }, [popupDismissed]);
+
+    try {
+      const state = await getMyTournamentRegistrationState(tournamentId);
+      setRegistrationState(state);
+      return state;
+    } catch (e) {
+      if (e?.response?.status !== 401) {
+        console.log("Failed to load tournament registration state:", e?.message);
+      }
+      setRegistrationState(null);
+      return null;
+    }
+  }, [tournamentId]);
 
   useEffect(() => {
     fetchData();
-    fetchRegState();
     fetchTournamentDetail();
-  }, [fetchData, fetchRegState, fetchTournamentDetail]);
+    fetchRegistrationState();
+  }, [fetchData, fetchTournamentDetail, fetchRegistrationState]);
 
-  // Refresh regState when screen is focused (after navigation back)
+  // Refresh data when screen is focused (after navigation back)
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchRegState();
+      fetchData();
       fetchTournamentDetail();
+      fetchRegistrationState();
     });
     return unsubscribe;
-  }, [navigation, fetchRegState, fetchTournamentDetail]);
-
-  // Check popup when regState changes
-  useEffect(() => {
-    if (regState) {
-      checkPendingPopup(regState);
-    }
-  }, [regState, checkPendingPopup]);
-
-  // Load dismissed state on mount
-  useEffect(() => {
-    const loadPopupDismissed = async () => {
-      try {
-        const dismissed = await AsyncStorage.getItem(`pendingPairPopupDismissed_${tournamentId}`);
-        if (dismissed === "true") {
-          setPopupDismissed(true);
-        }
-      } catch (e) {
-        console.error("Failed to load popup dismissed state:", e);
-      }
-    };
-    loadPopupDismissed();
-  }, [tournamentId]);
+  }, [navigation, fetchData, fetchTournamentDetail, fetchRegistrationState]);
 
   const onRefresh = useCallback(async () => {
     try {
       setErrorMsg("");
       setRefreshing(true);
 
-      const [res, stateData] = await Promise.all([
+      const [res] = await Promise.all([
         publicListTournamentRegistrations(tournamentId, "ALL"),
-        getMyTournamentRegistrationState(tournamentId).catch(() => null),
         fetchTournamentDetail(),
+        fetchRegistrationState(),
       ]);
 
       setResp(res);
-      if (stateData) setRegState(stateData);
     } catch (e) {
       setErrorMsg(
         e?.response?.data?.message ||
@@ -451,91 +465,7 @@ export default function RegistrationListScreen({ navigation, route }) {
     } finally {
       setRefreshing(false);
     }
-  }, [fetchTournamentDetail, tournamentId]);
-
-  const registrationStatus = useMemo(
-    () => normalizeRegistrationState(regState),
-    [regState],
-  );
-
-  const fetchBlockedPairRequests = useCallback(async () => {
-    const [sentData, receivedData] = await Promise.all([
-      getMyPairRequests(true).catch(() => []),
-      getMyPairRequests(false).catch(() => []),
-    ]);
-
-    return {
-      sentRequests: normalizePairRequestList(sentData, tournamentId),
-      receivedRequests: normalizePairRequestList(receivedData, tournamentId),
-    };
-  }, [tournamentId]);
-
-  const handlePressRegister = useCallback(async () => {
-    if (regStateLoading) {
-      Alert.alert("Đang kiểm tra", "Hệ thống đang kiểm tra trạng thái đăng ký của bạn. Vui lòng thử lại sau vài giây.");
-      return;
-    }
-
-    if (registrationStatus.canRegister) {
-      navigation.navigate("TournamentRegister", {
-        tournamentId,
-      });
-      return;
-    }
-
-    try {
-      setCheckingRegisterBlock(true);
-      const { sentRequests, receivedRequests } = await fetchBlockedPairRequests();
-      const hasPairRequests =
-        sentRequests.length > 0 ||
-        receivedRequests.length > 0 ||
-        registrationStatus.hasPendingSent ||
-        registrationStatus.hasPendingReceived;
-
-      const message = buildCannotRegisterMessage({
-        state: regState,
-        sentRequests,
-        receivedRequests,
-      });
-
-      const buttons = hasPairRequests
-        ? [
-            { text: "Đóng", style: "cancel" },
-            {
-              text: "Xem lời mời",
-              onPress: () => navigation.navigate("PairRequestManagement", {}),
-            },
-          ]
-        : [{ text: "Đã hiểu" }];
-
-      Alert.alert("Không thể đăng ký", message, buttons);
-    } finally {
-      setCheckingRegisterBlock(false);
-    }
-  }, [
-    fetchBlockedPairRequests,
-    navigation,
-    regState,
-    regStateLoading,
-    registrationStatus,
-    tournamentId,
-  ]);
-
-  const handleDismissPendingPopup = useCallback(async () => {
-    setShowPendingPopup(false);
-    // Mark as dismissed for this tournament
-    try {
-      await AsyncStorage.setItem(`pendingPairPopupDismissed_${tournamentId}`, "true");
-      setPopupDismissed(true);
-    } catch (e) {
-      console.error("Failed to save popup dismissed state:", e);
-    }
-  }, [tournamentId]);
-
-  const handleViewPendingRequests = useCallback(() => {
-    setShowPendingPopup(false);
-    navigation.navigate("PairRequestManagement", {});
-  }, [navigation]);
+  }, [fetchRegistrationState, fetchTournamentDetail, tournamentId]);
 
   const handleOpenZaloGroup = useCallback(async () => {
     try {
@@ -562,14 +492,56 @@ export default function RegistrationListScreen({ navigation, route }) {
     }
   }, [tournament, tournamentId]);
 
+  const handleOpenPayment = useCallback(async (item) => {
+    if (!item?.id || item.paid || payingRegistrationId) return;
+
+    try {
+      setPayingRegistrationId(item.id);
+
+      const checkout = {
+        tournamentId,
+        registrationId: item.id,
+      };
+      const paymentTournamentId = firstValue(
+        checkout?.tournamentId,
+        checkout?.TournamentId,
+        tournamentId,
+      );
+      const paymentRegistrationId = firstValue(
+        checkout?.registrationId,
+        checkout?.RegistrationId,
+        item.id,
+      );
+
+      navigation.navigate("AppWebView", {
+        title: "Chi tiết đăng ký",
+        url: buildTournamentPaymentWebUrl(
+          paymentTournamentId,
+          paymentRegistrationId,
+        ),
+      });
+    } catch (error) {
+      Alert.alert(
+        "Không mở được trang",
+        error?.response?.data?.message ||
+          error?.message ||
+          "Vui lòng thử lại sau.",
+      );
+    } finally {
+      setPayingRegistrationId(null);
+    }
+  }, [navigation, payingRegistrationId, tournamentId]);
+
   const allItems = useMemo(() => {
     const successItems = resp?.successItems || [];
-    const waitingItems = resp?.waitingItems || [];
-    const merged = [...successItems, ...waitingItems];
+    const merged = successItems;
 
     return merged.map((r) => {
       const v1 = r.player1;
       const v2 = r.player2;
+      const paid = asBool(r.paid, r.Paid);
+      const canPay = !!r.success && !r.waitingPair && !paid;
+      const showPaymentState = !!r.success && !r.waitingPair && (paid || canPay);
 
       return {
         id: String(r.registrationId),
@@ -579,6 +551,10 @@ export default function RegistrationListScreen({ navigation, route }) {
         points: r.points ?? 0,
         success: !!r.success,
         waitingPair: !!r.waitingPair,
+        paid,
+        paidAt: r.paidAt,
+        canPay,
+        showPaymentState,
         vdv1: {
           name: v1?.name || "-",
           avatar: v1?.avatar || "",
@@ -621,6 +597,140 @@ export default function RegistrationListScreen({ navigation, route }) {
     });
   }, [allItems, query]);
 
+  const scrollToRegistration = useCallback(
+    (registrationId) => {
+      const targetId = String(registrationId || "");
+      if (!targetId) return;
+      scrollTargetRef.current = targetId;
+
+      const itemExists = allItems.some((item) => sameId(item.id, targetId));
+      if (!itemExists) {
+        setPendingScrollRegistrationId(targetId);
+        if (query) {
+          setQuery("");
+        }
+        return;
+      }
+
+      const index = displayItems.findIndex((item) => sameId(item.id, targetId));
+      if (index < 0) {
+        setPendingScrollRegistrationId(targetId);
+        if (query) {
+          setQuery("");
+        }
+        return;
+      }
+
+      listRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.25,
+      });
+    },
+    [allItems, displayItems, query],
+  );
+
+  useEffect(() => {
+    if (!pendingScrollRegistrationId) return undefined;
+
+    const index = displayItems.findIndex((item) =>
+      sameId(item.id, pendingScrollRegistrationId),
+    );
+    if (index < 0) return undefined;
+
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.25,
+      });
+      setPendingScrollRegistrationId("");
+    }, 80);
+
+    return () => clearTimeout(timer);
+  }, [displayItems, pendingScrollRegistrationId]);
+
+  const handleScrollToIndexFailed = useCallback((info) => {
+    const targetId = scrollTargetRef.current || pendingScrollRegistrationId;
+    const offset = Math.max(0, info.averageItemLength * (info.index + 1));
+
+    setTimeout(() => {
+      listRef.current?.scrollToOffset({ offset, animated: true });
+    }, 60);
+
+    if (!targetId || scrollRetryCountRef.current >= 5) {
+      return;
+    }
+
+    scrollRetryCountRef.current += 1;
+    setTimeout(() => {
+      scrollToRegistration(targetId);
+    }, 260);
+  }, [pendingScrollRegistrationId, scrollToRegistration]);
+
+  const navigateToLogin = useCallback(() => {
+    const parentNavigation = navigation.getParent?.();
+    if (parentNavigation) {
+      parentNavigation.navigate("AuthStack", { screen: "Login" });
+      return;
+    }
+
+    navigation.navigate("AuthStack", { screen: "Login" });
+  }, [navigation]);
+
+  const handlePressRegister = useCallback(async () => {
+    let state = registrationState;
+    let registrationId = findRegistrationItemIdForState(state, allItems);
+
+    if (!registrationId && !checkingRegistration) {
+      try {
+        setCheckingRegistration(true);
+        state = await getMyTournamentRegistrationState(tournamentId);
+        setRegistrationState(state);
+        registrationId = findRegistrationItemIdForState(state, allItems);
+      } catch (e) {
+        if (e?.response?.status === 401) {
+          Alert.alert("Thông báo", "Bạn cần đăng nhập để đăng kí giải đấu", [
+            {
+              text: "OK",
+              onPress: navigateToLogin,
+            },
+          ]);
+          return;
+        }
+
+        if (e?.response?.status !== 401) {
+          console.log("Failed to check registration state:", e?.message);
+        }
+      } finally {
+        setCheckingRegistration(false);
+      }
+    }
+
+    if (registrationId) {
+      scrollRetryCountRef.current = 0;
+      Alert.alert("Thông báo", "Bạn đã đăng kí", [
+        {
+          text: "OK",
+          onPress: () => scrollToRegistration(registrationId),
+        },
+      ]);
+      return;
+    }
+
+    navigation.navigate("TournamentRegister", {
+      tournamentId,
+    });
+  }, [
+    allItems,
+    checkingRegistration,
+    navigateToLogin,
+    navigation,
+    registrationState,
+    scrollToRegistration,
+    tournamentId,
+  ]);
+
   const stats = useMemo(() => {
     const c = resp?.counts;
 
@@ -645,7 +755,7 @@ export default function RegistrationListScreen({ navigation, route }) {
         <AvatarCircle
           uri={p.avatar}
           name={p.name}
-          size={styles.avatar?.width || 44}
+          size={50}
         />
       </View>
 
@@ -667,6 +777,132 @@ export default function RegistrationListScreen({ navigation, route }) {
     </View>
   );
 
+  const renderPaymentIcon = (item, extraStyle) => {
+    if (!item.showPaymentState) return null;
+
+    if (item.paid) {
+      return (
+        <View
+          accessibilityRole="image"
+          accessibilityLabel="Hoan tat"
+          style={[styles.paymentPaidBadge, extraStyle]}
+        >
+          <Ionicons name="checkmark-circle" size={22} color="#047857" />
+        </View>
+      );
+    }
+
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Mo"
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.paymentIconButton,
+          extraStyle,
+          pressed && styles.paymentButtonPressed,
+          payingRegistrationId && payingRegistrationId !== item.id
+            ? styles.paymentButtonDisabled
+            : null,
+        ]}
+        onPress={() => handleOpenPayment(item)}
+        disabled={!!payingRegistrationId}
+      >
+        {payingRegistrationId === item.id ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Ionicons name="card-outline" size={21} color="#fff" />
+        )}
+      </Pressable>
+    );
+  };
+
+  const renderSingleItem = ({ item }) => (
+    <View style={[styles.item, styles.singleItem]}>
+      <View style={styles.itemHeaderRow}>
+        <Text style={styles.idx}>{item.index}</Text>
+        <Text style={styles.itemHeaderText}>
+          Mã đk: <Text style={styles.itemHeaderStrong}>{item.regCode}</Text>{" "}
+          <Text>{item.regTime}</Text>
+        </Text>
+      </View>
+
+      <View style={styles.singleBody}>
+        <View style={styles.singlePlayerInfo}>
+          <View style={styles.avatarRing}>
+            <AvatarCircle
+              uri={item.vdv1.avatar}
+              name={item.vdv1.name}
+              size={50}
+            />
+          </View>
+
+          <View style={styles.singlePlayerTextWrap}>
+            <Text style={styles.singlePlayerName} numberOfLines={2}>
+              {item.vdv1.name}
+            </Text>
+            <Text style={styles.singlePlayerLevel}>
+              Pick Single: {item.vdv1.level}
+            </Text>
+            {item.vdv1.verified ? (
+              <Text style={styles.singleVerifiedText}>Đã xác thực</Text>
+            ) : (
+              <View style={styles.singleStatusPill}>
+                <Text style={styles.statusPillText}>
+                  {item.vdv1.isGuest ? "Khách" : "Chờ xác thực"}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.singleMetaCol}>
+          {renderPaymentIcon(item, styles.paymentTopAction)}
+          <Text style={styles.singlePointsText}>{item.points}</Text>
+        </View>
+      </View>
+
+      {item.showPaymentState && (
+        <>
+          <View style={styles.singlePaymentDivider} />
+          <View style={styles.singlePaymentRow}>
+            {item.paid ? (
+              <View
+                accessibilityRole="image"
+                accessibilityLabel="Hoàn tất"
+                style={[styles.paymentPaidBadge, styles.singlePaymentBadge]}
+              >
+                <Ionicons name="checkmark-circle" size={22} color="#047857" />
+              </View>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Mở"
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.paymentIconButton,
+                  styles.singlePaymentButton,
+                  pressed && styles.paymentButtonPressed,
+                  payingRegistrationId && payingRegistrationId !== item.id
+                    ? styles.paymentButtonDisabled
+                    : null,
+                ]}
+                onPress={() => handleOpenPayment(item)}
+                disabled={!!payingRegistrationId}
+              >
+                {payingRegistrationId === item.id ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="card-outline" size={21} color="#fff" />
+                )}
+              </Pressable>
+            )}
+          </View>
+        </>
+      )}
+    </View>
+  );
+
   const renderItem = ({ item }) => (
     <View style={styles.item}>
       <View style={styles.itemHeaderRow}>
@@ -682,45 +918,46 @@ export default function RegistrationListScreen({ navigation, route }) {
         {renderPlayer(item.vdv2)}
 
         <View style={styles.pointCol}>
+          {renderPaymentIcon(item, styles.paymentTopAction)}
           <Text style={styles.pointsText}>{item.points}</Text>
         </View>
       </View>
 
-      {/* Nút Mời cho waiting registration của chính user */}
-      {item.waitingPair && item.vdv2?.name === "Chờ ghép" && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.inviteBtn,
-            pressed && styles.inviteBtnPressed,
-          ]}
-          onPress={() => {
-            if (!currentUserId) {
-              Alert.alert("Lỗi", "Không xác định được người dùng hiện tại.");
-              return;
-            }
-
-            // Chỉ cho phép mời nếu là registration của chính user
-            const isOwnWaiting =
-              regState?.registration?.registrationId === Number(item.id);
-
-            if (!isOwnWaiting) {
-              Alert.alert(
-                "Thông báo",
-                "Bạn chỉ có thể mời đối tác cho đăng ký chờ ghép của mình."
-              );
-              return;
-            }
-
-            // Điều hướng đến PartnerSearch để tìm đối tác
-            navigation.navigate("PartnerSearch", {
-              tournamentId,
-            });
-          }}
-        >
-          <Ionicons name="person-add-outline" size={16} color="#fff" />
-          <Text style={styles.inviteBtnText}>Mời người chơi khác</Text>
-        </Pressable>
+      {item.showPaymentState && (
+        <View style={styles.paymentRow}>
+          {item.paid ? (
+            <View
+              accessibilityRole="image"
+              accessibilityLabel="Hoàn tất"
+              style={styles.paymentPaidBadge}
+            >
+              <Ionicons name="checkmark-circle" size={22} color="#047857" />
+            </View>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Mở"
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.paymentIconButton,
+                pressed && styles.paymentButtonPressed,
+                payingRegistrationId && payingRegistrationId !== item.id
+                  ? styles.paymentButtonDisabled
+                  : null,
+              ]}
+              onPress={() => handleOpenPayment(item)}
+              disabled={!!payingRegistrationId}
+            >
+              {payingRegistrationId === item.id ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="card-outline" size={21} color="#fff" />
+              )}
+            </Pressable>
+          )}
+        </View>
       )}
+
     </View>
   );
 
@@ -776,29 +1013,15 @@ export default function RegistrationListScreen({ navigation, route }) {
           style={[
             styles.actionButton,
             styles.actionButtonPrimary,
-            (!registrationStatus.canRegister ||
-              regStateLoading ||
-              checkingRegisterBlock) &&
-              styles.actionButtonDisabled,
+            checkingRegistration && styles.actionButtonDisabled,
           ]}
           onPress={handlePressRegister}
-          disabled={checkingRegisterBlock}
+          disabled={checkingRegistration}
         >
-          <Ionicons name="create-outline" size={14} color="#2563EB" style={styles.actionButtonIcon} />
+          <Ionicons name="create-outline" size={18} color="#2563EB" style={styles.actionButtonIcon} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>
-            {regStateLoading || checkingRegisterBlock ? "Đang kiểm tra" : "Đăng ký"}
+            Đăng ký
           </Text>
-        </Pressable>
-
-        {/* Lời mời của tôi button */}
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => {
-            navigation.navigate("PairRequestManagement", {});
-          }}
-        >
-          <Ionicons name="person-add-outline" size={14} color="#1E2430" style={styles.actionButtonIcon} />
-          <Text style={styles.actionButtonText}>Lời mời</Text>
         </Pressable>
 
         {/* Zalo group button */}
@@ -807,7 +1030,7 @@ export default function RegistrationListScreen({ navigation, route }) {
           onPress={handleOpenZaloGroup}
           disabled={openingZalo}
         >
-          <Ionicons name="link-outline" size={14} color="#1E2430" style={styles.actionButtonIcon} />
+          <Ionicons name="link-outline" size={18} color="#1E2430" style={styles.actionButtonIcon} />
           <Text style={styles.actionButtonText}>
             {openingZalo ? "Đang mở" : "Zalo"}
           </Text>
@@ -820,22 +1043,9 @@ export default function RegistrationListScreen({ navigation, route }) {
             Alert.alert("Thành công", `Có ${stats.success} đội đăng ký thành công.`);
           }}
         >
-          <Ionicons name="checkmark-circle-outline" size={14} color="#22C55E" style={styles.actionButtonIcon} />
+          <Ionicons name="checkmark-circle-outline" size={18} color="#22C55E" style={styles.actionButtonIcon} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextSuccess]}>
             Thành công ({stats.success})
-          </Text>
-        </Pressable>
-
-        {/* Chờ ghép button */}
-        <Pressable
-          style={[styles.actionButton, styles.actionButtonWaiting]}
-          onPress={() => {
-            Alert.alert("Chờ ghép", `${stats.waitingPair} đội đang chờ ghép cặp.`);
-          }}
-        >
-          <Ionicons name="time-outline" size={14} color="#F59E0B" style={styles.actionButtonIcon} />
-          <Text style={[styles.actionButtonText, styles.actionButtonTextWaiting]}>
-            Chờ ghép ({stats.waitingPair})
           </Text>
         </Pressable>
 
@@ -846,27 +1056,12 @@ export default function RegistrationListScreen({ navigation, route }) {
             Alert.alert("Còn chỗ", `Giải còn ${stats.capacity} chỗ trống.`);
           }}
         >
-          <Ionicons name="people-outline" size={14} color="#6B7280" style={styles.actionButtonIcon} />
+          <Ionicons name="people-outline" size={18} color="#6B7280" style={styles.actionButtonIcon} />
           <Text style={[styles.actionButtonText, styles.actionButtonTextCapacity]}>
             Còn chỗ ({stats.capacity})
           </Text>
         </Pressable>
       </View>
-
-      {/* Lý do không thể đăng ký - chỉ hiển thị nếu không phải là pending pair request */}
-      {regState &&
-        !registrationStatus.canRegister &&
-        !regStateLoading &&
-        !showPendingPopup &&
-        registrationStatus.reason &&
-        !registrationStatus.reason.toLowerCase().includes("lời mời ghép đôi") && (
-        <View style={styles.reasonRow}>
-          <Ionicons name="information-circle-outline" size={16} color="#DC2626" />
-          <Text style={styles.reasonText}>
-            {registrationStatus.reason}
-          </Text>
-        </View>
-      )}
 
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -883,6 +1078,7 @@ export default function RegistrationListScreen({ navigation, route }) {
         </View>
       </View>
 
+      {!isSingle && (
       <View style={styles.tableHeader}>
         <View style={styles.colVdv1}>
           <Text style={styles.thText}>VĐV1</Text>
@@ -894,47 +1090,16 @@ export default function RegistrationListScreen({ navigation, route }) {
           <Text style={styles.thText}>Điểm</Text>
         </View>
       </View>
-
-      {/* Pending Pair Request Popup */}
-      <Modal
-        visible={showPendingPopup}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowPendingPopup(false)}
-      >
-        <View style={styles.popupOverlay}>
-          <View style={styles.popupContent}>
-            <View style={styles.popupIconContainer}>
-              <Ionicons name="time-outline" size={40} color="#F59E0B" />
-            </View>
-            <Text style={styles.popupTitle}>Lời mời ghép đôi đang chờ</Text>
-            <Text style={styles.popupMessage}>
-              Bạn có lời mời ghép đôi đang được chờ xử lý. Bạn cần phản hồi các lời mời này trước khi có thể đăng ký tham gia giải.
-            </Text>
-            <View style={styles.popupButtonRow}>
-              <Pressable
-                style={[styles.popupButton, styles.popupButtonExit]}
-                onPress={handleDismissPendingPopup}
-              >
-                <Text style={styles.popupButtonExitText}>Thoát</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.popupButton, styles.popupButtonView]}
-                onPress={handleViewPendingRequests}
-              >
-                <Text style={styles.popupButtonViewText}>Xem chi tiết</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      )}
 
       <FlatList
+        ref={listRef}
         contentContainerStyle={styles.listPad}
         data={displayItems}
         keyExtractor={(it) => it.id}
-        renderItem={renderItem}
+        renderItem={isSingle ? renderSingleItem : renderItem}
         ListEmptyComponent={renderEmpty}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

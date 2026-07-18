@@ -41,8 +41,20 @@ function normalizePairNotification(raw = {}) {
     NotificationType:
       firstValue(raw.NotificationType, raw.notificationType, raw.type) ||
       "PAIR_REQUEST",
+    IsRead: firstValue(raw.IsRead, raw.isRead, false),
     ReceivedAt: firstValue(raw.ReceivedAt, raw.receivedAt, raw.createdAt, new Date().toISOString()),
   };
+}
+
+function getPairNotificationType(notification) {
+  return String(
+    firstValue(notification?.NotificationType, notification?.notificationType, notification?.type) ||
+      "PAIR_REQUEST",
+  ).toUpperCase();
+}
+
+function shouldAlwaysPopup(notification) {
+  return getPairNotificationType(notification) === "PAIR_REQUEST";
 }
 
 export default function PairRequestNotificationManager({ navigation }) {
@@ -78,10 +90,12 @@ export default function PairRequestNotificationManager({ navigation }) {
       await savePairRequestNotifications(serverNotifications);
       if (accessTokenRef.current !== tokenSnapshot) return;
 
-      // Filter: only show if not dismissed (by NotificationId)
+      // Pending invitations must keep coming back until accepted/rejected/canceled/expired.
       const unseen = [];
       for (const n of serverNotifications) {
-        const dismissed = await isPairRequestNotificationDismissed(n.NotificationId);
+        const dismissed = shouldAlwaysPopup(n)
+          ? false
+          : await isPairRequestNotificationDismissed(n.NotificationId);
         if (accessTokenRef.current !== tokenSnapshot) return;
 
         console.log(`Notification ${n.NotificationId} from server, dismissed:`, dismissed);
@@ -125,7 +139,9 @@ export default function PairRequestNotificationManager({ navigation }) {
         console.log("Processing new_pair_request:", notification.NotificationId, notification.PairRequestId);
 
         // Check if this notification is dismissed before showing
-        const isDismissed = await isPairRequestNotificationDismissed(notification.NotificationId);
+        const isDismissed = shouldAlwaysPopup(notification)
+          ? false
+          : await isPairRequestNotificationDismissed(notification.NotificationId);
         if (accessTokenRef.current !== tokenSnapshot) return;
 
         console.log(`Notification ${notification.NotificationId} dismissed:`, isDismissed);
@@ -179,12 +195,11 @@ export default function PairRequestNotificationManager({ navigation }) {
     };
   }, [checkPendingNotifications]);
 
-  const handleClosePopup = useCallback(async (notificationId) => {
+  const handleClosePopup = useCallback(async (notificationId, notificationType) => {
     setCurrentPopup(null);
-    // Mark as dismissed so we don't show again
-    if (notificationId) {
+
+    if (notificationId && String(notificationType || "").toUpperCase() !== "PAIR_REQUEST") {
       await dismissPairRequestNotification(notificationId);
-      // Remove from pending list
       setPendingNotifications((prev) => prev.filter((n) => n.NotificationId !== notificationId));
     }
   }, []);
@@ -210,7 +225,7 @@ export default function PairRequestNotificationManager({ navigation }) {
         <PairRequestNotificationPopup
           visible={!!currentPopup}
           notification={currentPopup.notification}
-          onClose={() => handleClosePopup(currentPopup.notificationId)}
+          onClose={(notificationId, notificationType) => handleClosePopup(notificationId, notificationType)}
           onNavigate={(pairRequestId) => handleNavigateToDetail(pairRequestId)}
         />
       )}

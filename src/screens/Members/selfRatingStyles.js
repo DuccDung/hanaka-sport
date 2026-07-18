@@ -46,6 +46,26 @@ export const styles = StyleSheet.create({
     height: 210,
   },
 
+  noticeCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  noticeText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "600",
+    color: "#065F46",
+  },
+
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
@@ -119,6 +139,9 @@ export const styles = StyleSheet.create({
   scoreChipActive: {
     backgroundColor: "#DCE7FF",
     borderColor: COLORS.BLUE,
+  },
+  scoreChipDisabled: {
+    opacity: 0.55,
   },
   scoreChipText: {
     fontSize: 15,

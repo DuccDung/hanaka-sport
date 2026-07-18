@@ -177,7 +177,7 @@ export default function MembersScreen({ navigation }) {
           <View style={styles.headerRight}>
             <Pressable
               hitSlop={10}
-              onPress={() => navigation.navigate("HanakaRatingInfo")}
+              onPress={() => navigation.navigate("SelfRating")}
             >
               <Text style={styles.headerLink}>Tự chấm trình</Text>
             </Pressable>
@@ -206,8 +206,8 @@ export default function MembersScreen({ navigation }) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Thành viên</Text>
           <View style={styles.sectionRightCols}>
-            <Ionicons name="people" size={18} color="#1E2430" />
             <Ionicons name="person" size={18} color="#1E2430" />
+            <Ionicons name="people" size={18} color="#1E2430" />
           </View>
         </View>
       </View>

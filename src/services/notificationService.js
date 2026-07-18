@@ -6,7 +6,9 @@ export async function getUpcomingMatchNotifications() {
 }
 
 export async function getPairRequestNotifications() {
-  const res = await apiClient.get("/notifications/pair-requests");
+  const res = await apiClient.get("/notifications/pair-requests", {
+    params: { includeResponses: true },
+  });
   return res.data;
 }
 
@@ -68,6 +70,41 @@ function normalizePairRequestNotification(item) {
   };
 }
 
+function normalizePairRequestNotificationV2(item) {
+  const type = item?.notificationType || item?.type || "PAIR_REQUEST";
+  const requestedAtText = formatNotificationTime(item?.requestedAt);
+  const expiresAtText = formatNotificationTime(item?.expiresAt);
+  const createdAtText = formatNotificationTime(item?.createdAt);
+  const actor =
+    item?.acceptedBy ||
+    item?.requestedTo ||
+    item?.requestedBy ||
+    item?.details?.acceptedBy ||
+    item?.details?.requestedTo ||
+    item?.details?.requestedBy;
+  const actorLabel =
+    type === "PAIR_REQUEST"
+      ? "Người gửi"
+      : type === "PAIR_ACCEPTED" || type === "PAIR_REJECTED"
+        ? "Người phản hồi"
+        : "Liên quan";
+
+  return {
+    id: `${type}-${item?.notificationId || item?.pairRequestId}`,
+    type,
+    title: item?.title || "Lời mời ghép đôi",
+    message: item?.message || "",
+    timeText: requestedAtText || createdAtText,
+    sortAt: item?.requestedAt || item?.createdAt || "",
+    metaLines: [
+      `Giải đấu: ${item?.tournamentTitle || "Chưa cập nhật"}`,
+      `${actorLabel}: ${actor?.fullName || "Chưa cập nhật"}`,
+      expiresAtText && type === "PAIR_REQUEST" ? `Hết hạn: ${expiresAtText}` : null,
+    ].filter(Boolean),
+    raw: item,
+  };
+}
+
 export async function getNotificationInbox() {
   const [upcomingResult, pairRequestResult] = await Promise.allSettled([
     getUpcomingMatchNotifications(),
@@ -81,12 +118,16 @@ export async function getNotificationInbox() {
 
   const pairRequestItems =
     pairRequestResult.status === "fulfilled"
-      ? (pairRequestResult.value?.items || []).map(normalizePairRequestNotification)
+      ? (pairRequestResult.value?.items || []).map(normalizePairRequestNotificationV2)
       : [];
 
   return {
     total: upcomingItems.length + pairRequestItems.length,
-    items: [...pairRequestItems, ...upcomingItems],
+    items: [...pairRequestItems, ...upcomingItems].sort((a, b) => {
+      const left = new Date(a?.sortAt || 0).getTime() || 0;
+      const right = new Date(b?.sortAt || 0).getTime() || 0;
+      return right - left;
+    }),
   };
 }
 

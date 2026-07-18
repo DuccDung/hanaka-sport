@@ -19,14 +19,21 @@ import { acceptCommunityTerms } from "../../services/communitySafetyService";
 
 export default function RegisterOtpScreen({ navigation, route }) {
   const email = route?.params?.email || "";
+  const phone = route?.params?.phone || "";
   const fullName = route?.params?.fullName || "";
   const agreedToTerms = !!route?.params?.agreedToTerms;
+  const identifier = (phone || email).trim();
   const { setAuthSession } = useAuth();
 
   const [otp, setOtp] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const [deliveryInfo, setDeliveryInfo] = useState({
+    channel: route?.params?.otpDeliveryChannel || "",
+    target: route?.params?.otpDeliveryTarget || "",
+    message: route?.params?.otpDeliveryMessage || "",
+  });
 
   const canSubmit = useMemo(() => {
     return otp.trim().length === 6 && !submitting;
@@ -45,7 +52,9 @@ export default function RegisterOtpScreen({ navigation, route }) {
 
     try {
       const data = await confirmOtp({
+        identifier,
         email: email.trim(),
+        phone: phone.trim(),
         otp: otp.trim(),
       });
 
@@ -84,17 +93,26 @@ export default function RegisterOtpScreen({ navigation, route }) {
   };
 
   const onResend = async () => {
-    if (!email || resending) return;
+    if (!identifier || resending) return;
 
     setResending(true);
     setErrorText("");
 
     try {
       const data = await resendOtp({
+        identifier,
         email: email.trim(),
+        phone: phone.trim(),
       });
 
-      Alert.alert("Thông báo", data?.message || "OTP mới đã được gửi.");
+      const message = data?.otpDeliveryMessage || data?.message || "OTP mới đã được gửi.";
+      setDeliveryInfo((current) => ({
+        channel: data?.otpDeliveryChannel || current.channel,
+        target: data?.otpDeliveryTarget || current.target,
+        message,
+      }));
+
+      Alert.alert("Thông báo", message);
     } catch (e) {
       const msg =
         e?.response?.data?.message ||
@@ -108,6 +126,17 @@ export default function RegisterOtpScreen({ navigation, route }) {
       setResending(false);
     }
   };
+
+  const deliveryChannelLabel =
+    deliveryInfo.channel === "ZALO"
+      ? "Zalo"
+      : deliveryInfo.channel === "EMAIL"
+        ? "Email"
+        : "Nơi nhận OTP";
+  const deliveryMessage =
+    deliveryInfo.message ||
+    "Hệ thống đã gửi mã OTP. Nếu Zalo không nhận được, hệ thống sẽ dùng email dự phòng.";
+  const deliveryTarget = deliveryInfo.target || phone || email;
 
   return (
     <View style={styles.safe}>
@@ -146,19 +175,21 @@ export default function RegisterOtpScreen({ navigation, route }) {
                 lineHeight: 22,
               }}
             >
-              Hệ thống đã gửi mã OTP đến email:
+              {deliveryMessage}
             </Text>
 
-            <Text
-              style={{
-                marginTop: 4,
-                fontSize: 14,
-                fontWeight: "700",
-                color: "#2563EB",
-              }}
-            >
-              {email}
-            </Text>
+            {deliveryTarget ? (
+              <Text
+                style={{
+                  marginTop: 4,
+                  fontSize: 14,
+                  fontWeight: "700",
+                  color: "#2563EB",
+                }}
+              >
+                {deliveryChannelLabel}: {deliveryTarget}
+              </Text>
+            ) : null}
 
             <Text style={[styles.label, { marginTop: 20 }]}>Nhập mã OTP</Text>
 

@@ -18,23 +18,38 @@ import { login } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS } from "../../constants/colors";
 
+function isPhoneLike(v = "") {
+  const digits = v.replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15;
+}
+
 function isEmailLike(v = "") {
-  const s = v.trim();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+
+function normalizeIdentifier(v = "") {
+  const raw = v.trim();
+  if (!raw) return "";
+  if (isEmailLike(raw)) return raw.toLowerCase();
+  return raw.replace(/[^\d+]/g, "");
+}
+
+function isIdentifierLike(v = "") {
+  return isEmailLike(v) || isPhoneLike(v);
 }
 
 export default function LoginScreen({ navigation }) {
   const { logout, setAuthSession } = useAuth();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const canSubmit = useMemo(() => {
-    return isEmailLike(email) && password.trim().length >= 6;
-  }, [email, password]);
+    return isIdentifierLike(identifier) && password.trim().length >= 6;
+  }, [identifier, password]);
 
   const onSubmit = async () => {
     if (!canSubmit || loading) return;
@@ -43,15 +58,16 @@ export default function LoginScreen({ navigation }) {
       setLoading(true);
       await logout();
 
+      const normalizedIdentifier = normalizeIdentifier(identifier);
       const data = await login({
-        identifier: email.trim(),
+        identifier: normalizedIdentifier,
         password,
       });
 
       await setAuthSession({
         accessToken: data.accessToken,
         expiresAtUtc: data.expiresAtUtc,
-        user: data.user || { email: email.trim() },
+        user: data.user || { identifier: normalizedIdentifier },
         replace: true,
       });
 
@@ -73,7 +89,7 @@ export default function LoginScreen({ navigation }) {
       });
     } catch (err) {
       console.log("Login error:", err?.response?.data || err?.message);
-      Alert.alert("Lỗi", "Sai thông tin đăng nhập!");
+      Alert.alert("Lỗi", "Sai số điện thoại/email hoặc mật khẩu!");
     } finally {
       setLoading(false);
     }
@@ -90,12 +106,13 @@ export default function LoginScreen({ navigation }) {
       >
         <View style={styles.centerWrap}>
           <View style={styles.card}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Số điện thoại hoặc email</Text>
             <View style={styles.inputWrap}>
               <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="vd: admin@hanaka.com"
+                value={identifier}
+                onChangeText={setIdentifier}
+                onBlur={() => setIdentifier((value) => normalizeIdentifier(value))}
+                placeholder="vd: 0961848526 hoặc a@test.com"
                 style={styles.input}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -131,7 +148,7 @@ export default function LoginScreen({ navigation }) {
               <Pressable
                 onPress={() =>
                   navigation.navigate("ForgotPassword", {
-                    email: email.trim(),
+                    identifier: normalizeIdentifier(identifier),
                   })
                 }
                 hitSlop={10}

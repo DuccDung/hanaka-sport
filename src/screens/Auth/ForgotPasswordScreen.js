@@ -23,8 +23,33 @@ import {
 } from "../../services/authApi";
 import { styles } from "./loginStyles";
 
+function isPhoneLike(value = "") {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15;
+}
+
 function isEmailLike(value = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizeIdentifier(value = "") {
+  const raw = value.trim();
+  if (!raw) return "";
+  if (isEmailLike(raw)) return raw.toLowerCase();
+  return raw.replace(/[^\d+]/g, "");
+}
+
+function isIdentifierLike(value = "") {
+  return isEmailLike(value) || isPhoneLike(value);
+}
+
+function buildIdentifierPayload(value = "") {
+  const raw = value.trim();
+  const identifier = normalizeIdentifier(raw);
+  if (isEmailLike(raw)) {
+    return { identifier, email: identifier };
+  }
+  return { identifier, phone: identifier };
 }
 
 function getApiMessage(error, fallback) {
@@ -39,8 +64,10 @@ function getApiMessage(error, fallback) {
 
 export default function ForgotPasswordScreen({ navigation, route }) {
   const { setAuthSession } = useAuth();
-  const [step, setStep] = useState("email");
-  const [email, setEmail] = useState(route?.params?.email || "");
+  const [step, setStep] = useState("identifier");
+  const [identifier, setIdentifier] = useState(
+    route?.params?.identifier || route?.params?.phone || route?.params?.email || "",
+  );
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -52,22 +79,22 @@ export default function ForgotPasswordScreen({ navigation, route }) {
 
   const canSubmit = useMemo(() => {
     if (loading) return false;
-    if (step === "email") return isEmailLike(email);
-    if (step === "otp") return isEmailLike(email) && otp.trim().length === 6;
+    if (step === "identifier") return isIdentifierLike(identifier);
+    if (step === "otp") return isIdentifierLike(identifier) && otp.trim().length === 6;
     return (
-      isEmailLike(email) &&
+      isIdentifierLike(identifier) &&
       otp.trim().length === 6 &&
       newPassword.trim().length >= 6 &&
       newPassword === confirmPassword
     );
-  }, [confirmPassword, email, loading, newPassword, otp, step]);
+  }, [confirmPassword, identifier, loading, newPassword, otp, step]);
 
   const setOtpValue = (value) => {
     setOtp(value.replace(/[^0-9]/g, "").slice(0, 6));
   };
 
   const sendOtp = async ({ showAlert = true } = {}) => {
-    if (!isEmailLike(email) || loading) return;
+    if (!isIdentifierLike(identifier) || loading) return;
 
     try {
       Keyboard.dismiss();
@@ -75,16 +102,18 @@ export default function ForgotPasswordScreen({ navigation, route }) {
       setErrorText("");
       setInfoText("");
 
-      const data = await forgotPassword({ email: email.trim() });
+      const identifierPayload = buildIdentifierPayload(identifier);
+      const data = await forgotPassword(identifierPayload);
       const message =
+        data?.otpDeliveryMessage ||
         data?.message ||
-        "Nếu email tồn tại, mã OTP đã được gửi về hộp thư của bạn.";
+        "Nếu thông tin tồn tại, mã OTP đã được gửi về Zalo hoặc email dự phòng.";
 
       setInfoText(message);
       setStep("otp");
 
       if (showAlert) {
-        Alert.alert("Kiểm tra email", message);
+        Alert.alert("Kiểm tra OTP", message);
       }
     } catch (error) {
       setErrorText(getApiMessage(error, "Không thể gửi mã OTP."));
@@ -103,7 +132,7 @@ export default function ForgotPasswordScreen({ navigation, route }) {
       setInfoText("");
 
       const data = await verifyForgotPasswordOtp({
-        email: email.trim(),
+        ...buildIdentifierPayload(identifier),
         otp: otp.trim(),
       });
 
@@ -136,7 +165,7 @@ export default function ForgotPasswordScreen({ navigation, route }) {
       setInfoText("");
 
       const data = await resetPasswordWithOtp({
-        email: email.trim(),
+        ...buildIdentifierPayload(identifier),
         otp: otp.trim(),
         newPassword,
         confirmPassword,
@@ -145,7 +174,7 @@ export default function ForgotPasswordScreen({ navigation, route }) {
       await setAuthSession({
         accessToken: data.accessToken,
         expiresAtUtc: data.expiresAtUtc,
-        user: data.user || { email: email.trim() },
+        user: data.user || { identifier: normalizeIdentifier(identifier) },
         replace: true,
       });
 
@@ -163,14 +192,14 @@ export default function ForgotPasswordScreen({ navigation, route }) {
   };
 
   const primaryLabel =
-    step === "email"
+    step === "identifier"
       ? "Gửi mã OTP"
       : step === "otp"
         ? "Xác nhận OTP"
         : "Đổi mật khẩu";
 
   const submitAction =
-    step === "email" ? sendOtp : step === "otp" ? verifyOtp : resetPassword;
+    step === "identifier" ? sendOtp : step === "otp" ? verifyOtp : resetPassword;
 
   return (
     <View style={styles.safe}>
@@ -203,28 +232,29 @@ export default function ForgotPasswordScreen({ navigation, route }) {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Khôi phục mật khẩu</Text>
             <Text style={styles.sectionDesc}>
-              Nhập email đã đăng ký để nhận OTP, xác nhận mã rồi đặt lại mật
-              khẩu mới.
+              Nhập số điện thoại hoặc email đã đăng ký để nhận OTP. Nếu tài khoản có số điện thoại,
+              hệ thống sẽ ưu tiên gửi qua Zalo.
             </Text>
 
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Số điện thoại hoặc email</Text>
             <View style={styles.inputWrap}>
               <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="a@test.com"
+                value={identifier}
+                onChangeText={setIdentifier}
+                onBlur={() => setIdentifier((value) => normalizeIdentifier(value))}
+                placeholder="0961848526 hoặc a@test.com"
                 placeholderTextColor="#9CA3AF"
                 style={styles.input}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                editable={!loading && step === "email"}
+                editable={!loading && step === "identifier"}
                 returnKeyType="next"
                 onSubmitEditing={() => sendOtp()}
               />
             </View>
 
-            {step !== "email" ? (
+            {step !== "identifier" ? (
               <>
                 <Text style={[styles.label, { marginTop: 12 }]}>Mã OTP</Text>
                 <View style={styles.inputWrap}>
@@ -334,7 +364,7 @@ export default function ForgotPasswordScreen({ navigation, route }) {
               )}
             </Pressable>
 
-            {step !== "email" ? (
+            {step !== "identifier" ? (
               <View style={styles.secondaryActions}>
                 <Pressable
                   onPress={() => sendOtp({ showAlert: true })}
@@ -346,7 +376,7 @@ export default function ForgotPasswordScreen({ navigation, route }) {
                 <Text style={styles.footerText}> · </Text>
                 <Pressable
                   onPress={() => {
-                    setStep("email");
+                    setStep("identifier");
                     setOtp("");
                     setNewPassword("");
                     setConfirmPassword("");
@@ -356,7 +386,7 @@ export default function ForgotPasswordScreen({ navigation, route }) {
                   disabled={loading}
                   hitSlop={8}
                 >
-                  <Text style={styles.footerLink}>Đổi email</Text>
+                  <Text style={styles.footerLink}>Đổi thông tin</Text>
                 </Pressable>
               </View>
             ) : null}

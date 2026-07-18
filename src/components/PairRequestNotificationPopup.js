@@ -16,7 +16,12 @@ import {
   dismissPairRequestNotification,
   removePairRequestNotification,
 } from "../services/realtimeService";
-import { acceptPairRequest, getPairRequestDetail, rejectPairRequest } from "../services/tournamentService";
+import {
+  acceptPairRequest,
+  getPairRequestDetail,
+  markNotificationRead,
+  rejectPairRequest,
+} from "../services/tournamentService";
 
 const PAIR_STATUS_LABELS = {
   PAIR_REQUEST: "Lời mời mới",
@@ -151,6 +156,17 @@ function normalizePairRequestInfo(notification, detail) {
     ),
   );
 
+  const acceptedBy = normalizeUser(
+    firstValue(
+      detail?.AcceptedBy,
+      detail?.acceptedBy,
+      notification?.AcceptedBy,
+      notification?.acceptedBy,
+      details?.AcceptedBy,
+      details?.acceptedBy,
+    ),
+  );
+
   const tournamentTitle = asText(
     detail?.TournamentTitle,
     detail?.tournamentTitle,
@@ -206,6 +222,7 @@ function normalizePairRequestInfo(notification, detail) {
     tournamentTitle,
     requestedBy,
     requestedTo,
+    acceptedBy,
     message,
     note: asText(detail?.ResponseNote, detail?.responseNote, detail?.Note, detail?.note),
     requestedAtText: formatDateTime(requestedAt),
@@ -227,9 +244,10 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
   );
 
   // Determine notification type and UI
-  const notificationType =
+  const notificationType = String(
     firstValue(notification?.NotificationType, notification?.notificationType) ||
-    "PAIR_REQUEST";
+      "PAIR_REQUEST",
+  ).toUpperCase();
   let headerTitle = "Thông báo";
   let messageContent = notification?.Body || notification?.body || notification?.Title || notification?.title;
   let showActions = false;
@@ -269,7 +287,7 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
   const displayUser =
     notificationType === "PAIR_REQUEST"
       ? info.requestedBy
-      : info.requestedTo || info.requestedBy;
+      : info.acceptedBy || info.requestedTo || info.requestedBy;
   const userLabel =
     notificationType === "PAIR_REQUEST"
       ? "Người mời"
@@ -307,21 +325,32 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
   };
 
   const handleDismiss = useCallback(async () => {
-    if (notificationId) {
+    if (notificationId && notificationType !== "PAIR_REQUEST") {
+      try {
+        await markNotificationRead(notificationId);
+      } catch (_error) {
+      }
       await dismissPairRequestNotification(notificationId);
     }
-    onClose(notificationId);
-  }, [notificationId, onClose]);
+    onClose(notificationId, notificationType);
+  }, [notificationId, notificationType, onClose]);
 
-  const handleViewDetail = useCallback(() => {
+  const handleViewDetail = useCallback(async () => {
     if (!pairRequestId) {
       Alert.alert("Thông báo", "Chưa có mã lời mời để mở chi tiết.");
       return;
     }
 
-    onClose(notificationId);
+    if (notificationId && notificationType !== "PAIR_REQUEST") {
+      try {
+        await markNotificationRead(notificationId);
+      } catch (_error) {
+      }
+    }
+
+    onClose(notificationId, notificationType);
     onNavigate?.(pairRequestId);
-  }, [notificationId, pairRequestId, onClose, onNavigate]);
+  }, [notificationId, notificationType, pairRequestId, onClose, onNavigate]);
 
   const handleAccept = useCallback(async () => {
     if (!notificationId || !pairRequestId) return;
@@ -330,13 +359,13 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
       await acceptPairRequest(pairRequestId);
       Alert.alert("Thành công", "Đã chấp nhận lời mời ghép cặp.");
       await removePairRequestNotification(notificationId);
-      onClose(notificationId);
+      onClose(notificationId, notificationType);
     } catch (e) {
       Alert.alert("Lỗi", e?.response?.data?.message || e?.message || "Không thể chấp nhận lời mời.");
     } finally {
       setProcessing(false);
     }
-  }, [notificationId, pairRequestId, onClose]);
+  }, [notificationId, notificationType, pairRequestId, onClose]);
 
   const handleReject = useCallback(async () => {
     if (!notificationId || !pairRequestId) return;
@@ -353,7 +382,7 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
               setProcessing(true);
               await rejectPairRequest(pairRequestId);
               await removePairRequestNotification(notificationId);
-              onClose(notificationId);
+              onClose(notificationId, notificationType);
             } catch (e) {
               Alert.alert("Lỗi", "Không thể từ chối lời mời.");
             } finally {
@@ -363,7 +392,7 @@ const PairRequestNotificationPopup = ({ visible, notification, onClose, onNaviga
         },
       ]
     );
-  }, [notificationId, pairRequestId, onClose]);
+  }, [notificationId, notificationType, pairRequestId, onClose]);
 
   if (!visible || !notification) return null;
 

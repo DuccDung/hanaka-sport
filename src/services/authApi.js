@@ -43,11 +43,13 @@ export async function register({
  *   user: {...}
  * }
  */
-export async function confirmOtp({ email, otp }) {
+export async function confirmOtp({ identifier, email, phone, otp }) {
   const res = await apiClient.post(
     "/auths/confirm-otp",
     {
+      identifier: identifier || phone || email,
       email,
+      phone,
       otp,
     },
     { skipAuth: true },
@@ -67,11 +69,13 @@ export async function confirmOtp({ email, otp }) {
 /**
  * RESEND OTP
  */
-export async function resendOtp({ email }) {
+export async function resendOtp({ identifier, email, phone }) {
   const res = await apiClient.post(
     "/auths/resend-otp",
     {
+      identifier: identifier || phone || email,
       email,
+      phone,
     },
     { skipAuth: true },
   );
@@ -85,11 +89,13 @@ export async function resendOtp({ email }) {
  * 2. POST /api/auths/forgot-password/verify-otp { email, otp }
  * 3. POST /api/auths/forgot-password/reset { email, otp, newPassword, confirmPassword }
  */
-export async function forgotPassword({ email }) {
+export async function forgotPassword({ identifier, email, phone }) {
   const res = await apiClient.post(
     "/auths/forgot-password",
     {
+      identifier: identifier || phone || email,
       email,
+      phone,
     },
     { skipAuth: true },
   );
@@ -97,11 +103,13 @@ export async function forgotPassword({ email }) {
   return res.data;
 }
 
-export async function verifyForgotPasswordOtp({ email, otp }) {
+export async function verifyForgotPasswordOtp({ identifier, email, phone, otp }) {
   const res = await apiClient.post(
     "/auths/forgot-password/verify-otp",
     {
+      identifier: identifier || phone || email,
       email,
+      phone,
       otp,
     },
     { skipAuth: true },
@@ -111,7 +119,9 @@ export async function verifyForgotPasswordOtp({ email, otp }) {
 }
 
 export async function resetPasswordWithOtp({
+  identifier,
   email,
+  phone,
   otp,
   newPassword,
   confirmPassword,
@@ -119,7 +129,9 @@ export async function resetPasswordWithOtp({
   const res = await apiClient.post(
     "/auths/forgot-password/reset",
     {
+      identifier: identifier || phone || email,
       email,
+      phone,
       otp,
       newPassword,
       confirmPassword,

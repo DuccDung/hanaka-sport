@@ -17,7 +17,6 @@ import { styles } from "./registerStyles";
 import { getMyTournamentRegistrationState } from "../../services/tournamentService";
 import { publicGetTournamentDetail } from "../../services/tournamentService";
 import { registerSingle } from "../../services/tournamentService";
-import { registerWaitingPair } from "../../services/tournamentService";
 import { getAuthSession } from "../../services/authStorage";
 
 function getGameTypeLabel(gameType) {
@@ -126,19 +125,6 @@ export default function TournamentRegisterScreen({ navigation, route }) {
     return true;
   }, [tournament, selectedType, regState, userInfo.ratingSingle]);
 
-  // Kiểm tra có thể đăng ký chờ ghép
-  const canRegisterWaiting = useMemo(() => {
-    if (!tournament) return false;
-    if (selectedType !== "DOUBLE") return false;
-    if (!isDoubleLike) return false;
-    if (regState && !regState.canRegister) return false;
-
-    const doubleLimit = tournament.doubleLimit || 0;
-    if (doubleLimit > 0 && userInfo.ratingDouble > doubleLimit) return false;
-
-    return true;
-  }, [tournament, selectedType, regState, isDoubleLike, userInfo.ratingDouble]);
-
   // Xử lý đăng ký đơn
   const handleRegisterSingle = useCallback(async () => {
     if (!tournamentId) return;
@@ -184,59 +170,6 @@ export default function TournamentRegisterScreen({ navigation, route }) {
       },
     ]);
   }, [tournamentId, canRegisterSingle, regState, navigation]);
-
-  // Xử lý đăng ký chờ ghép
-  const handleRegisterWaiting = useCallback(async () => {
-    if (!tournamentId) return;
-
-    if (!canRegisterWaiting) {
-      Alert.alert(
-        "Không thể đăng ký",
-        regState?.reason || "Bạn không đủ điều kiện đăng ký chờ ghép."
-      );
-      return;
-    }
-
-    Alert.alert(
-      "Xác nhận",
-      "Bạn sẽ đăng ký trạng thái chờ ghép. Hệ thống sẽ thông báo khi có đối tác.",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Đăng ký",
-          onPress: async () => {
-            try {
-              setSubmitting(true);
-              await registerWaitingPair({ tournamentId });
-              Alert.alert(
-                "Thành công",
-                "Đăng ký chờ ghép thành công! Bạn có thể tìm đối tác trong phần quản lý.",
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      navigation.navigate("TournamentRegistration", {
-                        tournamentId,
-                        shouldRefresh: true,
-                      });
-                    },
-                  },
-                ]
-              );
-            } catch (e) {
-              const msg =
-                e?.response?.data?.message ||
-                e?.message ||
-                "Đăng ký thất bại.";
-              Alert.alert("Lỗi", msg);
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [tournamentId, canRegisterWaiting, regState, navigation]);
 
   // Loading state
   if (loading) {
@@ -439,33 +372,6 @@ export default function TournamentRegisterScreen({ navigation, route }) {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
-            </Pressable>
-
-            {/* Divider */}
-            <View style={styles.divider} />
-
-            {/* Option B: Đăng ký chờ ghép */}
-            <Pressable
-              style={[
-                styles.optionButton,
-                (!canRegisterWaiting || submitting) && styles.optionButtonDisabled,
-              ]}
-              onPress={handleRegisterWaiting}
-              disabled={!canRegisterWaiting || submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#2563EB" />
-              ) : (
-                <>
-                  <Ionicons name="time-outline" size={20} color="#2563EB" />
-                  <View style={styles.optionContent}>
-                    <Text style={styles.optionTitle}>Đăng ký chờ ghép</Text>
-                    <Text style={styles.optionDesc}>
-                      Đăng ký trước, hệ thống sẽ tự động ghép cặp khi có đối tác
-                    </Text>
-                  </View>
-                </>
-              )}
             </Pressable>
           </View>
         )}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -34,6 +34,20 @@ export default function WebViewScreen() {
     setReloadKey((value) => value + 1);
   };
 
+  const handleWebViewMessage = useCallback(({ nativeEvent }) => {
+    let message = null;
+
+    try {
+      message = JSON.parse(nativeEvent?.data || "{}");
+    } catch (_error) {
+      message = null;
+    }
+
+    if (message?.type === "payment-close") {
+      navigation.goBack();
+    }
+  }, [navigation]);
+
   return (
     <SafeAreaView style={styles.webViewSafe}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.WHITE} />
@@ -66,6 +80,7 @@ export default function WebViewScreen() {
             domStorageEnabled
             mixedContentMode="always"
             setSupportMultipleWindows={false}
+            onMessage={handleWebViewMessage}
             onLoadStart={() => {
               setLoadError(null);
               setLoading(true);

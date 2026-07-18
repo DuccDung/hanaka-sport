@@ -23,9 +23,15 @@ function isEmail(email = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+function isPhoneLike(value = "") {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15;
+}
+
 export default function RegisterScreen({ navigation }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [gender, setGender] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -37,12 +43,13 @@ export default function RegisterScreen({ navigation }) {
   const canSubmit = useMemo(() => {
     return (
       fullName.trim().length >= 2 &&
+      isPhoneLike(phone) &&
       isEmail(email) &&
       password.trim().length >= 6 &&
       agreedToTerms &&
       !submitting
     );
-  }, [fullName, email, password, agreedToTerms, submitting]);
+  }, [fullName, phone, email, password, agreedToTerms, submitting]);
 
   const onSubmit = async () => {
     if (!fullName.trim()) {
@@ -60,6 +67,11 @@ export default function RegisterScreen({ navigation }) {
       setErrorText(
         `Họ và tên có dấu hiệu ${fullNameModeration.category?.toLowerCase() || "vi phạm tiêu chuẩn cộng đồng"}. Vui lòng chỉnh sửa trước khi đăng ký.`,
       );
+      return;
+    }
+
+    if (!isPhoneLike(phone)) {
+      setErrorText("Số điện thoại không hợp lệ.");
       return;
     }
 
@@ -88,19 +100,27 @@ export default function RegisterScreen({ navigation }) {
       const payload = {
         fullName: fullName.trim(),
         email: email.trim(),
+        phone: phone.trim(),
         password,
         gender: gender || null,
       };
 
       const data = await register(payload);
 
-      Alert.alert("Thành công", data?.message || "OTP đã được gửi tới email.");
+      Alert.alert(
+        "Thành công",
+        data?.otpDeliveryMessage || data?.message || "OTP đã được gửi.",
+      );
 
       navigation.navigate("RegisterOtp", {
         email: email.trim(),
+        phone: phone.trim(),
         fullName: fullName.trim(),
         gender: gender || null,
         agreedToTerms: true,
+        otpDeliveryChannel: data?.otpDeliveryChannel || "",
+        otpDeliveryTarget: data?.otpDeliveryTarget || "",
+        otpDeliveryMessage: data?.otpDeliveryMessage || data?.message || "",
       });
     } catch (e) {
       const msg =
@@ -173,6 +193,34 @@ export default function RegisterScreen({ navigation }) {
                   returnKeyType="next"
                   editable={!submitting}
                   onFocus={() => setFocusedField("fullName")}
+                  onBlur={() => setFocusedField("")}
+                />
+              </View>
+            </View>
+
+            <View style={styles.fieldBlock}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Số điện thoại</Text>
+              </View>
+
+              <View
+                style={[
+                  styles.inputWrap,
+                  focusedField === "phone" && styles.inputWrapFocused,
+                ]}
+              >
+                <TextInput
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="0961848526"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.input}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="next"
+                  editable={!submitting}
+                  onFocus={() => setFocusedField("phone")}
                   onBlur={() => setFocusedField("")}
                 />
               </View>

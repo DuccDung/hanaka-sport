@@ -15,39 +15,39 @@ export const styles = StyleSheet.create({
   backBtn: { padding: 6, marginRight: 6 },
   headerTitle: { fontSize: 15, fontWeight: "600", color: "#1E2430" },
 
-  // Action buttons row - 2 rows, 3 columns
+  // Action buttons row - 2 columns
   actionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 14,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 16,
     backgroundColor: "#fff",
   },
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    minHeight: 36,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 8,
+    minHeight: 46,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     backgroundColor: "#F3F4F6",
-    // Width for 3 columns: (100% - 2*gap) / 3 ≈ 28%
-    width: "30%",
+    // Two cards per row on mobile.
+    width: "48%",
   },
   actionButtonPrimary: {
     backgroundColor: "#DBEAFE",
   },
   actionButtonIcon: {
-    fontSize: 14,
+    fontSize: 17,
     color: "#1E2430",
   },
   actionButtonText: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 14,
+    fontWeight: "700",
     color: "#1E2430",
   },
   actionButtonTextPrimary: {
@@ -196,9 +196,91 @@ export const styles = StyleSheet.create({
   itemHeaderText: { fontSize: 13, fontWeight: "400", color: "#1E2430" },
   itemHeaderStrong: { fontWeight: "700" },
 
+  singleItem: {
+    marginHorizontal: 8,
+    marginTop: 10,
+    marginBottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
+    borderWidth: 1,
+    borderColor: "#D8E2EF",
+    borderRadius: 8,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  singleBody: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  singlePlayerInfo: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 12,
+  },
+  singlePlayerTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginLeft: 14,
+  },
+  singlePlayerName: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: "#111827",
+  },
+  singlePlayerLevel: {
+    marginTop: 2,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#64748B",
+  },
+  singleVerifiedText: {
+    marginTop: 5,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#111827",
+  },
+  singleStatusPill: {
+    marginTop: 7,
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: "#F97316",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  singlePointsText: {
+    textAlign: "center",
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: "800",
+    color: "#EF4444",
+  },
+  singleMetaCol: {
+    width: 58,
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  singlePaymentDivider: {
+    display: "none",
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginTop: 18,
+    marginBottom: 14,
+  },
+
   gridRow: { flexDirection: "row", alignItems: "flex-start", marginTop: 10 },
   playerCol: { flex: 1.15, alignItems: "center" },
-  pointCol: { width: 52, alignItems: "center", paddingTop: 10 },
+  pointCol: { width: 52, alignItems: "center", paddingTop: 0 },
 
   avatarRing: {
     width: 54,
@@ -241,6 +323,68 @@ export const styles = StyleSheet.create({
   },
 
   pointsText: { fontSize: 13, fontWeight: "700", color: "#EF4444" },
+
+  paymentRow: {
+    display: "none",
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  paymentIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#16A34A",
+    borderWidth: 1,
+    borderColor: "#15803D",
+  },
+  paymentButtonPressed: {
+    opacity: 0.82,
+  },
+  paymentButtonDisabled: {
+    opacity: 0.56,
+  },
+  paymentPaidBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 7,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#34D399",
+  },
+  paymentTopAction: {
+    marginBottom: 8,
+  },
+  singlePaymentRow: {
+    display: "none",
+    marginTop: 0,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  singlePaymentButton: {
+    alignSelf: "flex-end",
+    width: 42,
+    height: 42,
+    minHeight: 42,
+    borderRadius: 7,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  singlePaymentBadge: {
+    alignSelf: "flex-end",
+    minHeight: 42,
+    borderRadius: 7,
+  },
 
   // Pending Pair Request Popup
   popupOverlay: {

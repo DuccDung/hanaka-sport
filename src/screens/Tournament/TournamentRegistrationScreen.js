@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "./tournamentRegistrationStyles";
-import { registerSingle, registerWaitingPair, createPairRequest, searchPartner } from "../../services/tournamentService";
+import { registerSingle, createPairRequest, searchPartner as searchPartnerApi } from "../../services/tournamentService";
 
 function formatDate(value) {
   if (!value) return "-";
@@ -41,11 +41,6 @@ export default function TournamentRegistrationScreen({ navigation, route }) {
     return gameType === "DOUBLE" || gameType === "MIXED";
   }, [gameType]);
 
-  // Check if user can register waiting (without partner) for DOUBLE/MIXED
-  const canRegisterWaiting = useMemo(() => {
-    return requiresPartner && tournament.doubleLimit !== undefined && tournament.doubleLimit > 0;
-  }, [requiresPartner, tournament.doubleLimit]);
-
   const searchPartner = async () => {
     if (!partnerUsername.trim()) {
       setPartnerError("Vui lòng nhập tên người chơi");
@@ -54,7 +49,7 @@ export default function TournamentRegistrationScreen({ navigation, route }) {
     setPartnerError("");
     setSearchingPartner(true);
     try {
-      const results = await searchPartner(tournament.tournamentId, partnerUsername.trim());
+      const results = await searchPartnerApi(tournament.tournamentId, partnerUsername.trim());
       // API returns { items: [...], total, page, pageSize }
       const items = results.items || [];
       if (items.length === 0) {
@@ -80,7 +75,7 @@ export default function TournamentRegistrationScreen({ navigation, route }) {
     setErrorMsg("");
 
     if (requiresPartner && !partnerSearchResult) {
-      setErrorMsg("Vui lòng chọn đối tác hoặc đăng ký chờ");
+      setErrorMsg("Vui lòng chọn đối tác.");
       return;
     }
 
@@ -99,16 +94,6 @@ export default function TournamentRegistrationScreen({ navigation, route }) {
         Alert.alert(
           "Đăng ký thành công",
           "Bạn đã đăng ký giải đấu đơn thành công.",
-          [{ text: "OK", onPress: () => navigation.goBack() }]
-        );
-      } else if (partnerSearchResult?.waiting) {
-        // Register as waiting pair (no partner)
-        await registerWaitingPair({
-          tournamentId: tournament.tournamentId,
-        });
-        Alert.alert(
-          "Đăng ký thành công",
-          "Bạn đã đăng ký chờ ghép cặp. Vui lòng tìm đối tác trong mục quản lý đăng ký.",
           [{ text: "OK", onPress: () => navigation.goBack() }]
         );
       } else if (partnerSearchResult && partnerSearchResult.userId) {
@@ -273,20 +258,6 @@ export default function TournamentRegistrationScreen({ navigation, route }) {
         </View>
       )}
 
-      {canRegisterWaiting && !partnerSearchResult && (
-        <Pressable
-          style={styles.waitingOptionBtn}
-          onPress={() => {
-            setPartnerSearchResult({ waiting: true });
-            setPartnerUsername("");
-          }}
-        >
-          <Ionicons name="time-outline" size={18} color="#6B7280" />
-          <Text style={styles.waitingOptionText}>
-            Đăng ký chờ ghép cặp (không có đối tác)
-          </Text>
-        </Pressable>
-      )}
     </View>
   );
 
@@ -382,11 +353,7 @@ export default function TournamentRegistrationScreen({ navigation, route }) {
           {submitting ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.submitBtnText}>
-              {requiresPartner && partnerSearchResult?.waiting
-                ? "Đăng ký chờ"
-                : "Xác nhận đăng ký"}
-            </Text>
+            <Text style={styles.submitBtnText}>Xác nhận đăng ký</Text>
           )}
         </Pressable>
 
