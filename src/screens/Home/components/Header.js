@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, Pressable, Image } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  Image,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
@@ -20,71 +26,138 @@ function normalizeAvatarUrl(value) {
   return s;
 }
 
-export default function Header({ sport, onToggleSport, onPressAvatar }) {
+export default function Header({ onPressAvatar }) {
+  const { width } = useWindowDimensions();
   const { session } = useAuth();
   const user = session?.user || null;
-
   const navigation = useNavigation();
   const avatarUrl = normalizeAvatarUrl(user?.avatarUrl);
-  const SportWrapper = onToggleSport ? Pressable : View;
+  const isWide = width >= 600;
+  const compact = width < 380;
+  const markSize = isWide ? 54 : compact ? 42 : 46;
+  const actionSize = isWide ? 40 : compact ? 32 : 36;
+  const iconSize = isWide ? 20 : 18;
+  const avatarIconSize = isWide ? 30 : compact ? 24 : 28;
 
   return (
     <>
       <AppStatusBar backgroundColor={COLORS.BLUE} />
 
-      <View style={styles.header}>
-        <SportWrapper
-          style={styles.sportPicker}
-          {...(onToggleSport ? { onPress: onToggleSport } : {})}
-        >
-          <Ionicons name="tennisball-outline" size={18} color="#fff" />
-          <Text style={styles.sportText}>{sport}</Text>
-          {onToggleSport ? (
-            <Ionicons name="chevron-down" size={18} color="#fff" />
-          ) : null}
-        </SportWrapper>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingHorizontal: isWide ? 32 : 16,
+          },
+        ]}
+      >
+        <View style={styles.brandWrap}>
+          <View
+            style={[
+              styles.brandMark,
+              {
+                width: markSize,
+                height: markSize,
+                borderRadius: isWide ? 18 : 15,
+              },
+            ]}
+          >
+            <Ionicons
+              name="tennisball-outline"
+              size={isWide ? 31 : 25}
+              color="#FFFFFF"
+            />
+          </View>
+
+          <Text
+            style={[
+              styles.brandTitle,
+              { fontSize: isWide ? 22 : compact ? 17 : 19 },
+            ]}
+            numberOfLines={1}
+          >
+            Hanaka Sport
+          </Text>
+        </View>
 
         <View style={styles.headerRight}>
           <NotificationBellButton
-            style={styles.headerIcon}
-            size={22}
-            color="#fff"
+            style={[
+              styles.headerActionButton,
+              {
+                width: actionSize,
+                height: actionSize,
+                borderRadius: isWide ? 16 : 13,
+              },
+            ]}
+            size={iconSize}
+            color="#FFFFFF"
             onPress={() => navigation.navigate("Notification")}
           />
 
           <Pressable
-            style={styles.headerIcon}
+            style={[
+              styles.headerActionButton,
+              {
+                width: actionSize,
+                height: actionSize,
+                borderRadius: isWide ? 16 : 13,
+              },
+            ]}
             onPress={() => navigation.navigate("Settings")}
           >
-            <Ionicons name="settings-outline" size={22} color="#fff" />
+            <Ionicons name="settings-outline" size={iconSize} color="#FFFFFF" />
           </Pressable>
 
           {user ? (
             <Pressable
               onPress={() => navigation.navigate("Account")}
               hitSlop={10}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                overflow: "hidden",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              style={[
+                styles.headerAvatarButton,
+                {
+                  width: actionSize,
+                  height: actionSize,
+                  borderRadius: actionSize / 2,
+                },
+              ]}
             >
               {avatarUrl ? (
                 <Image
                   source={{ uri: avatarUrl }}
-                  style={{ width: 36, height: 36 }}
+                  style={{
+                    width: actionSize,
+                    height: actionSize,
+                    borderRadius: actionSize / 2,
+                  }}
                   resizeMode="cover"
                 />
               ) : (
-                <Ionicons name="person-circle-outline" size={30} color="#fff" />
+                <Ionicons
+                  name="person-circle-outline"
+                  size={avatarIconSize}
+                  color="#FFFFFF"
+                />
               )}
             </Pressable>
           ) : (
-            <Pressable onPress={onPressAvatar} hitSlop={10}>
-              <Ionicons name="person-circle-outline" size={30} color="#fff" />
+            <Pressable
+              onPress={onPressAvatar}
+              hitSlop={10}
+              style={[
+                styles.headerAvatarButton,
+                {
+                  width: actionSize,
+                  height: actionSize,
+                  borderRadius: actionSize / 2,
+                },
+              ]}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={avatarIconSize}
+                color="#FFFFFF"
+              />
             </Pressable>
           )}
         </View>

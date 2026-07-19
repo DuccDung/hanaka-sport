@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   ScrollView,
@@ -7,88 +7,132 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Image,
+  Pressable,
+  useWindowDimensions,
 } from "react-native";
 import { styles } from "./styles";
 import Header from "./components/Header";
 import MenuGrid from "./components/MenuGrid";
-import BannerCarousel from "./components/BannerCarousel";
 import { menuItems as baseMenuItems } from "./data/menuItems";
-import { getHomeBanners } from "../../services/bannerService";
 import { getYoutubeGuideLink } from "../../services/publicLinkService";
+import { publicListTournaments } from "../../services/tournamentService";
+
+const LOGO = require("../../../assets/logo.png");
+const FALLBACK_TOURNAMENT_IMAGE =
+  "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80";
+
+function trimText(value) {
+  return String(value ?? "").trim();
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatDateTime(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${pad2(date.getDate())}/${pad2(
+    date.getMonth() + 1,
+  )}/${date.getFullYear()} ${pad2(date.getHours())}:${pad2(
+    date.getMinutes(),
+  )}`;
+}
+
+function resolveTournamentImage(item) {
+  return trimText(item?.bannerUrl) || FALLBACK_TOURNAMENT_IMAGE;
+}
+
+function getGameTypeLabel(value) {
+  switch (String(value || "").toUpperCase()) {
+    case "DOUBLE":
+      return "Đôi";
+    case "SINGLE":
+      return "Đơn";
+    case "MIXED":
+      return "Đôi hỗn hợp";
+    default:
+      return trimText(value) || "-";
+  }
+}
 
 export default function HomeScreen({ navigation }) {
-  const sport = "Pickleball";
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const [banners, setBanners] = useState([]);
-  const [loadingBanners, setLoadingBanners] = useState(true);
-  const [bannerError, setBannerError] = useState("");
+  const { width } = useWindowDimensions();
+  const [menuItems, setMenuItems] = useState(baseMenuItems);
+  const [tournaments, setTournaments] = useState([]);
+  const [loadingTournaments, setLoadingTournaments] = useState(true);
+  const [tournamentError, setTournamentError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const [menuItems, setMenuItems] = useState(baseMenuItems);
-  const [loadingMenu, setLoadingMenu] = useState(true);
+  const watermarkSize = useMemo(() => Math.min(width * 0.72, 430), [width]);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  const loadAll = async () => {
-    await Promise.all([loadGuideLink(), loadBanners()]);
-  };
-
-  const loadGuideLink = async () => {
+  const loadGuideLink = useCallback(async () => {
     try {
-      setLoadingMenu(true);
-
       const youtubeUrl = await getYoutubeGuideLink();
 
-      const nextItems = baseMenuItems.map((item) => {
-        if (item.key === "guide") {
-          return {
-            ...item,
-            url: youtubeUrl,
-          };
-        }
-        return item;
-      });
-
-      setMenuItems(nextItems);
+      setMenuItems(
+        baseMenuItems.map((item) =>
+          item.key === "guide"
+            ? {
+                ...item,
+                url: youtubeUrl,
+              }
+            : item,
+        ),
+      );
     } catch (error) {
       console.log(
         "loadGuideLink error:",
         error?.response?.data || error?.message,
       );
       setMenuItems(baseMenuItems);
-    } finally {
-      setLoadingMenu(false);
     }
-  };
+  }, []);
 
-  const loadBanners = async () => {
+  const loadTournaments = useCallback(async () => {
     try {
-      setBannerError("");
+      setTournamentError("");
+      setLoadingTournaments(true);
 
-      const items = await getHomeBanners();
-      setBanners(items || []);
-      setBannerIndex(0);
+      const res = await publicListTournaments({
+        page: 1,
+        pageSize: 5,
+        status: "ALL",
+      });
+
+      setTournaments(Array.isArray(res?.items) ? res.items : []);
     } catch (error) {
       console.log(
-        "loadBanners error:",
+        "loadHomeTournaments error:",
         error?.response?.data || error?.message,
       );
-      setBannerError("Không tải được banner từ máy chủ.");
-      setBanners([]);
-      setBannerIndex(0);
+      setTournamentError("Không tải được danh sách giải đấu.");
+      setTournaments([]);
     } finally {
-      setLoadingBanners(false);
+      setLoadingTournaments(false);
+    }
+  }, []);
+
+  const loadAll = useCallback(async () => {
+    await Promise.all([loadGuideLink(), loadTournaments()]);
+  }, [loadGuideLink, loadTournaments]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadAll();
+    } finally {
       setRefreshing(false);
     }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadAll();
-    setRefreshing(false);
-  };
+  }, [loadAll]);
 
   const openUrl = async (url) => {
     if (!url) {
@@ -161,16 +205,166 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const renderTournamentCard = (item) => {
+    const startTimeText = formatDateTime(item.startTime);
+    const deadlineText = formatDateTime(item.registerDeadline);
+    const imageUri = resolveTournamentImage(item);
+    const gameTypeLabel = getGameTypeLabel(item.gameType);
+
+    return (
+      <Pressable
+        key={String(item.tournamentId)}
+        style={({ pressed }) => [
+          styles.tournamentCard,
+          pressed && styles.cardPressed,
+        ]}
+        onPress={() =>
+          navigation.navigate("TournamentDetail", {
+            tournamentId: item.tournamentId,
+            preview: item,
+          })
+        }
+      >
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.tournamentImage}
+          resizeMode="cover"
+        />
+
+        <View style={styles.tournamentBody}>
+          <Text style={styles.tournamentTitle} numberOfLines={3}>
+            {trimText(item.title) || "Giải đấu Hanaka Sport"}
+          </Text>
+
+          <Text style={styles.tournamentInfoText}>
+            Ngày:{" "}
+            <Text style={styles.tournamentStrong}>
+              {startTimeText || "-"}
+            </Text>
+          </Text>
+
+          <Text style={styles.tournamentInfoText}>
+            Hạn đăng ký:{" "}
+            <Text style={styles.tournamentStrong}>{deadlineText || "-"}</Text>
+          </Text>
+
+          <View style={styles.tournamentInfoRow}>
+            <Text
+              style={[
+                styles.tournamentInfoText,
+                styles.tournamentInfoLeft,
+              ]}
+            >
+              Thể thức:{" "}
+              <Text style={styles.tournamentStrong}>
+                {trimText(item.formatText) || "-"}
+              </Text>
+            </Text>
+
+            <Text
+              style={[
+                styles.tournamentInfoText,
+                styles.tournamentInfoRight,
+              ]}
+            >
+              Giải: <Text style={styles.tournamentStrong}>{gameTypeLabel}</Text>
+            </Text>
+          </View>
+
+          <View style={styles.tournamentInfoRow}>
+            <Text
+              style={[
+                styles.tournamentInfoText,
+                styles.tournamentInfoLeft,
+              ]}
+            >
+              Giới hạn trình đơn tối đa:{" "}
+              <Text style={styles.tournamentStrong}>
+                {item.singleLimit ?? 0}
+              </Text>
+            </Text>
+
+            <Text
+              style={[
+                styles.tournamentInfoText,
+                styles.tournamentInfoRight,
+              ]}
+            >
+              Cấp tối đa:{" "}
+              <Text style={styles.tournamentStrong}>
+                {item.doubleLimit ?? 0}
+              </Text>
+            </Text>
+          </View>
+
+          <Text style={styles.tournamentInfoText}>
+            Khu vực:{" "}
+            <Text style={styles.tournamentStrong}>
+              {trimText(item.areaText) || "-"}
+            </Text>
+          </Text>
+
+          <View style={styles.tournamentInfoRow}>
+            <Text
+              style={[
+                styles.tournamentInfoText,
+                styles.tournamentInfoLeft,
+              ]}
+            >
+              Số đội dự kiến:{" "}
+              <Text style={styles.tournamentStrong}>
+                {item.expectedTeams ?? 0}
+              </Text>
+            </Text>
+
+            <Text
+              style={[
+                styles.tournamentInfoText,
+                styles.tournamentInfoRight,
+              ]}
+            >
+              Số trận thi đấu:{" "}
+              <Text style={styles.tournamentStrong}>
+                {item.matchesCount ?? 0}
+              </Text>
+            </Text>
+          </View>
+
+          <Text style={styles.tournamentInfoText}>
+            Tình trạng:{" "}
+            <Text style={styles.tournamentStrong}>
+              {trimText(item.stateText) || trimText(item.status) || "-"}
+            </Text>
+          </Text>
+        </View>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={styles.safe}>
       <Header
-        sport={sport}
         onPressAvatar={() =>
           navigation.navigate("AuthStack", {
             screen: "Login",
           })
         }
       />
+
+      <View style={styles.watermarkLayer} pointerEvents="none">
+        <Image
+          source={LOGO}
+          style={[
+            styles.watermarkLogo,
+            {
+              width: watermarkSize,
+              height: watermarkSize,
+            },
+          ]}
+          resizeMode="contain"
+          blurRadius={8}
+        />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.body}
@@ -179,35 +373,35 @@ export default function HomeScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {loadingMenu ? (
-          <View style={styles.bannerLoadingWrap}>
-            <ActivityIndicator size="small" />
+        <MenuGrid items={menuItems} onPressItem={handlePressItem} />
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Các giải đấu Hanaka</Text>
+        </View>
+
+        {loadingTournaments ? (
+          <View style={styles.sectionStateCard}>
+            <ActivityIndicator size="small" color="#0A66C2" />
+            <Text style={styles.sectionStateText}>Đang tải giải đấu...</Text>
+          </View>
+        ) : tournamentError ? (
+          <View style={styles.sectionStateCard}>
+            <Text style={styles.sectionErrorText}>{tournamentError}</Text>
+            <Pressable style={styles.retryButton} onPress={loadTournaments}>
+              <Text style={styles.retryButtonText}>Thử lại</Text>
+            </Pressable>
+          </View>
+        ) : tournaments.length > 0 ? (
+          <View style={styles.tournamentList}>
+            {tournaments.map(renderTournamentCard)}
           </View>
         ) : (
-          <MenuGrid items={menuItems} onPressItem={handlePressItem} />
-        )}
-
-        {loadingBanners ? (
-          <View style={styles.bannerLoadingWrap}>
-            <ActivityIndicator size="large" />
-          </View>
-        ) : bannerError ? (
-          <View style={styles.bannerErrorWrap}>
-            <Text style={styles.bannerErrorText}>{bannerError}</Text>
-          </View>
-        ) : banners.length > 0 ? (
-          <BannerCarousel
-            banners={banners}
-            index={bannerIndex}
-            onChangeIndex={setBannerIndex}
-          />
-        ) : (
-          <View style={styles.bannerEmptyWrap}>
-            <Text style={styles.bannerEmptyText}>Hiện chưa có banner.</Text>
+          <View style={styles.sectionStateCard}>
+            <Text style={styles.sectionStateText}>
+              Hiện chưa có giải đấu để hiển thị.
+            </Text>
           </View>
         )}
-
-        <View style={{ height: 24 }} />
       </ScrollView>
     </View>
   );

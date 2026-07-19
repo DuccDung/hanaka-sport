@@ -69,6 +69,11 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarInitials: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: COLORS.BLUE,
+  },
   roomBody: {
     flex: 1,
   },
@@ -102,6 +107,25 @@ export const styles = StyleSheet.create({
   roomLastMsgHidden: {
     color: "#9A3412",
     fontStyle: "italic",
+  },
+  roomPreviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  unreadBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#fff",
   },
 
   centerState: {
@@ -169,6 +193,67 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: "#E5ECFF",
   },
+  chatHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#E5E7EB",
+  },
+  headerAvatarFallback: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerAvatarInitials: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  chatModeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  chatModeBtn: {
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  chatModeBtnActive: {
+    borderColor: COLORS.BLUE,
+    backgroundColor: COLORS.BLUE,
+  },
+  chatModeText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: COLORS.BLUE,
+  },
+  chatModeTextActive: {
+    color: "#fff",
+  },
 
   msgListPad: {
     paddingHorizontal: 12,
@@ -201,6 +286,11 @@ export const styles = StyleSheet.create({
     backgroundColor: "#EAF1FF",
     alignItems: "center",
     justifyContent: "center",
+  },
+  msgAvatarInitials: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: COLORS.BLUE,
   },
 
   msgBubbleWrap: {
@@ -252,6 +342,11 @@ export const styles = StyleSheet.create({
     color: "#DC2626",
     fontWeight: "700",
   },
+  msgHint: {
+    fontSize: 10,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
   msgActionBtn: {
     minWidth: 104,
     height: 24,
@@ -276,6 +371,73 @@ export const styles = StyleSheet.create({
   msgMaskedText: {
     color: "#9A3412",
     fontStyle: "italic",
+  },
+  msgRecalledBubble: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  msgRecalledText: {
+    color: "#64748B",
+    fontStyle: "italic",
+  },
+
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  searchBox: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#DDE6F4",
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#111827",
+    paddingVertical: 0,
+  },
+  searchBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: COLORS.BLUE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  blockBanner: {
+    marginHorizontal: 12,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    backgroundColor: "#FFF7ED",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  blockBannerText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#9A3412",
+    fontWeight: "600",
   },
 
   safetyBanner: {
@@ -328,6 +490,10 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: "#111827",
+  },
+  inputDisabled: {
+    color: "#94A3B8",
+    backgroundColor: "#E5E7EB",
   },
   sendBtn: {
     width: 44,

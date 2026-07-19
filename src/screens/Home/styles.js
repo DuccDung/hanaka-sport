@@ -1,7 +1,5 @@
-import { StyleSheet, Dimensions, Platform } from "react-native";
+import { StyleSheet } from "react-native";
 import { COLORS } from "../../constants/colors";
-
-const { width } = Dimensions.get("window");
 
 export const styles = StyleSheet.create({
   safe: {
@@ -9,112 +7,103 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.BG,
   },
 
+  watermarkLayer: {
+    position: "absolute",
+    top: 218,
+    right: 0,
+    left: 0,
+    zIndex: 0,
+    alignItems: "center",
+  },
+
+  watermarkLogo: {
+    opacity: 0.1,
+  },
+
   body: {
-    padding: 16,
+    position: "relative",
+    zIndex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 28,
   },
 
   header: {
-    backgroundColor: COLORS.PRIMARY,
+    position: "relative",
+    zIndex: 2,
+    minHeight: 64,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === "android" ? 0 : 6,
-    paddingBottom: 12,
+    paddingVertical: 4,
+    backgroundColor: COLORS.BLUE,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
   },
 
-  sportPicker: {
+  brandWrap: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    minWidth: 170,
+    gap: 12,
   },
 
-  sportText: {
+  brandMark: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+  },
+
+  brandTitle: {
+    flex: 1,
+    minWidth: 0,
     color: COLORS.WHITE,
-    fontWeight: "700",
-    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0,
   },
 
   headerRight: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
 
-  headerIcon: {
-    padding: 6,
-  },
-
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#FDEBED",
+  headerActionButton: {
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  /* MENU */
-  radialMenu: {
-    alignSelf: "center",
-    marginTop: 8,
-    marginBottom: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  radialRing: {
-    position: "absolute",
-    top: "9%",
-    right: "9%",
-    bottom: "9%",
-    left: "9%",
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "rgba(10,102,194,0.18)",
-    backgroundColor: "rgba(255,255,255,0.42)",
-  },
-
-  radialCenter: {
-    width: 148,
-    height: 148,
-    borderRadius: 74,
-    backgroundColor: COLORS.WHITE,
-    borderWidth: 3,
-    borderColor: "rgba(10,102,194,0.24)",
+  headerAvatarButton: {
+    backgroundColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    shadowColor: "#0A3769",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 6,
   },
 
-  radialLogo: {
-    width: 148,
-    height: 148,
-    borderRadius: 74,
+  menuGrid: {
+    position: "relative",
+    zIndex: 1,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 28,
   },
 
-  radialButton: {
-    position: "absolute",
-    backgroundColor: COLORS.PRIMARY,
+  menuCard: {
+    borderRadius: 8,
+    backgroundColor: COLORS.BLUE,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 6,
     shadowColor: "#073B75",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 4,
   },
 
   menuItemPressed: {
@@ -122,62 +111,141 @@ export const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
 
-  radialIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  menuIconWrap: {
     backgroundColor: "rgba(255,255,255,0.16)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 3,
+    marginBottom: 11,
   },
 
-  radialLabel: {
-    textAlign: "center",
+  menuLabel: {
     color: COLORS.WHITE,
-    fontSize: 10,
-    fontWeight: "700",
-    lineHeight: 11,
+    fontWeight: "800",
+    lineHeight: 19,
+    textAlign: "center",
+  },
+
+  sectionHeader: {
+    marginBottom: 14,
   },
 
   sectionTitle: {
+    color: "#17233B",
+    fontSize: 24,
+    fontWeight: "800",
+    lineHeight: 30,
+    letterSpacing: 0,
+  },
+
+  tournamentList: {
+    gap: 14,
+  },
+
+  tournamentCard: {
+    overflow: "hidden",
+    borderRadius: 12,
+    backgroundColor: COLORS.WHITE,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#1F2937",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+
+  cardPressed: {
+    opacity: 0.94,
+    transform: [{ scale: 0.99 }],
+  },
+
+  tournamentImage: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: "#DCE8F6",
+  },
+
+  tournamentBody: {
+    padding: 12,
+  },
+
+  tournamentTitle: {
+    color: "#1E2430",
+    fontSize: 18,
+    fontWeight: "800",
+    lineHeight: 24,
+  },
+
+  tournamentInfoText: {
+    color: "#6B7280",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 20,
+    marginTop: 6,
+  },
+
+  tournamentStrong: {
+    color: "#1E2430",
+    fontWeight: "700",
+  },
+
+  tournamentInfoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+
+  tournamentInfoLeft: {
+    flex: 1,
+  },
+
+  tournamentInfoRight: {
+    flexShrink: 0,
+    maxWidth: "42%",
+    textAlign: "left",
+  },
+
+  sectionStateCard: {
+    minHeight: 118,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D8E5F1",
+    backgroundColor: "rgba(255,255,255,0.86)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 18,
+    gap: 10,
+  },
+
+  sectionStateText: {
+    color: COLORS.TEXT_SOFT,
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  sectionErrorText: {
+    color: "#DC2626",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  retryButton: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: COLORS.BLUE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  retryButtonText: {
+    color: COLORS.WHITE,
     fontSize: 13,
     fontWeight: "800",
-    marginTop: 6,
-    marginBottom: 10,
-    color: "#1E2430",
-  },
-
-  bannerCard: {
-    borderWidth: 2,
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#fff",
-  },
-
-  bannerImage: {
-    width: width - 32,
-    height: 200,
-  },
-
-  dots: {
-    position: "absolute",
-    bottom: 10,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-  },
-
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(255,255,255,0.6)",
-  },
-
-  dotActive: {
-    backgroundColor: "#fff",
   },
 });

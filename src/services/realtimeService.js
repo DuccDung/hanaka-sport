@@ -276,6 +276,18 @@ export function sendTyping(clubId, isTyping) {
   return sendRealtime({ type: "club.typing", clubId, isTyping });
 }
 
+export function subscribeDirectRoom(roomId) {
+  return sendRealtime({ type: "direct.subscribe", roomId });
+}
+
+export function unsubscribeDirectRoom(roomId) {
+  return sendRealtime({ type: "direct.unsubscribe", roomId });
+}
+
+export function sendDirectTyping(roomId, isTyping) {
+  return sendRealtime({ type: "direct.typing", roomId, isTyping });
+}
+
 // Tournament notification helpers
 export function getTournamentUnreadCount() {
   return tournamentUnreadCount;

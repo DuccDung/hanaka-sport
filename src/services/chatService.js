@@ -32,6 +32,27 @@ function sanitizeChatRoom(room) {
   };
 }
 
+function sanitizeDirectChatRoom(room) {
+  if (!room || typeof room !== "object") return room;
+
+  return {
+    ...room,
+    title: getSafeCommunityText(room?.title, room?.title || ""),
+    lastSenderName: getSafeCommunityText(room?.lastSenderName, ""),
+    lastMessagePreview: getSafeCommunityText(room?.lastMessagePreview, ""),
+    otherUser: sanitizeChatUser(room?.otherUser),
+  };
+}
+
+function sanitizeDirectChatSearchUser(user) {
+  if (!user || typeof user !== "object") return user;
+
+  return {
+    ...user,
+    fullName: getSafeCommunityText(user?.fullName, ""),
+  };
+}
+
 export async function getMyClubChatRooms({ page = 1, pageSize = 20 } = {}) {
   const res = await apiClient.get("/clubs/chat-rooms", {
     params: { page, pageSize },
@@ -89,6 +110,102 @@ export async function uploadClubMessageMedia(fileUri) {
   const res = await apiClient.post("/clubs/message-media", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+
+  return res.data;
+}
+
+export async function getDirectChatRooms({ page = 1, pageSize = 20 } = {}) {
+  const res = await apiClient.get("/direct-chats/rooms", {
+    params: { page, pageSize },
+  });
+
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeDirectChatRoom)
+      : res?.data?.items,
+  };
+}
+
+export async function searchDirectChatUsers({
+  keyword,
+  page = 1,
+  pageSize = 20,
+} = {}) {
+  const res = await apiClient.get("/direct-chats/users/search", {
+    params: { keyword, page, pageSize },
+  });
+
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeDirectChatSearchUser)
+      : res?.data?.items,
+  };
+}
+
+export async function createDirectChatRoom(targetUserId) {
+  const res = await apiClient.post("/direct-chats/rooms", { targetUserId });
+
+  return {
+    ...res.data,
+    item: sanitizeDirectChatRoom(res?.data?.item),
+  };
+}
+
+export async function getDirectChatMessages({
+  roomId,
+  page = 1,
+  pageSize = 30,
+} = {}) {
+  const res = await apiClient.get(`/direct-chats/rooms/${roomId}/messages`, {
+    params: { page, pageSize },
+  });
+
+  return {
+    ...res.data,
+    items: Array.isArray(res?.data?.items)
+      ? res.data.items.map(sanitizeChatMessage)
+      : res?.data?.items,
+  };
+}
+
+export async function sendDirectChatMessage(roomId, payload) {
+  const res = await apiClient.post(
+    `/direct-chats/rooms/${roomId}/messages`,
+    payload,
+  );
+
+  return {
+    ...res.data,
+    item: sanitizeChatMessage(res?.data?.item),
+  };
+}
+
+export async function recallDirectChatMessage(messageId) {
+  const res = await apiClient.post(
+    `/direct-chats/messages/${messageId}/recall`,
+  );
+
+  return {
+    ...res.data,
+    item: sanitizeChatMessage(res?.data?.item),
+  };
+}
+
+export async function blockDirectChatUser(targetUserId, payload = {}) {
+  const res = await apiClient.post(
+    `/direct-chats/users/${targetUserId}/block`,
+    payload,
+  );
+
+  return res.data;
+}
+
+export async function unblockDirectChatUser(targetUserId) {
+  const res = await apiClient.delete(
+    `/direct-chats/users/${targetUserId}/block`,
+  );
 
   return res.data;
 }

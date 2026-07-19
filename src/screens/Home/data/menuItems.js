@@ -6,7 +6,7 @@ export const menuItems = [
   },
   {
     key: "guide",
-    label: "H.Dẫn",
+    label: "Hướng Dẫn",
     icon: "map-outline",
   },
   {
@@ -36,17 +36,17 @@ export const menuItems = [
   },
   {
     key: "tournament",
-    label: "Giải đấu",
+    label: "Giải Đấu",
     icon: "trophy-outline",
   },
   {
     key: "exchange",
-    label: "Giao lưu",
+    label: "Giao Lưu",
     icon: "people-circle-outline",
   },
   {
     key: "match",
-    label: "Trận đấu",
+    label: "Trận Đấu",
     icon: "tennisball-outline",
   },
 ];

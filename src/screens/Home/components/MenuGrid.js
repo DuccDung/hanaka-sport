@@ -1,67 +1,57 @@
 import React from "react";
-import { Image, Pressable, View, Text, Dimensions } from "react-native";
+import { Pressable, View, Text, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../../../constants/colors";
 import { styles } from "../styles";
 
-const { width } = Dimensions.get("window");
-const LOGO = require("../../../../assets/logo.png");
-
 export default function MenuGrid({ items = [], onPressItem }) {
-  const MENU_SIZE = Math.min(width - 32, 360);
-  const BUTTON_SIZE = MENU_SIZE <= 330 ? 68 : 74;
-  const CENTER = MENU_SIZE / 2;
-  const RADIUS = MENU_SIZE / 2 - BUTTON_SIZE / 2 - 8;
-  const totalItems = items.length || 1;
+  const { width } = useWindowDimensions();
+  const isWide = width >= 600;
+  const compact = width < 380;
+  const horizontalPadding = 32;
+  const gap = isWide ? 15 : compact ? 8 : 10;
+  const itemSize = Math.floor((width - horizontalPadding - gap * 3) / 4);
+  const cardHeight = isWide ? 132 : compact ? 86 : 92;
+  const iconSize = isWide ? 52 : compact ? 36 : 40;
+  const labelSize = isWide ? 17 : compact ? 11 : 13;
 
   return (
-    <View
-      style={[
-        styles.radialMenu,
-        {
-          width: MENU_SIZE,
-          height: MENU_SIZE,
-        },
-      ]}
-    >
-      <View style={styles.radialRing} />
-
-      <View style={styles.radialCenter}>
-        <Image source={LOGO} style={styles.radialLogo} resizeMode="cover" />
-      </View>
-
-      {items.map((item, index) => {
-        const angle = -90 + (360 / totalItems) * index;
-        const radian = (Math.PI / 180) * angle;
-        const left = CENTER + RADIUS * Math.cos(radian) - BUTTON_SIZE / 2;
-        const top = CENTER + RADIUS * Math.sin(radian) - BUTTON_SIZE / 2;
-
-        return (
-          <Pressable
-            key={item.key}
-            onPress={() => onPressItem?.(item)}
-            style={({ pressed }) => [
-              styles.radialButton,
+    <View style={[styles.menuGrid, { gap }]}>
+      {items.map((item) => (
+        <Pressable
+          key={item.key}
+          onPress={() => onPressItem?.(item)}
+          style={({ pressed }) => [
+            styles.menuCard,
+            {
+              width: itemSize,
+              minHeight: cardHeight,
+              paddingVertical: isWide ? 22 : 12,
+            },
+            pressed && styles.menuItemPressed,
+          ]}
+        >
+          <View
+            style={[
+              styles.menuIconWrap,
               {
-                width: BUTTON_SIZE,
-                height: BUTTON_SIZE,
-                borderRadius: BUTTON_SIZE / 2,
-                left,
-                top,
+                width: iconSize,
+                height: iconSize,
+                borderRadius: iconSize / 2,
               },
-              pressed && styles.menuItemPressed,
             ]}
           >
-            <View style={styles.radialIconWrap}>
-              <Ionicons name={item.icon} size={22} color={COLORS.WHITE} />
-            </View>
+            <Ionicons name={item.icon} size={iconSize * 0.46} color={COLORS.WHITE} />
+          </View>
 
-            <Text style={styles.radialLabel} numberOfLines={2}>
-              {item.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+          <Text
+            style={[styles.menuLabel, { fontSize: labelSize }]}
+            numberOfLines={2}
+          >
+            {item.label}
+          </Text>
+        </Pressable>
+      ))}
     </View>
   );
 }
