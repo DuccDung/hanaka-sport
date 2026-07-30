@@ -251,7 +251,17 @@ function mapRemoteReport(item = {}, fallback = {}) {
       item?.reasonLabel || fallback?.reasonLabel || makeReportReasonLabel(reason),
     notes: item?.notes || fallback?.notes || "",
     clubId: item?.clubId ?? fallback?.clubId ?? null,
-    messageId: item?.messageId ?? fallback?.messageId ?? null,
+    messageId:
+      item?.messageId ??
+      item?.directChatMessageId ??
+      fallback?.messageId ??
+      fallback?.directChatMessageId ??
+      null,
+    clubMessageId: item?.clubMessageId ?? fallback?.clubMessageId ?? null,
+    directChatRoomId:
+      item?.directChatRoomId ?? fallback?.directChatRoomId ?? null,
+    directChatMessageId:
+      item?.directChatMessageId ?? fallback?.directChatMessageId ?? null,
     messageContent: item?.messageContent || fallback?.messageContent || "",
     targetUserId:
       normalizeId(item?.targetUserId) || normalizeId(fallback?.targetUserId) || null,
@@ -509,6 +519,10 @@ export async function submitCommunityReport(payload = {}) {
     notes: payload?.notes?.trim() || "",
     clubId: normalizeNumericId(payload?.clubId),
     messageId: normalizeNumericId(payload?.messageId),
+    directChatRoomId: normalizeNumericId(
+      payload?.directChatRoomId ?? payload?.roomId,
+    ),
+    directChatMessageId: normalizeNumericId(payload?.directChatMessageId),
     messageContent: payload?.messageContent || "",
     targetUserId,
     targetUserName: payload?.targetUserName || "Người dùng",
@@ -567,6 +581,33 @@ export async function reportChatMessage({
     kind: "message",
     clubId,
     messageId,
+    messageContent,
+    targetUserId,
+    targetUserName,
+    reason,
+    notes,
+    source,
+  });
+}
+
+export async function reportDirectChatMessage({
+  roomId,
+  directChatRoomId,
+  messageId,
+  directChatMessageId,
+  messageContent,
+  targetUserId,
+  targetUserName,
+  reason,
+  notes,
+  source = "direct_chat_report",
+} = {}) {
+  const resolvedMessageId = directChatMessageId ?? messageId;
+
+  return submitCommunityReport({
+    kind: "message",
+    directChatRoomId: directChatRoomId ?? roomId,
+    directChatMessageId: resolvedMessageId,
     messageContent,
     targetUserId,
     targetUserName,

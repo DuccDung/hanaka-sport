@@ -787,7 +787,7 @@ export default function RegistrationListScreen({ navigation, route }) {
           accessibilityLabel="Hoan tat"
           style={[styles.paymentPaidBadge, extraStyle]}
         >
-          <Ionicons name="checkmark-circle" size={22} color="#047857" />
+          <Ionicons name="checkmark-circle" size={34} color="#16A34A" />
         </View>
       );
     }
@@ -809,9 +809,9 @@ export default function RegistrationListScreen({ navigation, route }) {
         disabled={!!payingRegistrationId}
       >
         {payingRegistrationId === item.id ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color="#F59E0B" />
         ) : (
-          <Ionicons name="card-outline" size={21} color="#fff" />
+          <Ionicons name="card" size={34} color="#F59E0B" />
         )}
       </Pressable>
     );
@@ -857,10 +857,11 @@ export default function RegistrationListScreen({ navigation, route }) {
         </View>
 
         <View style={styles.singleMetaCol}>
-          {renderPaymentIcon(item, styles.paymentTopAction)}
           <Text style={styles.singlePointsText}>{item.points}</Text>
         </View>
       </View>
+
+      {renderPaymentIcon(item, styles.paymentCornerAction)}
 
       {item.showPaymentState && (
         <>
@@ -872,7 +873,7 @@ export default function RegistrationListScreen({ navigation, route }) {
                 accessibilityLabel="Hoàn tất"
                 style={[styles.paymentPaidBadge, styles.singlePaymentBadge]}
               >
-                <Ionicons name="checkmark-circle" size={22} color="#047857" />
+                <Ionicons name="checkmark-circle" size={34} color="#16A34A" />
               </View>
             ) : (
               <Pressable
@@ -891,9 +892,9 @@ export default function RegistrationListScreen({ navigation, route }) {
                 disabled={!!payingRegistrationId}
               >
                 {payingRegistrationId === item.id ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color="#F59E0B" />
                 ) : (
-                  <Ionicons name="card-outline" size={21} color="#fff" />
+                  <Ionicons name="card" size={34} color="#F59E0B" />
                 )}
               </Pressable>
             )}
@@ -918,10 +919,11 @@ export default function RegistrationListScreen({ navigation, route }) {
         {renderPlayer(item.vdv2)}
 
         <View style={styles.pointCol}>
-          {renderPaymentIcon(item, styles.paymentTopAction)}
           <Text style={styles.pointsText}>{item.points}</Text>
         </View>
       </View>
+
+      {renderPaymentIcon(item, styles.paymentCornerAction)}
 
       {item.showPaymentState && (
         <View style={styles.paymentRow}>
@@ -931,7 +933,7 @@ export default function RegistrationListScreen({ navigation, route }) {
               accessibilityLabel="Hoàn tất"
               style={styles.paymentPaidBadge}
             >
-              <Ionicons name="checkmark-circle" size={22} color="#047857" />
+              <Ionicons name="checkmark-circle" size={34} color="#16A34A" />
             </View>
           ) : (
             <Pressable
@@ -949,9 +951,9 @@ export default function RegistrationListScreen({ navigation, route }) {
               disabled={!!payingRegistrationId}
             >
               {payingRegistrationId === item.id ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color="#F59E0B" />
               ) : (
-                <Ionicons name="card-outline" size={21} color="#fff" />
+                <Ionicons name="card" size={34} color="#F59E0B" />
               )}
             </Pressable>
           )}

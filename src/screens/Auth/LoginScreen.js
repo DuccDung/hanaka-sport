@@ -112,7 +112,7 @@ export default function LoginScreen({ navigation }) {
                 value={identifier}
                 onChangeText={setIdentifier}
                 onBlur={() => setIdentifier((value) => normalizeIdentifier(value))}
-                placeholder="vd: 0961848526 hoặc a@test.com"
+                placeholder="vd: 0961xxxx26 hoặc a@test.com"
                 style={styles.input}
                 keyboardType="email-address"
                 autoCapitalize="none"

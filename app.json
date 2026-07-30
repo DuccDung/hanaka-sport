@@ -2,7 +2,7 @@
   "expo": {
     "name": "Hanaka Sport",
     "slug": "hanaka-sport",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.hanakasport.app",
-      "buildNumber": "2",
+      "buildNumber": "4",
       "supportsTablet": false,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

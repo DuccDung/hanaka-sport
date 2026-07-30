@@ -29,6 +29,40 @@ export const styles = StyleSheet.create({
     paddingBottom: 20,
   },
 
+  chatPrivacyCard: {
+    marginBottom: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#DDE6F4",
+    padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  chatPrivacyIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatPrivacyBody: {
+    flex: 1,
+  },
+  chatPrivacyTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  chatPrivacyText: {
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#64748B",
+  },
+
   termsGateWrap: {
     padding: 16,
     width: "100%",
@@ -54,6 +88,42 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "center",
+  },
+  swipeRoomWrap: {
+    position: "relative",
+    marginBottom: 12,
+    overflow: "hidden",
+    borderRadius: 14,
+  },
+  roomSwipeCard: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+  },
+  roomCardSwipe: {
+    marginBottom: 0,
+  },
+  roomDeleteAction: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    backgroundColor: "#FEE2E2",
+    borderRadius: 14,
+  },
+  roomDeleteBtn: {
+    width: 76,
+    height: "100%",
+    backgroundColor: "#DC2626",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  roomDeleteBtnDisabled: {
+    opacity: 0.72,
+  },
+  roomDeleteText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#fff",
   },
   roomAvatar: {
     width: 52,

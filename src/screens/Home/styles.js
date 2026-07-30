@@ -7,18 +7,20 @@ export const styles = StyleSheet.create({
     backgroundColor: COLORS.BG,
   },
 
+  headerMeasureWrap: {
+    position: "relative",
+    zIndex: 2,
+  },
+
   watermarkLayer: {
     position: "absolute",
-    top: 218,
     right: 0,
     left: 0,
     zIndex: 0,
     alignItems: "center",
   },
 
-  watermarkLogo: {
-    opacity: 0.1,
-  },
+  watermarkLogo: {},
 
   body: {
     position: "relative",

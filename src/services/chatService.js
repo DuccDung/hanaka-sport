@@ -144,6 +144,18 @@ export async function searchDirectChatUsers({
   };
 }
 
+export async function getDirectChatSearchPrivacy() {
+  const res = await apiClient.get("/direct-chats/settings/search-privacy");
+  return res.data;
+}
+
+export async function updateDirectChatSearchPrivacy(isHiddenFromChatSearch) {
+  const res = await apiClient.put("/direct-chats/settings/search-privacy", {
+    isHiddenFromChatSearch: !!isHiddenFromChatSearch,
+  });
+  return res.data;
+}
+
 export async function createDirectChatRoom(targetUserId) {
   const res = await apiClient.post("/direct-chats/rooms", { targetUserId });
 
@@ -151,6 +163,11 @@ export async function createDirectChatRoom(targetUserId) {
     ...res.data,
     item: sanitizeDirectChatRoom(res?.data?.item),
   };
+}
+
+export async function deleteDirectChatRoom(roomId) {
+  const res = await apiClient.delete(`/direct-chats/rooms/${roomId}`);
+  return res.data;
 }
 
 export async function getDirectChatMessages({

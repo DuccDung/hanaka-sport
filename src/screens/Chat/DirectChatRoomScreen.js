@@ -19,7 +19,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AppStatusBar from "../../components/AppStatusBar";
+import OptionPickerModal from "../../components/OptionPickerModal";
 import { COLORS } from "../../constants/colors";
+import { COMMUNITY_REPORT_REASONS } from "../../constants/communitySafety";
 import { styles } from "./styles";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -38,6 +40,7 @@ import {
 import {
   evaluateCommunityContent,
   getSafeCommunityText,
+  reportDirectChatMessage,
 } from "../../services/communitySafetyService";
 
 function formatMessageTime(value) {
@@ -165,6 +168,8 @@ export default function DirectChatRoomScreen({ navigation, route }) {
   const [isBlockedByMe, setIsBlockedByMe] = useState(!!routeRoom?.isBlockedByMe);
   const [hasBlockedMe, setHasBlockedMe] = useState(!!routeRoom?.hasBlockedMe);
   const [typingText, setTypingText] = useState("");
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [reportPickerVisible, setReportPickerVisible] = useState(false);
 
   const flatListRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -248,6 +253,16 @@ export default function DirectChatRoomScreen({ navigation, route }) {
               ? nextItem || { ...x, isRecalled: true, content: "" }
               : x,
           ),
+        );
+      }
+
+      if (
+        event.type === "direct.message.deleted" &&
+        String(eventRoomId) === String(roomId)
+      ) {
+        const deletedMessageId = event.messageId || event.directChatMessageId;
+        setItems((prev) =>
+          prev.filter((x) => String(x.messageId) !== String(deletedMessageId)),
         );
       }
 
@@ -485,14 +500,55 @@ export default function DirectChatRoomScreen({ navigation, route }) {
 
       Alert.alert(
         getSenderName(item),
-        "Bạn có thể chặn người này để dừng nhận tin nhắn.",
+        "Chọn hành động moderation cho nội dung này.",
         [
+          {
+            text: "Báo cáo tin nhắn",
+            onPress: () => {
+              setSelectedMessage(item);
+              setReportPickerVisible(true);
+            },
+          },
           { text: "Chặn người này", style: "destructive", onPress: () => blockUser(item) },
           { text: "Hủy", style: "cancel" },
         ],
       );
     },
     [blockUser, handleRecall, myUserId],
+  );
+
+  const onSelectReportReason = useCallback(
+    async (option) => {
+      if (!selectedMessage) return;
+
+      try {
+        const report = await reportDirectChatMessage({
+          roomId,
+          directChatMessageId:
+            selectedMessage.directChatMessageId || selectedMessage.messageId,
+          messageContent: selectedMessage.content || "",
+          targetUserId: getSenderId(selectedMessage),
+          targetUserName: getSenderName(selectedMessage),
+          reason: option?.value || "other",
+          source: "direct_chat_report",
+        });
+
+        Alert.alert(
+          report?.developerNotified ? "Đã gửi báo cáo" : "Đã ghi nhận báo cáo",
+          report?.developerNotified
+            ? "Báo cáo của bạn đã được gửi tới moderation. Đội ngũ Hanaka Sport sẽ xử lý trong vòng 24 giờ."
+            : "Báo cáo đã được lưu trên thiết bị nhưng chưa gửi được tới moderation. Vui lòng kiểm tra kết nối mạng.",
+        );
+      } catch (error) {
+        Alert.alert(
+          "Không thể báo cáo",
+          error?.message || "Đã xảy ra lỗi khi gửi báo cáo.",
+        );
+      } finally {
+        setSelectedMessage(null);
+      }
+    },
+    [roomId, selectedMessage],
   );
 
   const onToggleBlock = useCallback(() => {
@@ -641,6 +697,23 @@ export default function DirectChatRoomScreen({ navigation, route }) {
           </>
         )}
       </KeyboardAvoidingView>
+
+      <OptionPickerModal
+        visible={reportPickerVisible}
+        title="Chọn lý do báo cáo"
+        options={COMMUNITY_REPORT_REASONS}
+        selectedValue={null}
+        getLabel={(item) => item.label}
+        getValue={(item) => item.value}
+        onClose={() => {
+          setReportPickerVisible(false);
+          setSelectedMessage(null);
+        }}
+        onSelect={(item) => {
+          setReportPickerVisible(false);
+          onSelectReportReason(item);
+        }}
+      />
     </View>
   );
 }

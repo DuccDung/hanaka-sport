@@ -18,7 +18,7 @@ import { menuItems as baseMenuItems } from "./data/menuItems";
 import { getYoutubeGuideLink } from "../../services/publicLinkService";
 import { publicListTournaments } from "../../services/tournamentService";
 
-const LOGO = require("../../../assets/logo.png");
+const LOGO = require("../../../assets/home-watermark-logo.png");
 const FALLBACK_TOURNAMENT_IMAGE =
   "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?w=1400&q=80";
 
@@ -67,8 +67,15 @@ export default function HomeScreen({ navigation }) {
   const [loadingTournaments, setLoadingTournaments] = useState(true);
   const [tournamentError, setTournamentError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
-  const watermarkSize = useMemo(() => Math.min(width * 0.72, 430), [width]);
+  const watermarkHeight = useMemo(() => {
+    const logoSource = Image.resolveAssetSource(LOGO);
+    const logoWidth = logoSource?.width || 1;
+    const logoHeight = logoSource?.height || 1;
+
+    return width * (logoHeight / logoWidth);
+  }, [width]);
 
   const loadGuideLink = useCallback(async () => {
     try {
@@ -343,26 +350,45 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <Header
-        onPressAvatar={() =>
-          navigation.navigate("AuthStack", {
-            screen: "Login",
-          })
-        }
-      />
+      <View
+        style={styles.headerMeasureWrap}
+        onLayout={(event) => {
+          const nextHeight = Math.round(event.nativeEvent.layout.height);
+          setHeaderHeight((current) =>
+            current === nextHeight ? current : nextHeight,
+          );
+        }}
+      >
+        <Header
+          onPressAvatar={() =>
+            navigation.navigate("AuthStack", {
+              screen: "Login",
+            })
+          }
+        />
+      </View>
 
-      <View style={styles.watermarkLayer} pointerEvents="none">
+      <View
+        style={[
+          styles.watermarkLayer,
+          {
+            top: headerHeight,
+            opacity: headerHeight > 0 ? 1 : 0,
+          },
+        ]}
+        pointerEvents="none"
+      >
         <Image
           source={LOGO}
           style={[
             styles.watermarkLogo,
             {
-              width: watermarkSize,
-              height: watermarkSize,
+              width,
+              height: watermarkHeight,
             },
           ]}
           resizeMode="contain"
-          blurRadius={8}
+          blurRadius={2}
         />
       </View>
 
